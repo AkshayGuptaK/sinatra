@@ -3,7 +3,7 @@ from .base import MusicPlayer
 
 
 class MPDPlayer(MusicPlayer):
-    def __init__(self, host: str = "host.docker.internal", port: int = 6600):
+    def __init__(self, host: str = "localhost", port: int = 6600):
         self.host = host
         self.port = port
         self.client = MPDClient()
@@ -14,6 +14,16 @@ class MPDPlayer(MusicPlayer):
             self.client.ping()
         except (ConnectionError, Exception):
             self.client.connect(self.host, self.port)
+
+    def get_current_song_path(self):
+        self._ensure_connected()
+        status = self.client.status()
+
+        if status.get("state") != "play":
+            return None
+
+        song_info = self.client.currentsong()
+        return song_info.get("file")
 
     def play(self, filepaths):
         self._ensure_connected()

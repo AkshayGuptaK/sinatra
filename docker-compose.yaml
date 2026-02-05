@@ -1,24 +1,4 @@
 services:
-  api:
-    build: .
-    command: uv run fastapi dev src/main.py --host 0.0.0.0 --port ${PORT}
-    ports:
-      - "${PORT}:${PORT}"
-    env_file:
-      - .env
-    environment:
-      APP_PORT: ${PORT}
-      OLLAMA_HOST: "http://host.docker.internal:11434"
-      MPD_HOST: host.docker.internal
-      MPD_PORT: 6600
-
-    volumes:
-      - .:/app
-      - /app/.venv
-      - ${MUSIC_DIR}:${MUSIC_DIR}:ro
-    depends_on:
-      - db
-
   db:
     image: pgvector/pgvector:pg16
     env_file:

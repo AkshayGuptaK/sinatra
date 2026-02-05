@@ -29,7 +29,6 @@ class MPDPlayer(MusicPlayer):
         self._ensure_connected()
         self.client.clear()
         for path in filepaths:
-            # MPD expects paths relative to its music root
             self.client.add(path)
         self.client.play()
 
@@ -46,4 +45,6 @@ class MPDPlayer(MusicPlayer):
             "volume": int(status.get("volume", 0)),
             "elapsed": float(status.get("elapsed", 0.0)),
             "bitrate": int(status.get("bitrate")) if status.get("bitrate") else None,
+            "song": int(status.get("song", -1)),
+            "playlistlength": int(status.get("playlistlength", 0)),
         }

@@ -19,7 +19,10 @@ async def _safety_net_poller():
 
 async def _autodj_poller():
     while True:
-        autodj.check_and_queue()
+        try:
+            autodj.check_and_queue()
+        except Exception as e:
+            print(f"AutoDJ failed: {e}")
         await asyncio.sleep(10)
 
 
@@ -27,7 +30,7 @@ async def _run_test_playback():
     print("--- Startup: Triggering Test Playback ---")
     try:
         mpd = MPDPlayer()
-        mpd.play(["Lofi/Alone.opus"])
+        mpd.play(["Lofi/Still Cold.opus"])
     except Exception as e:
         print(f"Startup playback failed: {e}")
 

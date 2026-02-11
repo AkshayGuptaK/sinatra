@@ -10,7 +10,7 @@ class AutoDJ:
         self.db = get_pg()
 
     def _enqueue_similar_track(self):
-        music_root = "/Users/akshay/Music"  # change to config["music_dir"] later once entire library ingested
+        music_root = config["music_dir"]
         relative_path = self.player.get_current_song_path()
         if not relative_path:
             return

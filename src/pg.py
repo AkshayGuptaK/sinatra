@@ -36,7 +36,7 @@ class PostgresStore:
             cur.execute("SELECT filename FROM schema_migrations")
             applied_migrations = {row["filename"] for row in cur.fetchall()}
 
-            for file in sorted(Path("/migrations").glob("*.sql")):
+            for file in sorted(Path("./src/migrations").glob("*.sql")):
                 if file.name in applied_migrations:
                     continue
 

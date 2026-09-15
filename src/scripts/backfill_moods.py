@@ -16,8 +16,7 @@ def backfill_moods():
             """
             SELECT filepath, musical_embedding 
             FROM nodes 
-            WHERE musical_embedding IS NOT NULL 
-              AND (moods IS NULL OR mood_vector IS NULL);
+            WHERE musical_embedding IS NOT NULL;
             """
         )
         rows = cur.fetchall()

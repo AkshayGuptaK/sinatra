@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from src.pg import get_pg
 from src.sources import *
 from src.embedding import get_musical_embedder
+from src.mood_scorer import get_mood_scorer
 
 ai_executor = ThreadPoolExecutor(max_workers=1)
 
@@ -11,9 +12,18 @@ ai_executor = ThreadPoolExecutor(max_workers=1)
 def _process_single_file(path):
     try:
         embedder = get_musical_embedder()
-        vector = embedder.extract(path)
+        raw_embedding = embedder.extract(path)
+
+        scorer = get_mood_scorer()
+        moods_dict, mood_vector = scorer.score(raw_embedding)
+
         db = get_pg()
-        db.upsert_track(filepath=path, embedding=vector.tolist())
+        db.upsert_track(
+            filepath=path,
+            embedding=raw_embedding.tolist(),
+            moods=moods_dict,
+            mood_vector=mood_vector
+        )
 
     except Exception as e:
         print(f"Failed to ingest {path}: {e}", flush=True)

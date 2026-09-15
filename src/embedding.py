@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import numpy as np
 import torch
 import torchaudio.functional as F
 from transformers import Wav2Vec2FeatureExtractor, AutoModel
@@ -40,6 +41,10 @@ class MusicalEmbedder:
         print(f"Starting embedding of {filepath}")
         waveform = FileSystemSource.read_file(filepath, self.target_sampling_rate, 1)
 
+        if hasattr(waveform, "numpy"):
+            waveform = waveform.numpy()
+        waveform = np.asarray(waveform).squeeze()
+
         MAX_SAMPLES = 1_440_000
 
         total_samples = waveform.shape[0]
@@ -48,8 +53,6 @@ class MusicalEmbedder:
             end = start + MAX_SAMPLES
             waveform = waveform[start:end]
 
-        waveform = torch.from_numpy(waveform).to(self.device)
-
         inputs = self.processor(
             waveform,
             sampling_rate=self.target_sampling_rate,
@@ -57,15 +60,16 @@ class MusicalEmbedder:
             padding=True,
         )
 
+        input_values = inputs.input_values.to(self.device)
+
         with torch.no_grad():
-            outputs = self.model(**inputs.to(self.device), output_hidden_states=True)
+            outputs = self.model(input_values=input_values, output_hidden_states=True)
 
         # Take the average of the last hidden state for the "song embedding"
         # (Advanced: Weighted average of layers is better for MERT, but last layer is fine for start)
         musical_vector = outputs.hidden_states[-1].mean(dim=1).cpu().numpy().flatten()
 
         print(f"Completed embedding of {filepath}")
-
         return musical_vector
 
 

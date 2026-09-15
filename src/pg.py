@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 import psycopg
 from psycopg.rows import dict_row
+from typing import Dict, List, Optional
+import json
 from src.config import config
 
 
@@ -49,17 +51,39 @@ class PostgresStore:
                 )
                 self.conn.commit()
 
-    def upsert_track(self, filepath, embedding):
+    def upsert_track(
+        self,
+        filepath: str,
+        embedding: List[float],
+        moods: Optional[Dict[str, float]] = None,
+        mood_vector: Optional[List[float]] = None,
+    ) -> None:
+        # 1. Format JSONB string
+        moods_json = json.dumps(moods) if moods is not None else None
+
+        # 2. Format pgvector string: "[v0,v1,...,v23]"
+        mood_vec_str = None
+        if mood_vector is not None:
+            mood_vec_str = f"[{','.join(f'{x:.6f}' for x in mood_vector)}]"
+
         with self.conn.cursor() as cur:
             cur.execute(
                 """
-                    INSERT INTO nodes (filepath, musical_embedding, updated_at)
-                    VALUES (%s, %s, NOW())
-                    ON CONFLICT (filepath) DO UPDATE SET
-                        musical_embedding = EXCLUDED.musical_embedding,
-                        updated_at = NOW();
+                INSERT INTO nodes (
+                    filepath, 
+                    musical_embedding, 
+                    moods, 
+                    mood_vector, 
+                    updated_at
+                )
+                VALUES (%s, %s, %s, %s::vector, NOW())
+                ON CONFLICT (filepath) DO UPDATE SET
+                    musical_embedding = EXCLUDED.musical_embedding,
+                    moods = EXCLUDED.moods,
+                    mood_vector = EXCLUDED.mood_vector,
+                    updated_at = NOW();
                 """,
-                (filepath, embedding),
+                (filepath, embedding, moods_json, mood_vec_str),
             )
 
         self.conn.commit()

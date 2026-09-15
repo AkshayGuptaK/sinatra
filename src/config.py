@@ -20,4 +20,5 @@ config = {
     "music_dir": os.getenv("MUSIC_DIR"),
     "sync_interval": int(os.getenv("SYNC_INTERVAL", 1800)),
     "postgres_dsn": _pg_dsn(),
+    "project_root": Path(__file__).resolve().parents[1]
 }

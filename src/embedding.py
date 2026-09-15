@@ -1,16 +1,16 @@
 import os
 from pathlib import Path
-import soundfile as sf
 import torch
 import torchaudio.functional as F
 from transformers import Wav2Vec2FeatureExtractor, AutoModel
-import numpy as np
+from src.sources import *
 
 
 class MusicalEmbedder:
     def __init__(self):
         self.device = None
         self._set_device()
+        self.target_sampling_rate = 24000
 
         current_file = Path(__file__).resolve()
         project_root = current_file.parents[1]
@@ -38,31 +38,21 @@ class MusicalEmbedder:
 
     def extract(self, filepath):
         print(f"Starting embedding of {filepath}")
-        target_sample_rate = 24000
-        data, sample_rate = sf.read(filepath, always_2d=True)
-
-        waveform = torch.from_numpy(data).float()
-        waveform = waveform.t()
-
-        if waveform.shape[0] > 1:
-            waveform = torch.mean(waveform, dim=0, keepdim=True)
-
-        if sample_rate != target_sample_rate:
-            waveform = F.resample(waveform, sample_rate, target_sample_rate)
+        waveform = FileSystemSource.read_file(filepath, self.target_sampling_rate, 1)
 
         MAX_SAMPLES = 1_440_000
 
-        current_samples = waveform.shape[-1]
-        if current_samples > MAX_SAMPLES:
-            start = (current_samples - MAX_SAMPLES) // 2
+        total_samples = waveform.shape[0]
+        if total_samples > MAX_SAMPLES:
+            start = (total_samples - MAX_SAMPLES) // 2
             end = start + MAX_SAMPLES
-            waveform = waveform[..., start:end]
+            waveform = waveform[start:end]
 
-        waveform = waveform.to(self.device)
+        waveform = torch.from_numpy(waveform).to(self.device)
 
         inputs = self.processor(
-            waveform.squeeze(),
-            sampling_rate=target_sample_rate,
+            waveform,
+            sampling_rate=self.target_sampling_rate,
             return_tensors="pt",
             padding=True,
         )

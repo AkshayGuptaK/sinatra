@@ -67,78 +67,68 @@ class MoodScorer:
         self.weights = df[weight_cols].values.T.astype(np.float32)
         self.biases = df["intercept"].values.astype(np.float32)
 
+    # TODO: write comment
     def _load_calibration_stats(self) -> None:
-        """Derives 1st and 99th percentiles per mood from the Cowen baseline dataset.
-
-        Anchoring to percentiles rather than strict min/max prevents outlier survey ratings
-        from compressing the dynamic range.
-        """
         if not self.ref_path.exists():
-            print(
-                f"⚠️ Reference corpus not found at {self.ref_path}; falling back to unscaled normalization."
-            )
             self.p_min = np.zeros(len(self.mood_names), dtype=np.float32)
             self.p_range = np.ones(len(self.mood_names), dtype=np.float32)
             return
 
         ref_df = pd.read_csv(self.ref_path)
-        missing_moods = [m for m in self.mood_names if m not in ref_df.columns]
-        if missing_moods:
-            raise ValueError(
-                f"Reference corpus missing required mood columns: {missing_moods}"
-            )
+        feature_cols = [f"mert_{i}" for i in range(1024)]
 
-        # Extract values in identical column order as regression weights
-        mood_matrix = ref_df[self.mood_names].dropna().values.astype(np.float32)
+        # Get raw training embeddings: shape (N, 1024)
+        X_train = ref_df[feature_cols].values.astype(np.float32)
 
-        # Calculate robust 1st and 99th percentiles along each column
-        p1 = np.percentile(mood_matrix, 1, axis=0)
-        p99 = np.percentile(mood_matrix, 99, axis=0)
+        # Generate the model's actual predictions on the training data: shape (N, 24)
+        y_train_pred = np.dot(X_train, self.weights) + self.biases
+
+        # Calculate percentiles on the MODEL's output distribution
+        p1 = np.percentile(y_train_pred, 1, axis=0)
+        p99 = np.percentile(y_train_pred, 99, axis=0)
 
         self.p_min = p1.astype(np.float32)
         diff = p99 - p1
-        # Add epsilon to prevent division by zero on flat distributions
         self.p_range = np.where(diff > 1e-6, diff, 1.0).astype(np.float32)
-        print(
-            f"MoodScorer calibrated across {len(self.mood_names)} dimensions via {self.ref_path.name}."
-        )
 
     def score(
         self, embedding: np.ndarray | List[float]
-    ) -> Tuple[Dict[str, float], List[float]]:
-        """Projects a 1024-dimensional MERT embedding into calibrated mood space.
+    ) -> Tuple[Dict[str, float], List[float], Dict[str, float], List[float]]:
+        """Projects a 1024-dimensional MERT embedding into mood space.
 
-        Computes continuous raw regression scores (y = x @ W + b) and normalizes
-        them against the baseline corpus's 1st-99th percentile bounds into [0.0, 1.0].
+        Computes both raw continuous regression scores (y = x @ W + b) and
+        calibrated scores normalized against the empirical distribution into [0.0, 1.0].
 
         Args:
             embedding: 1024-element vector (list or numpy array).
 
         Returns:
-            A tuple of:
-                1. moods_dict: {mood_name: normalized_score} scaled to [0.0, 1.0]
-                   for human inspection, thresholds, and JSONB storage.
-                2. mood_vector: raw, unconstrained 24-dim continuous vector as
-                   list[float] preserving geometric manifold distances for pgvector.
+            A tuple of 4 items:
+                1. raw_moods_dict: {mood_name: raw_score} (unnormalized floats)
+                2. raw_mood_vector: raw continuous 24-dim vector as list[float]
+                3. norm_moods_dict: {mood_name: norm_score} (calibrated to [0.0, 1.0])
+                4. norm_mood_vector: normalized 24-dim vector as list[float]
         """
         x = np.asarray(embedding, dtype=np.float32)
         if x.ndim != 1 or x.shape[0] != 1024:
             raise ValueError(f"Expected 1024-dim embedding vector, got shape {x.shape}")
 
-        # Raw continuous projection: y = x @ W + b
+        # 1. Raw linear prediction: y = x @ W + b
         raw_scores = np.dot(x, self.weights) + self.biases
+        raw_moods_dict: Dict[str, float] = {
+            mood: round(float(val), 6) for mood, val in zip(self.mood_names, raw_scores)
+        }
+        raw_mood_vector = [float(v) for v in raw_scores]
 
-        # Empirical Min-Max percentile normalization: clip((y - p1) / (p99 - p1), 0.0, 1.0)
+        # 2. Normalized prediction: [0.0, 1.0]
         norm_scores = np.clip((raw_scores - self.p_min) / self.p_range, 0.0, 1.0)
-
-        # Dictionary for JSONB / UI queries
-        moods_dict: Dict[str, float] = {
+        norm_moods_dict: Dict[str, float] = {
             mood: round(float(val), 4)
             for mood, val in zip(self.mood_names, norm_scores)
         }
+        norm_mood_vector = [round(float(v), 6) for v in norm_scores]
 
-        # Return normalized dict for JSONB and uncompressed raw floats for vector distance
-        return moods_dict, [float(v) for v in raw_scores]
+        return raw_moods_dict, raw_mood_vector, norm_moods_dict, norm_mood_vector
 
 
 _scorer_instance: MoodScorer | None = None

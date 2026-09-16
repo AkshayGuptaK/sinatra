@@ -15,14 +15,16 @@ def _process_single_file(path):
         raw_embedding = embedder.extract(path)
 
         scorer = get_mood_scorer()
-        moods_dict, mood_vector = scorer.score(raw_embedding)
+        moods, mood_vec, moods_norm, mood_norm_vec = scorer.score(raw_embedding)
 
         db = get_pg()
         db.upsert_track(
             filepath=path,
             embedding=raw_embedding.tolist(),
-            moods=moods_dict,
-            mood_vector=mood_vector
+            moods=moods,
+            mood_vector=mood_vec,
+            moods_normalized=moods_norm,
+            mood_vector_normalized=mood_norm_vec,
         )
 
     except Exception as e:

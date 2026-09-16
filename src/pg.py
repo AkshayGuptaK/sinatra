@@ -57,14 +57,26 @@ class PostgresStore:
         embedding: List[float],
         moods: Optional[Dict[str, float]] = None,
         mood_vector: Optional[List[float]] = None,
+        moods_normalized: Optional[Dict[str, float]] = None,
+        mood_vector_normalized: Optional[List[float]] = None,
     ) -> None:
-        # 1. Format JSONB string
+        # Format JSONB strings
         moods_json = json.dumps(moods) if moods is not None else None
+        moods_norm_json = (
+            json.dumps(moods_normalized) if moods_normalized is not None else None
+        )
 
-        # 2. Format pgvector string: "[v0,v1,...,v23]"
-        mood_vec_str = None
-        if mood_vector is not None:
-            mood_vec_str = f"[{','.join(f'{x:.6f}' for x in mood_vector)}]"
+        # Format vector strings
+        mood_vec_str = (
+            f"[{','.join(f'{x:.6f}' for x in mood_vector)}]"
+            if mood_vector is not None
+            else None
+        )
+        mood_norm_vec_str = (
+            f"[{','.join(f'{x:.6f}' for x in mood_vector_normalized)}]"
+            if mood_vector_normalized is not None
+            else None
+        )
 
         with self.conn.cursor() as cur:
             cur.execute(
@@ -73,17 +85,28 @@ class PostgresStore:
                     filepath, 
                     musical_embedding, 
                     moods, 
-                    mood_vector, 
+                    mood_vector,
+                    moods_normalized,
+                    mood_vector_normalized,
                     updated_at
                 )
-                VALUES (%s, %s, %s, %s::vector, NOW())
+                VALUES (%s, %s, %s, %s::vector, %s, %s::vector, NOW())
                 ON CONFLICT (filepath) DO UPDATE SET
                     musical_embedding = EXCLUDED.musical_embedding,
                     moods = EXCLUDED.moods,
                     mood_vector = EXCLUDED.mood_vector,
+                    moods_normalized = EXCLUDED.moods_normalized,
+                    mood_vector_normalized = EXCLUDED.mood_vector_normalized,
                     updated_at = NOW();
                 """,
-                (filepath, embedding, moods_json, mood_vec_str),
+                (
+                    filepath,
+                    embedding,
+                    moods_json,
+                    mood_vec_str,
+                    moods_norm_json,
+                    mood_norm_vec_str,
+                ),
             )
 
         self.conn.commit()

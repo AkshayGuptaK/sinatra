@@ -133,7 +133,16 @@ def run_mert_regression():
     )
 
 
-def run_hybrid_regression():
+def run_clap_regression():
+    return _fit_and_evaluate(
+        csv_path_or_df=Path("datasets/cowen_clap_embeddings.csv"),
+        output_path=Path("datasets/cowen_clap_regression_weights.csv"),
+        feature_start_col="clap_0",
+        feature_label="512 CLAP Embeddings",
+    )
+
+
+def run_dsp_mert_hybrid_regression():
     dsp_path = Path("datasets/cowen.csv")
     mert_path = Path("datasets/cowen_mert_embeddings.csv")
 
@@ -191,10 +200,68 @@ def run_hybrid_regression():
     )
 
 
+def run_clap_mert_hybrid_regression():
+    clap_path = Path("datasets/cowen_clap_embeddings.csv")
+    mert_path = Path("datasets/cowen_mert_embeddings.csv")
+
+    if not clap_path.exists() or not mert_path.exists():
+        print(
+            "❌ Both datasets/cowen_clap_embeddings.csv and datasets/cowen_mert_embeddings.csv must exist."
+        )
+        return None
+
+    clap_df = pd.read_csv(clap_path)
+    mert_df = pd.read_csv(mert_path)
+
+    # Determine CLAP feature list (clap_0 to clap_511)
+    clap_cols = list(clap_df.columns)
+    clap_split = clap_cols.index("clap_0")
+    clap_feature_cols = clap_cols[clap_split:]
+
+    # Determine MERT feature list (mert_0 to mert_1023)
+    mert_cols = list(mert_df.columns)
+    mert_split = mert_cols.index("mert_0")
+    mert_feature_cols = mert_cols[mert_split:]
+
+    # Merge on audio identification column if available, or align row-for-row
+    id_col = None
+    for candidate in ["path", "filename", "audio_path", "track_id"]:
+        if candidate in clap_df.columns and candidate in mert_df.columns:
+            id_col = candidate
+            break
+
+    if id_col:
+        print(f"Merging CLAP and MERT on identifier column: '{id_col}'")
+        combined_df = pd.merge(
+            clap_df,
+            mert_df[[id_col] + mert_feature_cols],
+            on=id_col,
+            how="inner",
+        )
+    else:
+        print("No shared ID column found; asserting 1-to-1 row index alignment...")
+        if len(clap_df) != len(mert_df):
+            print(
+                f"❌ Row count mismatch: CLAP has {len(clap_df)}, MERT has {len(mert_df)}"
+            )
+            return None
+        combined_df = pd.concat([clap_df, mert_df[mert_feature_cols]], axis=1)
+
+    combined_features = clap_feature_cols + mert_feature_cols
+
+    return _fit_and_evaluate(
+        csv_path_or_df=combined_df,
+        output_path=Path("datasets/cowen_hybrid_regression_weights.csv"),
+        feature_start_col=None,
+        feature_cols=combined_features,
+        feature_label=f"Hybrid ({len(clap_feature_cols)} CLAP + {len(mert_feature_cols)} MERT)",
+    )
+
+
 def run_comparison():
     dsp_res = run_dsp_regression()
     mert_res = run_mert_regression()
-    hybrid_res = run_hybrid_regression()
+    hybrid_res = run_dsp_mert_hybrid_regression()
 
     if dsp_res is None or mert_res is None or hybrid_res is None:
         return
@@ -234,8 +301,12 @@ if __name__ == "__main__":
 
     if arg == "mert":
         run_mert_regression()
-    elif arg == "hybrid":
-        run_hybrid_regression()
+    elif arg == "clap":
+        run_clap_regression()
+    elif arg == "dsp_hybrid":
+        run_dsp_mert_hybrid_regression()
+    elif arg == "clap_hybrid":
+        run_clap_mert_hybrid_regression()
     elif arg == "all":
         run_comparison()
     else:

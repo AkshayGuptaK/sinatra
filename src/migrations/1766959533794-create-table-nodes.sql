@@ -9,6 +9,7 @@ CREATE TABLE nodes (
     musical_embedding vector(1024),
     cluster_id INTEGER,
     musical_fruit varchar(20),
+    features jsonb,
 
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()

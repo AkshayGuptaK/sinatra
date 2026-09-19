@@ -134,6 +134,20 @@ class PostgresStore:
                 for fname, ts in cur.fetchall()
             ]
 
+    def get_track_path_by_id(self, track_id):
+        print('getting', track_id)
+        query = """
+        SELECT filepath FROM nodes WHERE id = %s;
+        """
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(query, ([track_id]))
+                result = cur.fetchone()
+                return result[0] if result else None
+        except Exception as e:
+            print(f"Error finding track: {e}")
+            return None
+
     def get_similar_track(self, current_filepath):
         query = """
         SELECT filepath 

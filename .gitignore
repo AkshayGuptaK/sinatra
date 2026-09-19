@@ -18,6 +18,7 @@ wheels/
 
 # Raw models
 *.bin
+*.joblib
 
 # Data
 datasets/

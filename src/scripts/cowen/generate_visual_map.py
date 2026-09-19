@@ -1,11 +1,9 @@
 from pathlib import Path
-import numpy as np
 import pandas as pd
-from sklearn.manifold import TSNE
 import plotly.express as px
 from src.config import config
 
-PARQUET_PATH = config["project_root"] / "datasets" / "cowen.parquet"
+COORDS_CSV = config["project_root"] / "datasets" / "cowen_2d_coords.csv"
 OUTPUT_HTML = config["project_root"] / "datasets" / "cowen_map_replicated.html"
 
 # The 24 retained high-signal dimensions
@@ -36,22 +34,6 @@ EMOTION_COLS = [
     "triumphant/heroic",
 ]
 
-# As per the Cowen paper, only 13 emotions are truly orthogonal
-CORE_EMOTIONS = [
-    "amusing",
-    "angry",
-    "annoying",
-    "anxious/tense",
-    "beautiful",
-    "calm/relaxing/serene",
-    "dreamy",
-    "energizing/pump-up",
-    "erotic/desirous",
-    "indignant/defiant",
-    "joyful/cheerful",
-    "sad/depressing",
-    "scary/fearful",
-]
 
 def build_hover_text(row: pd.Series) -> str:
     """Formats all 24 emotion scores into a sorted, scannable HTML tooltip."""
@@ -67,49 +49,17 @@ def build_hover_text(row: pd.Series) -> str:
     return "<br>".join(lines)
 
 
-def load_and_project() -> pd.DataFrame:
-    print(f"Reading {PARQUET_PATH}...")
-    df = pd.read_parquet(PARQUET_PATH)
+def generate_interactive_map():
+    if not COORDS_CSV.exists():
+        print(f"Error: {COORDS_CSV} not found. Run your projection script first.")
+        return
 
-    df["row_id"] = np.arange(1, len(df) + 1)
+    print(f"Reading precomputed coordinates from {COORDS_CSV}...")
+    df = pd.read_csv(COORDS_CSV)
 
-    def get_audio_filename(entry):
-        if isinstance(entry, dict) and entry.get("path"):
-            return Path(entry["path"]).name
-        return ""
-
-    df["filename"] = df["audio"].apply(get_audio_filename)
     df["audio_rel_url"] = "audio_cache/" + df["filename"]
-
-    # Build formatted tooltip string containing all 24 emotions
     df["hover_desc"] = df.apply(build_hover_text, axis=1)
 
-    X = df[EMOTION_COLS].to_numpy(dtype=np.float64)
-
-    print(f"Running t-SNE over {len(df)} samples across 24 emotions...")
-    tsne = TSNE(
-        n_components=2,
-        metric="correlation",
-        perplexity=50,
-        learning_rate=500.0,
-        max_iter=3000,
-        random_state=42,
-    )
-    coords = tsne.fit_transform(X)
-
-    df["map_x"] = coords[:, 0]
-    df["map_y"] = coords[:, 1]
-    
-    X_13 = df[CORE_EMOTIONS].to_numpy(dtype=np.float64)
-    df["dominant_emotion"] = [CORE_EMOTIONS[i] for i in np.argmax(X_13, axis=1)]
-
-    return df
-
-
-def generate_interactive_map():
-    df = load_and_project()
-
-    # Pass audio_rel_url and formatted hover text into custom_data
     fig = px.scatter(
         df,
         x="map_x",
@@ -122,12 +72,12 @@ def generate_interactive_map():
         title="Cowen 2D Music Emotion Manifold",
     )
 
-    # %{customdata[1]} injects the 24-emotion breakdown; <extra></extra> strips trace headers
     fig.update_traces(
         marker=dict(size=7, opacity=0.85),
         hovertemplate="%{customdata[1]}<extra></extra>",
     )
 
+    # Injected vanilla JS: plays audio clip on hover after first interaction
     audio_hover_js = """
     <script>
     document.addEventListener("DOMContentLoaded", function () {
@@ -147,7 +97,7 @@ def generate_interactive_map():
 
             currentAudio = new Audio(audioSrc);
             currentAudio.play().catch(e => {
-                console.log("Waiting for user interaction before playing audio.");
+                console.log("Audio waiting for first user click interaction.");
             });
         });
 

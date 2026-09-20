@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 import asyncio
 from contextlib import asynccontextmanager
@@ -7,7 +8,11 @@ from src.config import config
 from src.sync import sync_store
 from src.watcher import watch_files
 from src.autodj import AutoDJ
-from src.visualizer import fetch_library_map_points, fetch_library_path, render_map_page_html
+from src.visualizer import (
+    fetch_library_map_points,
+    fetch_library_path,
+    render_map_page_html,
+)
 
 autodj = AutoDJ()
 
@@ -43,6 +48,19 @@ async def _lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=_lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:1420",
+        "http://127.0.0.1:1420",
+        "tauri://localhost",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["Content-Range", "Accept-Ranges"],
+)
+
 
 @app.get("/map", response_class=HTMLResponse)
 async def get_library_map():
@@ -67,5 +85,5 @@ async def stream_track(track_id: str):
     return FileResponse(
         path=file_path,
         media_type="audio/mpeg" if Path(file_path).suffix.lower() == ".mp3" else None,
-        filename=file_path
+        filename=file_path,
     )

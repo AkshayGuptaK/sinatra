@@ -1,39 +1,37 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import '../app.css';
+  import PlayControls from '$lib/components/molecules/PlayControls.svelte';
+	import { player } from '$lib/audio/player.svelte';
 
-  let name = $state("");
-  let greetMsg = $state("");
-
-  async function greet(event: Event) {
-    event.preventDefault();
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    greetMsg = await invoke("greet", { name });
-  }
+	const testTrackId = '4299b43f-39a3-4cf1-aeee-1bc9f40ed997';
 </script>
 
-<main class="container">
-  <h1>Welcome to Tauri + Svelte</h1>
+<main class="flex min-h-screen flex-col items-center justify-center p-6 bg-background">
+	<div class="flex flex-col items-center gap-4 p-6 rounded-xl border bg-card text-card-foreground shadow-lg">
+		<div class="text-sm font-medium text-muted-foreground">
+			{player.isPlaying ? 'Playing track' : 'Ready'}
+		</div>
 
-  <div class="row">
-  </div>
-  <p>Click on the Tauri, Vite, and SvelteKit logos to learn more.</p>
-
-  <form class="row" onsubmit={greet}>
-    <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
-    <button type="submit">Greet</button>
-  </form>
-  <p>{greetMsg}</p>
+		<!-- Play Controls Molecule -->
+		<PlayControls
+			isPlaying={player.isPlaying}
+			isLooping={player.isLooping}
+			onPlayToggle={() => {
+				if (!player.currentTrackId) {
+					player.loadTrack(testTrackId);
+				} else {
+					player.togglePlay();
+				}
+			}}
+			onSkipBackward={() => player.seekRelative(-5)}
+			onSkipForward={() => player.seekRelative(5)}
+			onLoopToggle={() => player.toggleLoop()}
+		/>
+	</div>
 </main>
 
 <style>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.svelte-kit:hover {
-  filter: drop-shadow(0 0 2em #ff3e00);
-}
 
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
@@ -49,31 +47,6 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
-}
-
-.container {
-  margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
 }
 
 a {

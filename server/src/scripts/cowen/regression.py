@@ -145,7 +145,7 @@ def run_dsp_mert_hybrid_regression():
 
     if not dsp_path.exists() or not mert_path.exists():
         print(
-            "❌ Both ${FEATURES_CSV} and ${MERT_EMBEDDINGS_CSV} must exist."
+            f"❌ Both {FEATURES_CSV} and {MERT_EMBEDDINGS_CSV} must exist."
         )
         return None
 

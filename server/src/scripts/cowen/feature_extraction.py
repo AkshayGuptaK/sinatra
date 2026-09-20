@@ -172,12 +172,12 @@ def run():
         if (i + 1) % 25 == 0 or (i + 1) == total:
             print(f"Processed {i + 1}/{total} samples...", end="\r", flush=True)
 
-    print("\n💾 Writing to ${OUTPUT_CSV}")
+    print(f"\n💾 Writing to {OUTPUT_CSV}")
     OUTPUT_CSV.parent.mkdir(parents=True, exist_ok=True)
     out_df = pd.DataFrame(results)
     out_df.to_csv(OUTPUT_CSV, index=False)
     print(
-        f"✅ Extraction finished! Saved {len(out_df)} rows with {len(out_df.columns)} columns to {output_csv}"
+        f"✅ Extraction finished! Saved {len(out_df)} rows with {len(out_df.columns)} columns to {OUTPUT_CSV}"
     )
 
 

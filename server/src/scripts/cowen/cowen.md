@@ -12,7 +12,6 @@ This suite handles data ingestion, feature extraction (DSP and MERT audio repres
 * **`mert_extraction.py`**: Runs audio snippets through the pre-trained MERT model to extract mean-pooled 1024-dimensional acoustic/harmonic embeddings.
 * **`regression.py`**: Trains $L_2$-regularized Ridge regression models (`RidgeCV`) using 5-fold cross-validation on DSP, MERT, or Hybrid feature sets to output mood projection weights and evaluate out-of-fold $R^2$ and RMSE.
 * **`random_baseline.py`**: Evaluates statistical lower bounds (dummy estimators, permuted labels, and uniform random sampling) across all mood dimensions to verify whether learned features exceed chance.
-* **`tree_benchmark.py`**: Trains and evaluates tree-based non-linear alternatives (e.g., Random Forests, Gradient Boosted Trees / XGBoost) to compare against regularized linear probes.
 
 ---
 
@@ -66,25 +65,7 @@ uv run python -m src.scripts.cowen.regression [MODE]
 
 
 * **Modes / Positional Arguments:**
-* `dsp`: Runs Ridge regression on the 18 handcrafted DSP features (`datasets/cowen.csv`). Output: `datasets/cowen_regression_weights.csv`. Default.
+* `dsp`: Runs Ridge regression on the 18 handcrafted DSP features (`datasets/cowen_features.csv`). Output: `datasets/cowen_features_regression_weights.csv`. Default.
 * `mert`: Runs Ridge regression on the 1024 MERT embeddings (`datasets/cowen_mert_embeddings.csv`). Output: `datasets/cowen_mert_regression_weights.csv`.
 * `hybrid`: Merges DSP and MERT matrices (1042 total features) and fits a combined model. Output: `datasets/cowen_hybrid_regression_weights.csv`.
 * `all`: Runs DSP, MERT, and Hybrid sequentially and displays a side-by-side $R^2$ comparative delta matrix.
-
-
-
----
-
-#### `tree_benchmark.py`
-
-* **Usage:**
-```bash
-uv run python -m src.scripts.cowen.tree_benchmark [MODE]
-
-```
-
-
-* **Modes / Positional Arguments:**
-* `dsp`: Runs Ridge regression on the 18 handcrafted DSP features (`datasets/cowen.csv`). Output: `datasets/cowen_regression_weights.csv`. Default.
-* `mert`: Runs Ridge regression on the 1024 MERT embeddings (`datasets/cowen_mert_embeddings.csv`). Output: `datasets/cowen_mert_regression_weights.csv`.
-* `all`: Runs DSP and MERT sequentially and displays a side-by-side $R^2$ comparative delta matrix.

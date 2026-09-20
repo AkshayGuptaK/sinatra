@@ -6,6 +6,12 @@ from sklearn.linear_model import RidgeCV
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import KFold, cross_val_predict
 from sklearn.preprocessing import StandardScaler
+from src.config import config
+
+FEATURES_CSV = config["project_root"] / "datasets" / "cowen_features.csv"
+MERT_EMBEDDINGS_CSV = config["project_root"] / "datasets" / "cowen_mert_embeddings.csv"
+OUTPUT_FEATURES_WEIGHTS_CSV = config["project_root"] / "datasets" / "cowen_features_regression_weights.csv"
+OUTPUT_MERT_WEIGHTS_CSV = config["project_root"] / "datasets" / "cowen_mert_regression_weights.csv"
 
 # Dimensions dropped due to low cross-cultural stability or near-zero signal floor
 DROPPED_EMOTIONS = {
@@ -117,8 +123,8 @@ def _fit_and_evaluate(
 
 def run_dsp_regression():
     return _fit_and_evaluate(
-        csv_path_or_df=Path("datasets/cowen.csv"),
-        output_path=Path("datasets/cowen_regression_weights.csv"),
+        csv_path_or_df=Path(FEATURES_CSV),
+        output_path=Path(OUTPUT_FEATURES_WEIGHTS_CSV),
         feature_start_col="vocal_probability",
         feature_label="18 Handcrafted DSP Features",
     )
@@ -126,29 +132,20 @@ def run_dsp_regression():
 
 def run_mert_regression():
     return _fit_and_evaluate(
-        csv_path_or_df=Path("datasets/cowen_mert_embeddings.csv"),
-        output_path=Path("datasets/cowen_mert_regression_weights.csv"),
+        csv_path_or_df=Path(MERT_EMBEDDINGS_CSV),
+        output_path=Path(OUTPUT_MERT_WEIGHTS_CSV),
         feature_start_col="mert_0",
         feature_label="1024 MERT Embeddings",
     )
 
 
-def run_clap_regression():
-    return _fit_and_evaluate(
-        csv_path_or_df=Path("datasets/cowen_clap_embeddings.csv"),
-        output_path=Path("datasets/cowen_clap_regression_weights.csv"),
-        feature_start_col="clap_0",
-        feature_label="512 CLAP Embeddings",
-    )
-
-
 def run_dsp_mert_hybrid_regression():
-    dsp_path = Path("datasets/cowen.csv")
-    mert_path = Path("datasets/cowen_mert_embeddings.csv")
+    dsp_path = Path(FEATURES_CSV)
+    mert_path = Path(MERT_EMBEDDINGS_CSV)
 
     if not dsp_path.exists() or not mert_path.exists():
         print(
-            "❌ Both datasets/cowen.csv and datasets/cowen_mert_embeddings.csv must exist."
+            "❌ Both ${FEATURES_CSV} and ${MERT_EMBEDDINGS_CSV} must exist."
         )
         return None
 
@@ -200,64 +197,6 @@ def run_dsp_mert_hybrid_regression():
     )
 
 
-def run_clap_mert_hybrid_regression():
-    clap_path = Path("datasets/cowen_clap_embeddings.csv")
-    mert_path = Path("datasets/cowen_mert_embeddings.csv")
-
-    if not clap_path.exists() or not mert_path.exists():
-        print(
-            "❌ Both datasets/cowen_clap_embeddings.csv and datasets/cowen_mert_embeddings.csv must exist."
-        )
-        return None
-
-    clap_df = pd.read_csv(clap_path)
-    mert_df = pd.read_csv(mert_path)
-
-    # Determine CLAP feature list (clap_0 to clap_511)
-    clap_cols = list(clap_df.columns)
-    clap_split = clap_cols.index("clap_0")
-    clap_feature_cols = clap_cols[clap_split:]
-
-    # Determine MERT feature list (mert_0 to mert_1023)
-    mert_cols = list(mert_df.columns)
-    mert_split = mert_cols.index("mert_0")
-    mert_feature_cols = mert_cols[mert_split:]
-
-    # Merge on audio identification column if available, or align row-for-row
-    id_col = None
-    for candidate in ["path", "filename", "audio_path", "track_id"]:
-        if candidate in clap_df.columns and candidate in mert_df.columns:
-            id_col = candidate
-            break
-
-    if id_col:
-        print(f"Merging CLAP and MERT on identifier column: '{id_col}'")
-        combined_df = pd.merge(
-            clap_df,
-            mert_df[[id_col] + mert_feature_cols],
-            on=id_col,
-            how="inner",
-        )
-    else:
-        print("No shared ID column found; asserting 1-to-1 row index alignment...")
-        if len(clap_df) != len(mert_df):
-            print(
-                f"❌ Row count mismatch: CLAP has {len(clap_df)}, MERT has {len(mert_df)}"
-            )
-            return None
-        combined_df = pd.concat([clap_df, mert_df[mert_feature_cols]], axis=1)
-
-    combined_features = clap_feature_cols + mert_feature_cols
-
-    return _fit_and_evaluate(
-        csv_path_or_df=combined_df,
-        output_path=Path("datasets/cowen_hybrid_regression_weights.csv"),
-        feature_start_col=None,
-        feature_cols=combined_features,
-        feature_label=f"Hybrid ({len(clap_feature_cols)} CLAP + {len(mert_feature_cols)} MERT)",
-    )
-
-
 def run_comparison():
     dsp_res = run_dsp_regression()
     mert_res = run_mert_regression()
@@ -301,12 +240,8 @@ if __name__ == "__main__":
 
     if arg == "mert":
         run_mert_regression()
-    elif arg == "clap":
-        run_clap_regression()
-    elif arg == "dsp_hybrid":
+    elif arg == "hybrid":
         run_dsp_mert_hybrid_regression()
-    elif arg == "clap_hybrid":
-        run_clap_mert_hybrid_regression()
     elif arg == "all":
         run_comparison()
     else:

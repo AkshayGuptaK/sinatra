@@ -10,6 +10,10 @@ from demucs.apply import apply_model
 from src.analysis.demucs_features import get_demucs_feature
 from src.analysis.torch_features import get_torch_feature
 from src.sources import FileSystemSource
+from src.config import config
+
+PARQUET_PATH = config["project_root"] / "datasets" / "cowen.parquet"
+OUTPUT_CSV = config["project_root"] / "datasets" / "cowen_features.csv"
 
 
 def sanitize_dict(d: dict) -> dict:
@@ -141,15 +145,8 @@ def extract_features_from_audio(
 
 
 def run():
-    parquet_path = Path("datasets/cowen.parquet")
-    output_csv = Path("datasets/cowen.csv")
-
-    if not parquet_path.exists():
-        print(f"❌ Could not find {parquet_path}")
-        return
-
-    print(f"📖 Reading {parquet_path}...")
-    df = pd.read_parquet(parquet_path)
+    print(f"📖 Reading {PARQUET_PATH}...")
+    df = pd.read_parquet(PARQUET_PATH)
     print(f"Found {len(df)} audio entries.")
 
     torch_ext = get_torch_feature()
@@ -175,10 +172,10 @@ def run():
         if (i + 1) % 25 == 0 or (i + 1) == total:
             print(f"Processed {i + 1}/{total} samples...", end="\r", flush=True)
 
-    print("\n💾 Writing datasets/cowen.csv...")
-    output_csv.parent.mkdir(parents=True, exist_ok=True)
+    print("\n💾 Writing to ${OUTPUT_CSV}")
+    OUTPUT_CSV.parent.mkdir(parents=True, exist_ok=True)
     out_df = pd.DataFrame(results)
-    out_df.to_csv(output_csv, index=False)
+    out_df.to_csv(OUTPUT_CSV, index=False)
     print(
         f"✅ Extraction finished! Saved {len(out_df)} rows with {len(out_df.columns)} columns to {output_csv}"
     )

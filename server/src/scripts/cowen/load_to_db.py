@@ -7,7 +7,7 @@ from src.config import config
 from src.pg import get_pg
 
 BATCH_SIZE = 500
-DEFAULT_PARQUET_PATH = config["project_root"] / "datasets" / "cowen.parquet"
+PARQUET_PATH = config["project_root"] / "datasets" / "cowen.parquet"
 
 
 def sanitize_ident(col_name: str) -> str:
@@ -32,7 +32,7 @@ def map_dtype_to_pg(series: pd.Series) -> str:
     return "TEXT"
 
 
-def load_parquet_to_postgres(parquet_path: Path | str = DEFAULT_PARQUET_PATH):
+def load_parquet_to_postgres(parquet_path: Path | str = PARQUET_PATH):
     path = Path(parquet_path)
     if not path.exists():
         print(f"❌ File not found: {path}")
@@ -115,5 +115,5 @@ def load_parquet_to_postgres(parquet_path: Path | str = DEFAULT_PARQUET_PATH):
 
 
 if __name__ == "__main__":
-    target_parquet = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_PARQUET_PATH
+    target_parquet = sys.argv[1] if len(sys.argv) > 1 else PARQUET_PATH
     load_parquet_to_postgres(target_parquet)

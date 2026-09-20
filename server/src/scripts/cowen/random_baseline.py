@@ -5,18 +5,15 @@ from sklearn.linear_model import RidgeCV
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import KFold, cross_val_predict
 from sklearn.preprocessing import StandardScaler
+from src.config import config
+
+MERT_CSV = config["project_root"] / "datasets" / "cowen_mert_embeddings.csv"
+WEIGHTS_CSV = config["project_root"] / "datasets" / "cowen_mert_regression_weights.csv"
+OUTPUT_CSV = config["project_root"] / "datasets" / "cowen_random_baseline_results.csv"
 
 
 def run_random_baseline():
-    mert_csv = Path("datasets/cowen_mert_embeddings.csv")
-    weights_csv = Path("datasets/cowen_mert_regression_weights.csv")
-    output_csv = Path("datasets/cowen_random_baseline_results.csv")
-
-    if not mert_csv.exists():
-        print(f"File not found: {mert_csv}")
-        return
-
-    df = pd.read_csv(mert_csv)
+    df = pd.read_csv(MERT_CSV)
 
     # 1. Isolate target mood dimensions
     all_cols = list(df.columns)
@@ -36,8 +33,8 @@ def run_random_baseline():
 
     # Load MERT Ridge scores for side-by-side comparison
     mert_map = {}
-    if weights_csv.exists():
-        mert_df = pd.read_csv(weights_csv)
+    if WEIGHTS_CSV.exists():
+        mert_df = pd.read_csv(WEIGHTS_CSV)
         mert_map = dict(zip(mert_df["mood"], mert_df["r2"]))
 
     cv = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -80,9 +77,9 @@ def run_random_baseline():
         )
 
     out_df = pd.DataFrame(results)
-    out_df.to_csv(output_csv, index=False)
+    out_df.to_csv(OUTPUT_CSV, index=False)
     print("=" * 80)
-    print(f"Saved random baseline comparison to {output_csv}")
+    print(f"Saved random baseline comparison to {OUTPUT_CSV}")
 
 
 if __name__ == "__main__":

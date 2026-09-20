@@ -6,29 +6,28 @@ import torchaudio.functional as F
 from transformers import AutoModel, Wav2Vec2FeatureExtractor
 
 from src.sources import FileSystemSource
+from src.config import config
+
+PARQUET_PATH = config["project_root"] / "datasets" / "cowen.parquet"
+OUTPUT_CSV = config["project_root"] / "datasets" / "cowen_mert_embeddings.csv"
 
 
 def extract_mert():
-    parquet_path = Path("datasets/cowen.parquet")
-    output_csv = Path("datasets/cowen_mert_embeddings.csv")
-
-    if not parquet_path.exists():
-        print(f"File not found: {parquet_path}")
-        return
-
     # Setup device
     device = "mps" if torch.backends.mps.is_available() else "cpu"
     print(f"Loading MERT-v1-330M on {device}...")
 
     model_id = "m-a-p/MERT-v1-330M"
-    processor = Wav2Vec2FeatureExtractor.from_pretrained(model_id, trust_remote_code=True)
+    processor = Wav2Vec2FeatureExtractor.from_pretrained(
+        model_id, trust_remote_code=True
+    )
     model = AutoModel.from_pretrained(model_id, trust_remote_code=True).to(device)
     model.eval()
 
     target_sr = 24000  # MERT requires 24kHz
 
-    print(f"Reading {parquet_path}...")
-    df = pd.read_parquet(parquet_path)
+    print(f"Reading {PARQUET_PATH}...")
+    df = pd.read_parquet(PARQUET_PATH)
     total = len(df)
     print(f"Loaded {total} samples.")
 
@@ -78,11 +77,9 @@ def extract_mert():
 
         # 2. Extract MERT 768-dim Embedding
         try:
-            inputs = processor(
-                wav_np,
-                sampling_rate=target_sr,
-                return_tensors="pt"
-            ).to(device)
+            inputs = processor(wav_np, sampling_rate=target_sr, return_tensors="pt").to(
+                device
+            )
 
             with torch.no_grad():
                 outputs = model(**inputs, output_hidden_states=True)
@@ -102,11 +99,13 @@ def extract_mert():
         if (i + 1) % 25 == 0 or (i + 1) == total:
             print(f"Processed {i + 1}/{total} tracks...", end="\r", flush=True)
 
-    print(f"\nWriting embeddings to {output_csv}...")
-    output_csv.parent.mkdir(parents=True, exist_ok=True)
+    print(f"\nWriting embeddings to {OUTPUT_CSV}...")
+    OUTPUT_CSV.parent.mkdir(parents=True, exist_ok=True)
     out_df = pd.DataFrame(records)
-    out_df.to_csv(output_csv, index=False)
-    print(f"Finished. Saved {len(out_df)} rows with {len(out_df.columns)} columns to {output_csv}")
+    out_df.to_csv(OUTPUT_CSV, index=False)
+    print(
+        f"Finished. Saved {len(out_df)} rows with {len(out_df.columns)} columns to {OUTPUT_CSV}"
+    )
 
 
 if __name__ == "__main__":

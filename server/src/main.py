@@ -9,7 +9,8 @@ def main():
         "src.server:app", 
         host="0.0.0.0", 
         port=config['port'], 
-        reload=True
+        reload=True,
+        reload_dirs=["src"],
     )
 
 if __name__ == "__main__":

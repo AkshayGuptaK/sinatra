@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 from src.config import config
 from src.sync import sync_store
 from src.watcher import watch_files
-from src.players import *
 from src.autodj import AutoDJ
 from src.visualizer import fetch_library_map_points, fetch_library_path, render_map_page_html
 
@@ -29,22 +28,11 @@ async def _autodj_poller():
         await asyncio.sleep(10)
 
 
-async def _run_test_playback():
-    print("--- Startup: Triggering Test Playback ---")
-    try:
-        mpd = MPDPlayer()
-        mpd.play(["Lofi/Still Cold.opus"])
-    except Exception as e:
-        print(f"Startup playback failed: {e}")
-
-
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     watcher_task = asyncio.create_task(watch_files())
     poller_task = asyncio.create_task(_safety_net_poller())
     dj_task = asyncio.create_task(_autodj_poller())
-
-    asyncio.create_task(_run_test_playback())
 
     yield
 
@@ -74,7 +62,7 @@ async def get_library_map_data():
 
 @app.get("/api/map/audio/{track_id}")
 async def stream_track(track_id: str):
-    """Streams audio for hover playback."""
+    """Streams audio for playback."""
     file_path = fetch_library_path(track_id)
     return FileResponse(
         path=file_path,

@@ -70,6 +70,14 @@ export class MusicPlayer {
 		}
 	}
 
+    clearQueue() {
+        this.originalQueue = [];
+        this.queue = [];
+        this.currentIndex = -1;
+        this.engine.pause();
+        this.engine.seekTo(0);
+    }
+
 	enqueue(track: Track) {
 		this.originalQueue.push(track);
 		this.queue.push(track);

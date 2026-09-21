@@ -95,5 +95,6 @@
     onNext={() => player.next()}
     onShuffleToggle={() => player.toggleShuffle()}
     onRepeatAllToggle={handleRepeatAllToggle}
+    onClearQueue={() => player.clearQueue()}
   />
 </div>

@@ -136,7 +136,7 @@ export class MusicPlayer {
 		} else {
 			// Restore original queue order while keeping active index in sync
 			this.queue = [...this.originalQueue];
-			this.currentIndex = activeTrack ? this.queue.indexOf(activeTrack) : 0;
+			this.currentIndex = activeTrack ? this.queue.findIndex(track => track.id === activeTrack.id) : 0;
 		}
 	}
 

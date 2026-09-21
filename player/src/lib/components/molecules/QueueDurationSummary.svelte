@@ -19,7 +19,7 @@
 
 <div
 	class={cn(
-		'flex items-center justify-between px-3 py-3 border-t text-xs text-muted-foreground font-mono select-none',
+		'flex items-center justify-between px-4 py-3 border-t text-xs text-muted-foreground font-mono select-none',
 		className
 	)}
 >

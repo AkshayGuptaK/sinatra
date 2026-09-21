@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Track } from "$lib/audio/player.svelte";
+  import { type Track } from "$lib/types/track"
   import { formatTime } from "$lib/utils/time";
   import { Volume2, X } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";

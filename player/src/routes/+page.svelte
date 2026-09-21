@@ -1,6 +1,7 @@
 <script lang="ts">
   import "../app.css";
-  import { player, type Track } from "$lib/audio/player.svelte";
+  import { player } from "$lib/audio/player.svelte";
+  import { type Track } from "$lib/types/track"
   import NowPlaying from "$lib/components/organisms/NowPlaying.svelte";
   import ActiveQueue from "$lib/components/organisms/ActiveQueue.svelte";
   import { onMount } from "svelte";

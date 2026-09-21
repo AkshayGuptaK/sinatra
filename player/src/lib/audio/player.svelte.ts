@@ -1,13 +1,8 @@
 import { sinatraApi } from "$lib/api/sinatra";
 
 import { AudioEngine } from "./engine.svelte";
+import { type Track } from "$lib/types/track"
 
-export interface Track {
-  id: string;
-  title?: string;
-  artist?: string;
-  duration?: number;
-}
 
 export type LoopMode = "none" | "one" | "all";
 

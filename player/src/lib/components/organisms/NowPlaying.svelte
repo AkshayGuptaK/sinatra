@@ -1,6 +1,7 @@
 <script lang="ts">
   import PlayControls from "$lib/components/molecules/PlayControls.svelte";
   import TrackProgress from "$lib/components/molecules/TrackProgress.svelte";
+  import VolumeControl from "$lib/components/molecules/VolumeControl.svelte";
   import { player } from "$lib/audio/player.svelte";
   import { cn } from "$lib/utils";
 
@@ -16,6 +17,8 @@
     class: className = "",
   }: Props = $props();
 
+  let volume = $state(1);
+
   async function handlePlayToggle() {
     if (!player.currentTrackId) {
       return;
@@ -26,6 +29,11 @@
 
   function handleLoopToggle() {
     player.setLoopMode(player.loopMode === "one" ? "none" : "one");
+  }
+
+  function handleVolumeChange(nextVol: number) {
+    volume = nextVol;
+    player.engine.setVolume(nextVol);
   }
 </script>
 
@@ -56,15 +64,23 @@
   <!-- Center / Right Container: Controls & Scrub Bar -->
   <div class="flex flex-1 flex-col items-center gap-2 w-full max-w-xl">
     <!-- Transport Controls -->
-    <PlayControls
-      isPlaying={player.engine.isPlaying}
-      isLooping={player.loopMode === "one"}
-      onPlayToggle={handlePlayToggle}
-      onSkipBackward={() => player.engine.seekRelative(-5)}
-      onSkipForward={() => player.engine.seekRelative(5)}
-      onLoopToggle={handleLoopToggle}
-      disabled={!player.currentTrackId}
-    />
+    <div class="flex items-center gap-4">
+      <PlayControls
+        isPlaying={player.engine.isPlaying}
+        isLooping={player.loopMode === "one"}
+        onPlayToggle={handlePlayToggle}
+        onSkipBackward={() => player.engine.seekRelative(-5)}
+        onSkipForward={() => player.engine.seekRelative(5)}
+        onLoopToggle={handleLoopToggle}
+        disabled={!player.currentTrackId}
+      />
+
+      <VolumeControl
+        {volume}
+        setVolume={handleVolumeChange}
+        disabled={!player.currentTrackId}
+      />
+    </div>
 
     <!-- Scrub / Progress Slider -->
     <TrackProgress

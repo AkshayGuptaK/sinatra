@@ -206,7 +206,7 @@ def render_map_page_html() -> str:
                 const pt = data.points[0];
                 if (!pt || !pt.customdata) return;
                 const trackId = pt.customdata;
-                const streamUrl = `/api/map/audio/${encodeURIComponent(trackId)}`;
+                const streamUrl = `/api/audio/${encodeURIComponent(trackId)}`;
 
                 if (currentAudio) {
                     currentAudio.pause();

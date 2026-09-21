@@ -1,32 +1,36 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/core";
-  import '../app.css';
-  import PlayControls from '$lib/components/molecules/PlayControls.svelte';
+	import '../app.css';
+	import PlayControls from '$lib/components/molecules/PlayControls.svelte';
 	import { player } from '$lib/audio/player.svelte';
 
 	const testTrackId = '4299b43f-39a3-4cf1-aeee-1bc9f40ed997';
+
+	async function handlePlayToggle() {
+		// If queue is empty or no track has been loaded, load the test track into queue
+		if (!player.currentTrackId) {
+			player.setQueue([testTrackId], 0, true);
+		} else {
+			player.engine.togglePlay();
+		}
+	}
 </script>
 
 <main class="flex min-h-screen flex-col items-center justify-center p-6 bg-background">
 	<div class="flex flex-col items-center gap-4 p-6 rounded-xl border bg-card text-card-foreground shadow-lg">
 		<div class="text-sm font-medium text-muted-foreground">
-			{player.isPlaying ? 'Playing track' : 'Ready'}
+			{player.engine.isPlaying ? 'Playing track' : 'Ready'}
 		</div>
 
 		<!-- Play Controls Molecule -->
 		<PlayControls
-			isPlaying={player.isPlaying}
-			isLooping={player.isLooping}
-			onPlayToggle={() => {
-				if (!player.currentTrackId) {
-					player.loadTrack(testTrackId);
-				} else {
-					player.togglePlay();
-				}
+			isPlaying={player.engine.isPlaying}
+			isLooping={player.loopMode === 'one'}
+			onPlayToggle={handlePlayToggle}
+			onSkipBackward={() => player.engine.seekRelative(-5)}
+			onSkipForward={() => player.engine.seekRelative(5)}
+			onLoopToggle={() => {
+				player.setLoopMode(player.loopMode === 'one' ? 'none' : 'one');
 			}}
-			onSkipBackward={() => player.seekRelative(-5)}
-			onSkipForward={() => player.seekRelative(5)}
-			onLoopToggle={() => player.toggleLoop()}
 		/>
 	</div>
 </main>

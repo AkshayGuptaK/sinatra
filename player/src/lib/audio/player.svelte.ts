@@ -1,137 +1,154 @@
 import { sinatraApi } from '$lib/api/sinatra';
 
-export class WebAudioPlayer {
-  private audio: HTMLAudioElement | null = null;
-  private ctx: AudioContext | null = null;
-  private sourceNode: MediaElementAudioSourceNode | null = null;
-  private gainNode: GainNode | null = null;
+// src/lib/audio/player.svelte.ts
+import { AudioEngine } from './engine.svelte';
 
-  isPlaying = $state(false);
-  currentTime = $state(0);
-  duration = $state(0);
-  isLooping = $state(false);
-  currentTrackId = $state<string | null>(null);
+export type LoopMode = 'none' | 'one' | 'all';
 
-  constructor() {
-    if (typeof window !== "undefined") {
-      this.audio = new Audio();
-      this.audio.crossOrigin = "anonymous";
-      this.setupListeners();
-    }
-  }
+export class MusicPlayer {
+	readonly engine: AudioEngine;
 
-  private initContext() {
-    if (!this.ctx && typeof window !== "undefined") {
-      const AudioContextClass =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext;
-      this.ctx = new AudioContextClass();
-      if (this.audio) {
-        this.sourceNode = this.ctx.createMediaElementSource(this.audio);
-        this.gainNode = this.ctx.createGain();
+	// Reactive Queue State
+	queue = $state<string[]>([]);
+	currentIndex = $state<number>(-1);
+	isShuffle = $state(false);
+	loopMode = $state<LoopMode>('none');
 
-        // Route: Element -> Gain -> Output (ready for Analyser/EQ later)
-        this.sourceNode.connect(this.gainNode);
-        this.gainNode.connect(this.ctx.destination);
-      }
-    }
+	// Internal record to restore queue order when un-shuffling
+	private originalQueue: string[] = [];
 
-    if (this.ctx && this.ctx.state === "suspended") {
-      this.ctx.resume();
-    }
-  }
+	// Derived state shortcuts
+	currentTrackId = $derived(
+		this.currentIndex >= 0 && this.currentIndex < this.queue.length
+			? this.queue[this.currentIndex]
+			: null
+	);
+	hasNext = $derived(
+		this.loopMode === 'all'
+			? this.queue.length > 0
+			: this.currentIndex < this.queue.length - 1
+	);
+	hasPrevious = $derived(
+		this.loopMode === 'all'
+			? this.queue.length > 0
+			: this.currentIndex > 0
+	);
 
-  private setupListeners() {
-    if (!this.audio) return;
+	constructor() {
+		this.engine = new AudioEngine();
+		this.engine.onTrackEnded = () => this.handleTrackEnded();
+	}
 
-    this.audio.addEventListener("play", () => {
-      this.isPlaying = true;
-    });
+	private handleTrackEnded() {
+		if (this.hasNext) {
+			this.next();
+		} else {
+			this.engine.pause();
+		}
+	}
 
-    this.audio.addEventListener("pause", () => {
-      this.isPlaying = false;
-    });
+	setQueue(trackIds: string[], startIndex = 0, autoPlay = true) {
+		this.originalQueue = [...trackIds];
+		this.queue = [...trackIds];
+		this.currentIndex = startIndex;
 
-    this.audio.addEventListener("timeupdate", () => {
-      if (this.audio) {
-        this.currentTime = this.audio.currentTime;
-      }
-    });
+		if (this.isShuffle) {
+			this.applyShuffleOrder(startIndex);
+		}
 
-    this.audio.addEventListener("loadedmetadata", () => {
-      if (this.audio) {
-        this.duration = this.audio.duration;
-      }
-    });
+		const currentId = this.currentTrackId;
+		if (currentId) {
+			this.engine.loadTrack(currentId, autoPlay);
+		}
+	}
 
-    this.audio.addEventListener("ended", () => {
-      if (!this.isLooping) {
-        this.isPlaying = false;
-      }
-    });
-  }
+	enqueue(trackId: string) {
+		this.originalQueue.push(trackId);
+		this.queue.push(trackId);
 
-  async loadTrack(trackId: string, autoPlay = true) {
-    this.initContext();
-    if (!this.audio) return;
+		// If nothing is playing, kick off playback with the new track
+		if (this.currentIndex === -1) {
+			this.currentIndex = 0;
+			this.engine.loadTrack(trackId, true);
+		}
+	}
 
-    this.currentTrackId = trackId;
-    this.audio.src = sinatraApi.getStreamUrl(trackId);
-    this.audio.load();
+	async playTrackAtIndex(index: number) {
+		if (index < 0 || index >= this.queue.length) return;
+		this.currentIndex = index;
+		const trackId = this.queue[index];
+		await this.engine.loadTrack(trackId, true);
+	}
 
-    if (autoPlay) {
-      await this.play();
-    }
-  }
+	async next() {
+		if (this.queue.length === 0) return;
 
-  async play() {
-    this.initContext();
-    if (!this.audio) return;
-    try {
-      await this.audio.play();
-    } catch (e) {
-      console.error("Audio playback failed or blocked:", e);
-    }
-  }
+		if (this.currentIndex + 1 < this.queue.length) {
+			await this.playTrackAtIndex(this.currentIndex + 1);
+		} else if (this.loopMode === 'all') {
+			await this.playTrackAtIndex(0);
+		}
+	}
 
-  pause() {
-    if (!this.audio) return;
-    this.audio.pause();
-  }
+	async previous() {
+		if (this.queue.length === 0) return;
 
-  togglePlay() {
-    if (this.isPlaying) {
-      this.pause();
-    } else {
-      this.play();
-    }
-  }
+		// If track has been playing for > 3s, restart track rather than jump backward
+		if (this.engine.currentTime > 3) {
+			this.engine.seekTo(0);
+			return;
+		}
 
-  seekRelative(deltaSeconds: number) {
-    if (!this.audio) return;
-    const nextTime = Math.min(
-      Math.max(this.audio.currentTime + deltaSeconds, 0),
-      this.duration || Infinity
-    );
-    this.audio.currentTime = nextTime;
-    this.currentTime = nextTime;
-  }
+		if (this.currentIndex > 0) {
+			await this.playTrackAtIndex(this.currentIndex - 1);
+		} else if (this.loopMode === 'all') {
+			await this.playTrackAtIndex(this.queue.length - 1);
+		} else {
+			this.engine.seekTo(0);
+		}
+	}
 
-  toggleLoop() {
-    if (!this.audio) return;
-    this.isLooping = !this.isLooping;
-    this.audio.loop = this.isLooping;
-  }
+	toggleShuffle() {
+		this.isShuffle = !this.isShuffle;
 
-  setVolume(val: number) {
-    if (this.gainNode && this.ctx) {
-      this.gainNode.gain.setValueAtTime(val, this.ctx.currentTime);
-    } else if (this.audio) {
-      this.audio.volume = val;
-    }
-  }
+		if (this.queue.length <= 1) return;
+
+		const activeTrack = this.currentTrackId;
+
+		if (this.isShuffle) {
+			this.applyShuffleOrder(this.currentIndex);
+		} else {
+			// Restore original queue order while keeping active index in sync
+			this.queue = [...this.originalQueue];
+			this.currentIndex = activeTrack ? this.queue.indexOf(activeTrack) : 0;
+		}
+	}
+
+	private applyShuffleOrder(preserveIndex: number) {
+		const activeTrack = this.queue[preserveIndex];
+		const remaining = this.queue.filter((_, i) => i !== preserveIndex);
+
+		// Fisher-Yates shuffle on remaining tracks
+		for (let i = remaining.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+		}
+
+		this.queue = activeTrack ? [activeTrack, ...remaining] : remaining;
+		this.currentIndex = 0;
+	}
+
+	setLoopMode(mode: LoopMode) {
+		this.loopMode = mode;
+		this.engine.setLoop(mode === 'one');
+	}
+
+	cycleLoopMode() {
+		const modes: LoopMode[] = ['none', 'all', 'one'];
+		const nextIdx = (modes.indexOf(this.loopMode) + 1) % modes.length;
+		this.setLoopMode(modes[nextIdx]);
+	}
 }
 
-// Global audio player singleton instance
-export const player = new WebAudioPlayer();
+// Global player singleton instance
+export const player = new MusicPlayer();

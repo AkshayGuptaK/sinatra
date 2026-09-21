@@ -78,7 +78,7 @@ async def get_library_map_data():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/map/audio/{track_id}")
+@app.get("/api/audio/{track_id}")
 async def stream_track(track_id: str):
     """Streams audio for playback."""
     file_path = fetch_library_path(track_id)

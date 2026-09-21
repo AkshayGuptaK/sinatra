@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ToggleButton from '$lib/components/atoms/ToggleButton.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { RotateCcw, RotateCw, Play, Pause, Repeat } from '@lucide/svelte';
+	import { RotateCcw, RotateCw, Play, Pause, Repeat2 } from '@lucide/svelte';
 	import { cn } from '$lib/utils';
 
 	interface Props {
@@ -75,8 +75,8 @@
 	<!-- Loop On / Off Toggle -->
 	<ToggleButton
 		active={isLooping}
-		inactiveIcon={Repeat}
-		activeIcon={Repeat}
+		inactiveIcon={Repeat2}
+		activeIcon={Repeat2}
 		inactiveLabel="Enable single track loop"
 		activeLabel="Disable single track loop"
 		inactiveVariant="ghost"

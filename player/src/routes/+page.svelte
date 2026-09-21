@@ -4,7 +4,7 @@
 	import NowPlaying from '$lib/components/organisms/NowPlaying.svelte';
 
 	const testTrackId = '4299b43f-39a3-4cf1-aeee-1bc9f40ed997';
-  player.setQueue([testTrackId])
+  player.setQueue([{ id: testTrackId}])
 
 </script>
 

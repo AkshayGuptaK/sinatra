@@ -6,16 +6,13 @@
   import { cn } from "$lib/utils";
 
   interface Props {
-    title?: string;
-    artist?: string;
     class?: string;
   }
 
-  let {
-    title = "Unknown",
-    artist = "Unknown",
-    class: className = "",
-  }: Props = $props();
+  let { class: className = "" }: Props = $props();
+  
+  let currentTitle = $derived(player.currentTrack?.title || 'Unknown');
+let currentArtist = $derived(player.currentTrack?.artist || 'Unknown');
 
   let volume = $state(1);
 
@@ -49,22 +46,22 @@
   >
     <span
       class="truncate text-base font-semibold tracking-tight text-foreground"
-      {title}
+      title={currentTitle}
     >
-      {title}
+      {currentTitle}
     </span>
     <span
       class="truncate text-xs font-medium text-muted-foreground"
-      title={artist}
+      title={currentArtist}
     >
-      {artist}
+      {currentArtist}
     </span>
   </div>
 
   <!-- Center / Right Container: Controls & Scrub Bar -->
   <div class="flex flex-1 flex-col items-center gap-2 w-full max-w-xl">
     <!-- Transport Controls -->
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-8">
       <PlayControls
         isPlaying={player.engine.isPlaying}
         isLooping={player.loopMode === "one"}

@@ -1,7 +1,13 @@
 import { sinatraApi } from '$lib/api/sinatra';
 
-// src/lib/audio/player.svelte.ts
 import { AudioEngine } from './engine.svelte';
+
+export interface Track {
+	id: string;
+	title?: string;
+	artist?: string;
+	duration?: number;
+}
 
 export type LoopMode = 'none' | 'one' | 'all';
 
@@ -9,20 +15,22 @@ export class MusicPlayer {
 	readonly engine: AudioEngine;
 
 	// Reactive Queue State
-	queue = $state<string[]>([]);
+	queue = $state<Track[]>([]);
 	currentIndex = $state<number>(-1);
 	isShuffle = $state(false);
 	loopMode = $state<LoopMode>('none');
 
 	// Internal record to restore queue order when un-shuffling
-	private originalQueue: string[] = [];
+	private originalQueue: Track[] = [];
 
-	// Derived state shortcuts
-	currentTrackId = $derived(
+    currentTrack = $derived(
 		this.currentIndex >= 0 && this.currentIndex < this.queue.length
 			? this.queue[this.currentIndex]
 			: null
 	);
+
+	currentTrackId = $derived(this.currentTrack?.id ?? null);
+
 	hasNext = $derived(
 		this.loopMode === 'all'
 			? this.queue.length > 0
@@ -47,9 +55,9 @@ export class MusicPlayer {
 		}
 	}
 
-	setQueue(trackIds: string[], startIndex = 0, autoPlay = true) {
-		this.originalQueue = [...trackIds];
-		this.queue = [...trackIds];
+	setQueue(tracks: Track[], startIndex = 0, autoPlay = true) {
+		this.originalQueue = [...tracks];
+		this.queue = [...tracks];
 		this.currentIndex = startIndex;
 
 		if (this.isShuffle) {
@@ -62,22 +70,22 @@ export class MusicPlayer {
 		}
 	}
 
-	enqueue(trackId: string) {
-		this.originalQueue.push(trackId);
-		this.queue.push(trackId);
+	enqueue(track: Track) {
+		this.originalQueue.push(track);
+		this.queue.push(track);
 
 		// If nothing is playing, kick off playback with the new track
 		if (this.currentIndex === -1) {
 			this.currentIndex = 0;
-			this.engine.loadTrack(trackId, true);
+			this.engine.loadTrack(track.id, true);
 		}
 	}
 
 	async playTrackAtIndex(index: number) {
 		if (index < 0 || index >= this.queue.length) return;
 		this.currentIndex = index;
-		const trackId = this.queue[index];
-		await this.engine.loadTrack(trackId, true);
+		const track = this.queue[index];
+		await this.engine.loadTrack(track.id, true);
 	}
 
 	async next() {
@@ -113,7 +121,7 @@ export class MusicPlayer {
 
 		if (this.queue.length <= 1) return;
 
-		const activeTrack = this.currentTrackId;
+		const activeTrack = this.currentTrack;
 
 		if (this.isShuffle) {
 			this.applyShuffleOrder(this.currentIndex);

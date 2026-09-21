@@ -36,6 +36,10 @@
   function handleRepeatAllToggle() {
     player.setLoopMode(player.loopMode === "all" ? "none" : "all");
   }
+
+  function handleTrackRemove(index: number) {
+    player.removeTrackAtIndex(index);
+  }
 </script>
 
 <div
@@ -72,6 +76,7 @@
           isActive={index === player.currentIndex}
           isPlaying={index === player.currentIndex && player.engine.isPlaying}
           onSelect={handleTrackSelect}
+          onRemove={handleTrackRemove}
         />
       {/each}
     {/if}

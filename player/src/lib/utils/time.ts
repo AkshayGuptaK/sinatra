@@ -1,5 +1,4 @@
 export function formatTime(seconds: number): string {
-	console.log("Formatting", seconds)
 	if (!isFinite(seconds) || isNaN(seconds) || seconds < 0) {
 		return '0:00';
 	}

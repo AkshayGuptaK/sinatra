@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Track } from "$lib/types/track";
+  import type { MetadataFields } from "$lib/types/metadata";
   import { formatTime } from "$lib/utils/time";
   import { Volume2, Plus } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
@@ -14,9 +15,7 @@
     class?: string;
     onPlay?: (track: Track) => void;
     onEnqueue?: (track: Track) => void;
-    onUpdate?: (
-      fields: Partial<Pick<Track, "title" | "artist" | "album" | "mood">>
-    ) => void;
+    onUpdate?: (fields: MetadataFields) => void;
   }
 
   let {

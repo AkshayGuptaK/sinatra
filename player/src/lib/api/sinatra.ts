@@ -1,4 +1,5 @@
 import type { Track } from "$lib/types/track";
+import type { MetadataFields } from "$lib/types/metadata";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -17,7 +18,7 @@ export const sinatraApi = {
 
   async updateTrackMetadata(
     trackId: string,
-    fields: Partial<Pick<Track, 'title' | 'artist' | 'album' | 'mood'>>
+    fields: MetadataFields
   ): Promise<void> {
     const res = await fetch(`${API_BASE_URL}/api/library/tracks/${encodeURIComponent(trackId)}`, {
       method: 'PATCH',

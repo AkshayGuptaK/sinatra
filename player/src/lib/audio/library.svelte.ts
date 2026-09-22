@@ -1,5 +1,6 @@
 import { sinatraApi } from "$lib/api/sinatra";
 import type { Track } from "$lib/types/track";
+import type { MetadataFields } from "$lib/types/metadata";
 
 export type ColumnFilterKey = "title" | "artist" | "album" | "mood";
 
@@ -52,7 +53,7 @@ export class MusicLibrary {
 
   async updateTrackMetadata(
     trackId: string,
-    fields: Partial<Pick<Track, "title" | "artist" | "album" | "mood">>
+    fields: MetadataFields
   ): Promise<void> {
     const trackIndex = this.tracks.findIndex((t) => t.id === trackId);
     if (trackIndex === -1) return;

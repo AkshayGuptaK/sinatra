@@ -140,7 +140,7 @@ class PostgresStore:
                title,
                artist,
                album,
-               musical_fruit AS mood,
+               musical_fruit AS mood
         FROM nodes
         ORDER BY title ASC
         """

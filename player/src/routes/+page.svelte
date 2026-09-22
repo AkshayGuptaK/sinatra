@@ -1,43 +1,24 @@
 <script lang="ts">
   import "../app.css";
-  import { player } from "$lib/audio/player.svelte";
-  import { type Track } from "$lib/types/track"
   import NowPlaying from "$lib/components/organisms/NowPlaying.svelte";
   import ActiveQueue from "$lib/components/organisms/ActiveQueue.svelte";
   import Library from "$lib/components/organisms/Library.svelte";
-  import { onMount } from "svelte";
-
-  // Sample tracks with initial metadata for quick testing
-  const samplePlaylist: Track[] = [
-    {
-      id: "1206c87a-ed13-428f-8fea-055041cf2361",
-      title: "Natsu Machi",
-      artist: "Aria",
-      duration: 345,
-    },
-    {
-      id: "f0aeed01-5aa3-497d-b50e-844a734ad96e",
-      title: "Moon River",
-      artist: "Frank Sinatra",
-      duration: 198,
-    },
-  ];
-
-  onMount(() => {
-    if (player.queue.length === 0) {
-      player.setQueue(samplePlaylist, 0, false);
-    }
-  });
 </script>
 
-<main
-  class="flex min-h-screen items-end justify-center p-6 bg-background"
->
-    <div>
-      <Library />
-      <NowPlaying />
+<main class="flex h-screen w-screen p-4 bg-background text-foreground overflow-hidden select-none">
+  <div class="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
+    <div class="flex-1 min-h-0 w-full">
+      <Library class="h-full w-full" />
     </div>
-  <ActiveQueue />
+
+    <div class="w-full shrink-0">
+      <NowPlaying class="w-full" />
+    </div>
+  </div>
+
+  <aside class="w-80 lg:w-96 shrink-0 h-full flex flex-col">
+    <ActiveQueue class="h-full w-full max-w-none" />
+  </aside>
 </main>
 
 <style>

@@ -44,7 +44,7 @@
 
 <div
   class={cn(
-    "flex flex-col w-full max-w-md h-96 rounded-xl border bg-card text-card-foreground shadow-lg overflow-hidden",
+    "flex flex-col w-full max-w-md h-full rounded-xl border bg-card text-card-foreground shadow-lg overflow-hidden",
     className
   )}
 >

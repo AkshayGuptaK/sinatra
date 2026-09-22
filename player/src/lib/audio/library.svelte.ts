@@ -41,7 +41,7 @@ export class MusicLibrary {
     this.error = null;
     try {
       const data = await sinatraApi.getLibraryTracks();
-      this.tracks = data;
+      if (data) this.tracks = data;
     } catch (e: any) {
       console.error("Failed to load library tracks:", e);
       this.error = e?.message || "Failed to fetch tracks";

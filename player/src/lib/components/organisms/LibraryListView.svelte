@@ -62,7 +62,7 @@
         No tracks found.
       </div>
     {:else}
-      <InfiniteScrollList items={library.filteredTracks} batchSize={100}>
+      <InfiniteScrollList items={library.filteredTracks} batchSize={100} class="h-full">
         {#snippet children(track, index)}
           <LibraryTrackItem
             {track}

@@ -74,6 +74,7 @@
               isQueued={queuedTrackIds.has(track.id)}
               onPlay={handlePlay}
               onEnqueue={handleEnqueue}
+              onUpdate={(fields) => library.updateTrackMetadata(track.id, fields)}
             />
           {/snippet}
         </InfiniteScrollList>

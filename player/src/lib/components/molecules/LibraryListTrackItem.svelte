@@ -3,6 +3,7 @@
   import { formatTime } from "$lib/utils/time";
   import { Volume2, Plus } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
+  import InlineEditableCell from "$lib/components/atoms/InlineEditableCell.svelte";
   import { cn } from "$lib/utils";
 
   interface Props {
@@ -13,6 +14,9 @@
     class?: string;
     onPlay?: (track: Track) => void;
     onEnqueue?: (track: Track) => void;
+    onUpdate?: (
+      fields: Partial<Pick<Track, "title" | "artist" | "album" | "mood">>
+    ) => void;
   }
 
   let {
@@ -22,6 +26,7 @@
     isQueued = false,
     class: className = "",
     onEnqueue,
+    onUpdate,
   }: Props = $props();
 
   function handleEnqueue(e: MouseEvent) {
@@ -46,15 +51,19 @@
     {#if isActive && isPlaying}
       <Volume2 class="size-4 text-primary animate-pulse" />
     {:else if isQueued}
-      <span class="size-1.5 rounded-full bg-primary/60 group-hover:bg-primary"></span>
+      <span class="size-1.5 rounded-full bg-primary/60 group-hover:bg-primary"
+      ></span>
     {/if}
   </div>
 
   <!-- Title -->
   <div class="truncate pr-4 font-medium" title={track.title}>
-    <span class={cn(isActive && "text-primary")}
-      >{track.title || "Unknown Title"}</span
-    >
+    <InlineEditableCell
+      value={track.title}
+      placeholder="Unknown Title"
+      class={cn("font-medium", isActive && "text-primary")}
+      onSave={(val) => onUpdate?.({ title: val })}
+    />
   </div>
 
   <!-- Artist -->
@@ -62,7 +71,12 @@
     class="truncate pr-4 text-muted-foreground text-xs sm:text-sm"
     title={track.artist}
   >
-    {track.artist || "Unknown Artist"}
+    <InlineEditableCell
+      value={track.artist}
+      placeholder="Unknown Artist"
+      class="text-xs sm:text-sm text-muted-foreground"
+      onSave={(val) => onUpdate?.({ artist: val })}
+    />
   </div>
 
   <!-- Album -->
@@ -70,20 +84,24 @@
     class="truncate pr-4 text-muted-foreground text-xs sm:text-sm"
     title={track.album}
   >
-    {track.album || "—"}
+    <InlineEditableCell
+      value={track.album || ""}
+      placeholder="—"
+      class="text-xs sm:text-sm text-muted-foreground"
+      onSave={(val) => onUpdate?.({ album: val })}
+    />
   </div>
 
   <!-- Mood -->
   <div class="truncate pr-4 text-xs" title={track.mood}>
-    {#if track.mood}
-      <span
-        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted border text-muted-foreground capitalize"
-      >
-        {track.mood}
-      </span>
-    {:else}
-      <span class="text-muted-foreground/60">—</span>
-    {/if}
+    <InlineEditableCell
+      value={track.mood || ""}
+      placeholder="—"
+      class={track.mood
+        ? "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted border text-muted-foreground capitalize"
+        : "text-muted-foreground/60"}
+      onSave={(val) => onUpdate?.({ mood: val })}
+    />
   </div>
 
   <!-- Duration -->

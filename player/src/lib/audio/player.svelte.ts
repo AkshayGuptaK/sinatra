@@ -1,7 +1,6 @@
 import { AudioEngine } from "./engine.svelte";
 import { sinatraApi } from "$lib/api/sinatra";
-import { type Track } from "$lib/types/track"
-
+import { type Track } from "$lib/types/track";
 
 export type LoopMode = "none" | "one" | "all";
 
@@ -72,6 +71,42 @@ export class MusicPlayer {
     this.engine.seekTo(0);
   }
 
+  /**
+   * Checks if the currently active track is the last track in the queue,
+   * and if so, fetches and enqueues more tracks via the backend.
+   */
+  async checkAndTriggerAutoDj() {
+    if (!this.isAutoDj || this.isFetchingAutoDj) return;
+
+    // Trigger only if we have an active track and it's the last one in the queue
+    const isLastTrack =
+      this.currentIndex >= 0 && this.currentIndex === this.queue.length - 1;
+
+    if (!isLastTrack || !this.currentTrackId) return;
+
+    try {
+      this.isFetchingAutoDj = true;
+
+      // Collect all track IDs currently in the queue to avoid repeats
+      const currentQueueIds = this.queue.map((t) => t.id);
+
+      const similarTracks = await sinatraApi.getSimilarTracks(
+        this.currentTrackId,
+        currentQueueIds
+      );
+
+      if (similarTracks && similarTracks.length > 0) {
+        for (const track of similarTracks) {
+          this.enqueue(track);
+        }
+      }
+    } catch (err) {
+      console.error("Auto DJ failed to fetch recommendations:", err);
+    } finally {
+      this.isFetchingAutoDj = false;
+    }
+  }
+
   enqueue(track: Track) {
     this.originalQueue.push(track);
     this.queue.push(track);
@@ -80,6 +115,7 @@ export class MusicPlayer {
     if (this.currentIndex === -1) {
       this.currentIndex = 0;
       this.engine.loadTrack(track.id, true);
+      this.checkAndTriggerAutoDj();
     }
   }
 
@@ -105,43 +141,7 @@ export class MusicPlayer {
     } else if (index < this.currentIndex) {
       this.currentIndex -= 1;
     }
-  }
-
-   /**
-   * Checks if the currently active track is the last track in the queue,
-   * and if so, fetches and enqueues more tracks via the backend.
-   */
-   async checkAndTriggerAutoDj() {
-    if (!this.isAutoDj || this.isFetchingAutoDj) return;
-
-    // Trigger only if we have an active track and it's the last one in the queue
-    const isLastTrack =
-      this.currentIndex >= 0 && this.currentIndex === this.queue.length - 1;
-
-    if (!isLastTrack || !this.currentTrackId) return;
-
-    try {
-      this.isFetchingAutoDj = true;
-
-      // Collect all track IDs currently in the queue to avoid repeats
-      const currentQueueIds = this.queue.map((t) => t.id);
-
-      const similarTracks = await sinatraApi.getSimilarTracks(
-        this.currentTrackId,
-        currentQueueIds,
-        5
-      );
-
-      if (similarTracks && similarTracks.length > 0) {
-        for (const track of similarTracks) {
-          this.enqueue(track);
-        }
-      }
-    } catch (err) {
-      console.error('Auto DJ failed to fetch recommendations:', err);
-    } finally {
-      this.isFetchingAutoDj = false;
-    }
+    this.checkAndTriggerAutoDj();
   }
 
   async playTrackAtIndex(index: number) {

@@ -9,6 +9,7 @@
     track: Track;
     isActive?: boolean;
     isPlaying?: boolean;
+    isQueued?: boolean;
     class?: string;
     onPlay?: (track: Track) => void;
     onEnqueue?: (track: Track) => void;
@@ -18,6 +19,7 @@
     track,
     isActive = false,
     isPlaying = false,
+    isQueued = false,
     class: className = "",
     onEnqueue,
   }: Props = $props();
@@ -43,6 +45,8 @@
   <div class="flex items-center text-xs text-muted-foreground font-mono">
     {#if isActive && isPlaying}
       <Volume2 class="size-4 text-primary animate-pulse" />
+    {:else if isQueued}
+      <span class="size-1.5 rounded-full bg-primary/60 group-hover:bg-primary"></span>
     {/if}
   </div>
 

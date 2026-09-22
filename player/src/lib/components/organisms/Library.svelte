@@ -26,6 +26,8 @@
     library.filteredTracks.reduce((acc, t) => acc + (t.duration ?? 0), 0)
   );
 
+  const queuedTrackIds = $derived(new Set(player.queue.map((t) => t.id)));
+
   function handleSearchChange(intent: ParsedIntent) {
     if (intent.type === "text_search") {
       library.setFilter(intent.query, "all");
@@ -88,7 +90,7 @@
   <!-- Canvas Body -->
   <div class="flex-1 min-h-0">
     {#if viewMode === "list"}
-      <LibraryListView />
+      <LibraryListView {queuedTrackIds} />
     {:else}
       <div
         class="flex flex-col items-center justify-center h-full border rounded-xl bg-card text-muted-foreground"

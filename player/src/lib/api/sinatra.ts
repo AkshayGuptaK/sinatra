@@ -20,7 +20,7 @@ export const sinatraApi = {
   async getSimilarTracks(
     trackId: string,
     excludeIds: string[] = [],
-    limit: number = 5
+    limit: number = 3
   ): Promise<Track[]> {
     const params = new URLSearchParams({
       limit: limit.toString(),

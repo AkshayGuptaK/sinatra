@@ -9,10 +9,11 @@
   import { cn } from "$lib/utils";
 
   interface Props {
+    queuedTrackIds: Set<string>;
     class?: string;
   }
 
-  let { class: className = "" }: Props = $props();
+  let { queuedTrackIds, class: className = "" }: Props = $props();
 
   function handlePlay(track: Track) {
     const trackIndex = library.filteredTracks.findIndex(
@@ -70,6 +71,7 @@
               isActive={player.currentTrackId === track.id}
               isPlaying={player.currentTrackId === track.id &&
                 player.engine.isPlaying}
+              isQueued={queuedTrackIds.has(track.id)}
               onPlay={handlePlay}
               onEnqueue={handleEnqueue}
             />

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { ListMusic, CirclePlus, MapPin } from '@lucide/svelte';
+	import { List, CirclePlus, MapPin } from '@lucide/svelte';
 	import { cn } from '$lib/utils';
 
 	export type LibraryViewMode = 'list' | 'map';
@@ -50,7 +50,7 @@
 					: 'text-muted-foreground hover:text-foreground'
 			)}
 		>
-			<ListMusic class="size-5" />
+			<List class="size-5" />
 		</button>
 		<button
 			type="button"

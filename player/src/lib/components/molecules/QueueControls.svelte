@@ -8,10 +8,12 @@
     Shuffle,
     Repeat,
     CircleX,
+    Disc3,
   } from "@lucide/svelte";
   import { cn } from "$lib/utils";
 
   interface Props {
+    isAutoDj?: boolean;
     isShuffle?: boolean;
     isRepeatAll?: boolean;
     hasPrevious?: boolean;
@@ -20,12 +22,14 @@
     class?: string;
     onPrevious?: () => void;
     onNext?: () => void;
+    onAutoDjToggle?: (nextAutoDj: boolean) => void;
     onShuffleToggle?: (nextShuffle: boolean) => void;
     onRepeatAllToggle?: (nextRepeat: boolean) => void;
     onClearQueue?: () => void;
   }
 
   let {
+    isAutoDj = false,
     isShuffle = false,
     isRepeatAll = false,
     hasPrevious = false,
@@ -34,6 +38,7 @@
     class: className = "",
     onPrevious,
     onNext,
+    onAutoDjToggle,
     onShuffleToggle,
     onRepeatAllToggle,
     onClearQueue,
@@ -48,6 +53,26 @@
 >
   <div class="flex items-center gap-1">
     <!-- Play Order Actions (Shuffling / Looping) -->
+    <ToggleButton
+    active={isAutoDj}
+    inactiveIcon={Disc3}
+    activeIcon={Disc3}
+    inactiveLabel="Enable auto DJ"
+    activeLabel="Disable auto DJ"
+    inactiveVariant="ghost"
+    activeVariant="secondary"
+    size="icon"
+    {disabled}
+    iconClass="size-4"
+    class={cn(
+      "size-8 transition-colors",
+      isAutoDj
+        ? "text-primary font-medium"
+        : "text-muted-foreground hover:text-foreground"
+    )}
+    onToggle={(next) => onAutoDjToggle?.(next)}
+  />
+
     <ToggleButton
       active={isShuffle}
       inactiveIcon={Shuffle}

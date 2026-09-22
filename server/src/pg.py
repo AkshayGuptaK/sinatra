@@ -140,7 +140,8 @@ class PostgresStore:
                title,
                artist,
                album,
-               musical_fruit AS mood
+               musical_fruit AS mood,
+               duration
         FROM nodes
         ORDER BY title ASC
         """
@@ -155,6 +156,7 @@ class PostgresStore:
                         "artist": r[2] or "Unknown Artist",
                         "album": r[3] or "",
                         "mood": r[4] or "",
+                        "duration": float(r[5])
                     }
                     for r in result
                 ]

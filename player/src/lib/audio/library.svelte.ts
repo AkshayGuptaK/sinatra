@@ -50,6 +50,29 @@ export class MusicLibrary {
     }
   }
 
+  async updateTrackMetadata(
+    trackId: string,
+    fields: Partial<Pick<Track, "title" | "artist" | "album" | "mood">>
+  ): Promise<void> {
+    const trackIndex = this.tracks.findIndex((t) => t.id === trackId);
+    if (trackIndex === -1) return;
+
+    const originalTrack = { ...this.tracks[trackIndex] };
+
+    this.tracks[trackIndex] = {
+      ...originalTrack,
+      ...fields,
+    };
+
+    try {
+      await sinatraApi.updateTrackMetadata(trackId, fields);
+    } catch (err) {
+      console.error(`Failed to update metadata for track ${trackId}:`, err);
+      this.tracks[trackIndex] = originalTrack;
+      throw err;
+    }
+  }
+
   setFilter(query: string, key: ColumnFilterKey | "all" = "all") {
     this.searchQuery = query;
     this.columnFilterKey = key;

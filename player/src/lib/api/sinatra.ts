@@ -14,6 +14,21 @@ export const sinatraApi = {
     }
     return res.json();
   },
+
+  async updateTrackMetadata(
+    trackId: string,
+    fields: Partial<Pick<Track, 'title' | 'artist' | 'album' | 'mood'>>
+  ): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/library/tracks/${encodeURIComponent(trackId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields)
+    });
+  
+    if (!res.ok) {
+      throw new Error(`Failed to update track metadata: ${res.statusText}`);
+    }
+  },
   /**
    * Fetches similar tracks excluding those already in the queue.
    */

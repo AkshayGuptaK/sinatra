@@ -1,4 +1,5 @@
 <script lang="ts">
+  import TrackDetails from "../molecules/TrackDetails.svelte";
   import PlayControls from "$lib/components/molecules/PlayControls.svelte";
   import TrackProgress from "$lib/components/molecules/TrackProgress.svelte";
   import VolumeControl from "$lib/components/molecules/VolumeControl.svelte";
@@ -10,9 +11,9 @@
   }
 
   let { class: className = "" }: Props = $props();
-  
-  let currentTitle = $derived(player.currentTrack?.title || 'Unknown');
-let currentArtist = $derived(player.currentTrack?.artist || 'Unknown');
+
+  let currentTitle = $derived(player.currentTrack?.title || "Unknown");
+  let currentArtist = $derived(player.currentTrack?.artist || "Unknown");
 
   let volume = $state(1);
 
@@ -36,30 +37,15 @@ let currentArtist = $derived(player.currentTrack?.artist || 'Unknown');
 
 <div
   class={cn(
-    "flex flex-col md:flex-row items-center justify-between gap-6 w-full max-w-4xl p-4 md:px-6 md:py-4 rounded-xl border bg-card text-card-foreground shadow-lg",
+    "flex flex-col md:flex-row items-center gap-6 w-full p-4 md:px-6 md:py-4 rounded-xl border bg-card text-card-foreground shadow-lg",
     className
   )}
 >
   <!-- Track Details -->
-  <div
-    class="flex flex-col min-w-0 w-full md:w-56 text-center md:text-left select-none"
-  >
-    <span
-      class="truncate text-base font-semibold tracking-tight text-foreground"
-      title={currentTitle}
-    >
-      {currentTitle}
-    </span>
-    <span
-      class="truncate text-xs font-medium text-muted-foreground"
-      title={currentArtist}
-    >
-      {currentArtist}
-    </span>
-  </div>
+  <TrackDetails {currentTitle} {currentArtist} />
 
   <!-- Center / Right Container: Controls & Scrub Bar -->
-  <div class="flex flex-1 flex-col items-center gap-2 w-full max-w-xl">
+  <div class="flex flex-1 flex-col items-center gap-2 w-full">
     <!-- Transport Controls -->
     <div class="flex items-center gap-8">
       <PlayControls

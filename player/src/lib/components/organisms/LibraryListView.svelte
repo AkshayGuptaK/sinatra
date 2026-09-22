@@ -35,7 +35,7 @@
   <div
     class="grid grid-cols-[3rem_minmax(180px,2fr)_minmax(140px,1.5fr)_minmax(140px,1.5fr)_minmax(100px,1fr)_5rem_3.5rem] items-center px-4 py-2.5 border-y bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none"
   >
-    <div>#</div>
+    <div></div>
     <div>Title</div>
     <div>Artist</div>
     <div>Album</div>

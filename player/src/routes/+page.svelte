@@ -4,7 +4,7 @@
   import { type Track } from "$lib/types/track"
   import NowPlaying from "$lib/components/organisms/NowPlaying.svelte";
   import ActiveQueue from "$lib/components/organisms/ActiveQueue.svelte";
-  import LibraryListView from "$lib/components/organisms/LibraryListView.svelte";
+  import Library from "$lib/components/organisms/Library.svelte";
   import { onMount } from "svelte";
 
   // Sample tracks with initial metadata for quick testing
@@ -34,8 +34,8 @@
   class="flex min-h-screen items-end justify-center p-6 bg-background"
 >
     <div>
-      <LibraryListView tracks={samplePlaylist} />
-      <NowPlaying />    
+      <Library />
+      <NowPlaying />
     </div>
   <ActiveQueue />
 </main>

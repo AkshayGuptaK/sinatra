@@ -106,6 +106,10 @@
 			type="text"
 			placeholder="Search songs, :artist, or /play something upbeat... (Esc to clear)"
 			value={rawInput}
+			autocomplete="off"
+		    autocorrect="off"
+    		autocapitalize="off"
+    		spellcheck="false"			
 			oninput={handleInput}
 			onkeydown={handleKeydown}
 			onfocus={() => (isFocused = true)}

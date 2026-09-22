@@ -141,7 +141,10 @@ class PostgresStore:
                artist,
                album,
                mood,
-               duration
+               duration,
+               emotions_normalized,
+               coord_x,
+               coord_y
         FROM nodes
         ORDER BY title ASC
         """
@@ -157,6 +160,9 @@ class PostgresStore:
                         "album": r[3] or "",
                         "mood": r[4] or "",
                         "duration": float(r[5]),
+                        "emotions": r[6] or {},
+                        "coord_x": r[7] or 0,
+                        "coord_y": r[8] or 0
                     }
                     for r in result
                 ]

@@ -55,26 +55,26 @@ class PostgresStore:
         self,
         filepath: str,
         embedding: List[float],
-        moods: Optional[Dict[str, float]] = None,
-        mood_vector: Optional[List[float]] = None,
-        moods_normalized: Optional[Dict[str, float]] = None,
-        mood_vector_normalized: Optional[List[float]] = None,
+        emotions: Optional[Dict[str, float]] = None,
+        emotion_vector: Optional[List[float]] = None,
+        emotions_normalized: Optional[Dict[str, float]] = None,
+        emotion_vector_normalized: Optional[List[float]] = None,
     ) -> None:
         # Format JSONB strings
-        moods_json = json.dumps(moods) if moods is not None else None
-        moods_norm_json = (
-            json.dumps(moods_normalized) if moods_normalized is not None else None
+        emotions_json = json.dumps(emotions) if emotions is not None else None
+        emotions_norm_json = (
+            json.dumps(emotions_normalized) if emotions_normalized is not None else None
         )
 
         # Format vector strings
-        mood_vec_str = (
-            f"[{','.join(f'{x:.6f}' for x in mood_vector)}]"
-            if mood_vector is not None
+        emotion_vec_str = (
+            f"[{','.join(f'{x:.6f}' for x in emotion_vector)}]"
+            if emotion_vector is not None
             else None
         )
-        mood_norm_vec_str = (
-            f"[{','.join(f'{x:.6f}' for x in mood_vector_normalized)}]"
-            if mood_vector_normalized is not None
+        emotion_norm_vec_str = (
+            f"[{','.join(f'{x:.6f}' for x in emotion_vector_normalized)}]"
+            if emotion_vector_normalized is not None
             else None
         )
 
@@ -84,28 +84,28 @@ class PostgresStore:
                 INSERT INTO nodes (
                     filepath, 
                     musical_embedding, 
-                    moods, 
-                    mood_vector,
-                    moods_normalized,
-                    mood_vector_normalized,
+                    emotions, 
+                    emotion_vector,
+                    emotions_normalized,
+                    emotion_vector_normalized,
                     updated_at
                 )
                 VALUES (%s, %s, %s, %s::vector, %s, %s::vector, NOW())
                 ON CONFLICT (filepath) DO UPDATE SET
                     musical_embedding = EXCLUDED.musical_embedding,
-                    moods = EXCLUDED.moods,
-                    mood_vector = EXCLUDED.mood_vector,
-                    moods_normalized = EXCLUDED.moods_normalized,
-                    mood_vector_normalized = EXCLUDED.mood_vector_normalized,
+                    emotions = EXCLUDED.emotions,
+                    emotion_vector = EXCLUDED.emotion_vector,
+                    emotions_normalized = EXCLUDED.emotions_normalized,
+                    emotion_vector_normalized = EXCLUDED.emotion_vector_normalized,
                     updated_at = NOW();
                 """,
                 (
                     filepath,
                     embedding,
-                    moods_json,
-                    mood_vec_str,
-                    moods_norm_json,
-                    mood_norm_vec_str,
+                    emotions_json,
+                    emotion_vec_str,
+                    emotions_norm_json,
+                    emotion_norm_vec_str,
                 ),
             )
 
@@ -166,7 +166,6 @@ class PostgresStore:
             return None
 
     def get_track_path_by_id(self, track_id):
-        print("getting", track_id)
         query = """
         SELECT filepath FROM nodes WHERE id = %s;
         """
@@ -275,8 +274,6 @@ class PostgresStore:
         updates = []
         values = []
 
-        print("updating")
-
         for key, val in fields.items():
             if key in allowed_fields:
                 col_name = allowed_fields[key]
@@ -294,8 +291,6 @@ class PostgresStore:
             SET {', '.join(updates)}
             WHERE id = %s::uuid;
         """
-
-        print("query is", query)
 
         try:
             with self.conn.cursor() as cur:

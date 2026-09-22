@@ -102,7 +102,6 @@ class TrackMetadataUpdate(BaseModel):
 @app.patch("/api/library/tracks/{track_id}")
 async def update_track(track_id: str, payload: TrackMetadataUpdate):
     """Updates editable metadata attributes for a given track."""
-    print("received req")
     updates = payload.model_dump(exclude_unset=True)
     if not updates:
         return {"status": "noop"}

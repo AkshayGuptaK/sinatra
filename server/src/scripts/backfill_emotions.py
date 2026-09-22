@@ -6,18 +6,18 @@ from src.mood_scorer import get_mood_scorer
 BATCH_SIZE = 100
 
 
-def backfill_moods():
+def backfill_emotions():
     db = get_pg()
     scorer = get_mood_scorer()
 
-    print("Fetching tracks needing mood backfill...")
+    print("Fetching tracks needing emotional backfill...")
     with db.conn.cursor() as cur:
         cur.execute(
             """
             SELECT filepath, musical_embedding 
             FROM nodes 
             WHERE musical_embedding IS NOT NULL 
-              AND (moods_normalized IS NULL OR mood_vector_normalized IS NULL);
+              AND (emotions_normalized IS NULL OR emotion_vector_normalized IS NULL);
             """
         )
         rows = cur.fetchall()
@@ -39,14 +39,14 @@ def backfill_moods():
             emb = np.asarray(raw_embedding, dtype=np.float32)
 
         # Unpack all 4 outputs
-        moods, mood_vec, moods_norm, mood_norm_vec = scorer.score(emb)
+        emotions, emotion_vec, emotions_norm, emotion_norm_vec = scorer.score(emb)
 
         update_payloads.append(
             (
-                json.dumps(moods),
-                f"[{','.join(f'{x:.6f}' for x in mood_vec)}]",
-                json.dumps(moods_norm),
-                f"[{','.join(f'{x:.6f}' for x in mood_norm_vec)}]",
+                json.dumps(emotions),
+                f"[{','.join(f'{x:.6f}' for x in emotion_vec)}]",
+                json.dumps(emotions_norm),
+                f"[{','.join(f'{x:.6f}' for x in emotion_norm_vec)}]",
                 filepath,
             )
         )
@@ -62,7 +62,7 @@ def backfill_moods():
         processed += len(update_payloads)
         print(f"Updated {processed}/{total_tracks} tracks.")
 
-    print("✅ Mood backfill complete!")
+    print("✅ Emotional backfill complete!")
 
 
 def _flush_batch(db, batch_data):
@@ -70,10 +70,10 @@ def _flush_batch(db, batch_data):
         cur.executemany(
             """
             UPDATE nodes 
-            SET moods = %s,
-                mood_vector = %s::vector,
-                moods_normalized = %s,
-                mood_vector_normalized = %s::vector,
+            SET emotions = %s,
+                emotion_vector = %s::vector,
+                emotions_normalized = %s,
+                emotion_vector_normalized = %s::vector,
                 updated_at = NOW()
             WHERE filepath = %s;
             """,
@@ -83,4 +83,4 @@ def _flush_batch(db, batch_data):
 
 
 if __name__ == "__main__":
-    backfill_moods()
+    backfill_emotions()

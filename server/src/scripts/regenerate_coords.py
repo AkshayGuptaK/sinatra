@@ -81,9 +81,9 @@ def generate_library_coords(method: str = "kr", k: int = 5):
     with db.conn.cursor() as cur:
         cur.execute(
             """
-            SELECT filepath, moods
+            SELECT filepath, emotions
             FROM nodes
-            WHERE moods IS NOT NULL;
+            WHERE emotions IS NOT NULL;
             """
         )
         rows = cur.fetchall()
@@ -98,11 +98,11 @@ def generate_library_coords(method: str = "kr", k: int = 5):
     processed = 0
 
     # 3. Process and batch update coordinates
-    for filepath, moods_data in rows:
-        if not isinstance(moods_data, dict):
+    for filepath, emotions_data in rows:
+        if not isinstance(emotions_data, dict):
             continue
 
-        vec_24 = [float(moods_data.get(mood, 0.0)) for mood in emotion_cols]
+        vec_24 = [float(emotions_data.get(emotion, 0.0)) for emotion in emotion_cols]
         X = np.array([vec_24], dtype=np.float64)
 
         preds = project_coords(X)[0]

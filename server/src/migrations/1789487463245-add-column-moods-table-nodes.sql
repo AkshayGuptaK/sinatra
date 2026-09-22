@@ -1,3 +1,3 @@
 ALTER TABLE nodes 
-ADD COLUMN mood_vector vector(24),
-ADD COLUMN moods jsonb;
+ADD COLUMN emotion_vector vector(24),
+ADD COLUMN emotions jsonb;

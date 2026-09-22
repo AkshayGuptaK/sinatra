@@ -57,7 +57,7 @@ def _fit_and_evaluate(
 
     print(f"\nEvaluating [{feature_label}] from {source_name}")
     print(
-        f"Tracks: {len(df)} | Retained Moods: {len(mood_cols)} (Dropped {len(DROPPED_EMOTIONS)}) | Features: {len(feature_cols)}"
+        f"Tracks: {len(df)} | Retained Emotions: {len(mood_cols)} (Dropped {len(DROPPED_EMOTIONS)}) | Features: {len(feature_cols)}"
     )
 
     df_clean = df.dropna(subset=feature_cols + mood_cols).copy()
@@ -117,7 +117,7 @@ def _fit_and_evaluate(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     results_df.to_csv(output_path, index=False)
     print("=" * 95)
-    print(f"✅ Saved trained weights ({len(results_df)} moods) to {output_path}")
+    print(f"✅ Saved trained weights ({len(results_df)} emotions) to {output_path}")
     return results_df
 
 

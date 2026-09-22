@@ -60,39 +60,39 @@ def fetch_library_map_points() -> List[Dict[str, Any]]:
     with db.conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id::text, filepath, title, artist, coord_x, coord_y, moods_normalized
+            SELECT id::text, filepath, title, artist, coord_x, coord_y, emotions_normalized
             FROM nodes
             WHERE coord_x IS NOT NULL 
               AND coord_y IS NOT NULL 
-              AND moods IS NOT NULL;
+              AND emotions IS NOT NULL;
             """
         )
         rows = cur.fetchall()
 
     points = []
-    for id, filepath, title, artist, cx, cy, moods_dict in rows:
-        if not isinstance(moods_dict, dict):
+    for id, filepath, title, artist, cx, cy, emotions_dict in rows:
+        if not isinstance(emotions_dict, dict):
             continue
 
         # 1. Determine dominant core emotion across the 13 categories
-        core_scores = [float(moods_dict.get(m, 0.0)) for m in CORE_13_EMOTIONS]
+        core_scores = [float(emotions_dict.get(m, 0.0)) for m in CORE_13_EMOTIONS]
         dominant = CORE_13_EMOTIONS[int(np.argmax(core_scores))]
 
         # 2. Extract and sort non-zero emotions for clean tooltips
-        active_moods = [
-            (mood, round(float(moods_dict.get(mood, 0.0)) * 100, 1))
-            for mood in EMOTION_COLS
-            if mood in moods_dict
-            and round(float(moods_dict.get(mood, 0.0)) * 100, 1) > 0.0
+        active_emotions = [
+            (emotion, round(float(emotions_dict.get(emotion, 0.0)) * 100, 1))
+            for emotion in EMOTION_COLS
+            if emotion in emotions_dict
+            and round(float(emotions_dict.get(emotion, 0.0)) * 100, 1) > 0.0
         ]
-        active_moods.sort(key=lambda item: item[1], reverse=True)
+        active_emotions.sort(key=lambda item: item[1], reverse=True)
 
         display_name = title if title else Path(filepath).name
 
         # 3. Format HTML hover string
         hover_lines = [f"<b>{display_name}</b><br>"]
-        for mood, pct in active_moods:
-            hover_lines.append(f"{mood}: <b>{pct:.1f}%</b>")
+        for emotion, pct in active_emotions:
+            hover_lines.append(f"{emotion}: <b>{pct:.1f}%</b>")
         hover_html = "<br>".join(hover_lines)
 
         points.append(

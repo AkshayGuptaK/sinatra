@@ -1,0 +1,74 @@
+
+/* Light Mode Tokens */
+[data-skin="resonance"] {
+    /* Base Surfaces */
+    --background: oklch(0.98 0.01 250);
+    --foreground: oklch(0.18 0.02 250);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.18 0.02 250);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.18 0.02 250);
+
+    /* Primary Accent / Active States */
+    --primary: oklch(0.45 0.18 260);
+    --primary-foreground: oklch(0.98 0 0);
+
+    /* Secondary Surfaces */
+    --secondary: oklch(0.94 0.02 250);
+    --secondary-foreground: oklch(0.2 0.02 250);
+
+    /* Muted & Inactive States */
+    --muted: oklch(0.95 0.01 250);
+    --muted-foreground: oklch(0.52 0.02 250);
+
+    /* Selection & Hover Accents */
+    --accent: oklch(0.92 0.04 260);
+    --accent-foreground: oklch(0.2 0.02 250);
+
+    /* Borders & Rings */
+    --border: oklch(0.9 0.01 250);
+    --input: oklch(0.9 0.01 250);
+    --ring: oklch(0.45 0.18 260);
+    --destructive: oklch(0.58 0.24 27);
+
+    /* Geometry Tokens (Ready for future Level 2 tweaks) */
+    --radius: 0.625rem;
+}
+
+/* Dark Mode Tokens */
+[data-skin="resonance"].dark,
+.dark [data-skin="resonance"],
+[data-skin="resonance"] .dark {
+    /* Base Surfaces */
+    --background: oklch(0.1637 0.0182 263.88);
+    --foreground: oklch(0.96 0.01 250);
+    --card: oklch(0.2 0.025 260);
+    --card-foreground: oklch(0.96 0.01 250);
+    --popover: oklch(0.2 0.025 260);
+    --popover-foreground: oklch(0.96 0.01 250);
+
+    /* Primary Accent / Active States */
+    --primary: oklch(0.8317 0.0866 283.63);
+    --primary-foreground: oklch(0.12 0.02 260);
+
+    /* Secondary Surfaces */
+    --secondary: oklch(0.26 0.03 260);
+    --secondary-foreground: oklch(0.96 0.01 250);
+
+    /* Muted & Inactive States */
+    --muted: oklch(0.25 0.02 260);
+    --muted-foreground: oklch(0.68 0.02 250);
+
+    /* Selection & Hover Accents */
+    --accent: oklch(0.28 0.04 260);
+    --accent-foreground: oklch(0.96 0.01 250);
+    --accent-slider: oklch(0.8172 0.1242 215.73);
+    /* Borders & Rings */
+    --border: oklch(1 0 0 / 12%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.7 0.19 255);
+    --destructive: oklch(0.7 0.19 22);
+
+    /* Geometry Tokens */
+    --radius: 0.625rem;
+}

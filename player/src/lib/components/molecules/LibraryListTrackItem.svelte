@@ -7,7 +7,6 @@
 
   interface Props {
     track: Track;
-    index: number;
     isActive?: boolean;
     isPlaying?: boolean;
     class?: string;
@@ -17,7 +16,6 @@
 
   let {
     track,
-    index,
     isActive = false,
     isPlaying = false,
     class: className = "",

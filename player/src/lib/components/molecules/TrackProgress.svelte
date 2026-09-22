@@ -54,7 +54,8 @@
       step={0.5}
       disabled={disabled || !duration || duration <= 0}
       onValueChange={updateScrubPosition}
-      class="cursor-pointer py-2"
+      class="cursor-pointer py-2
+             [&_[data-slot=slider-range]]:bg-[linear-gradient(to_right,var(--primary),var(--accent-slider))]"
     />
   </div>
 

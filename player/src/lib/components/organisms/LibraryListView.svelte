@@ -67,7 +67,6 @@
           {#snippet children(track, index)}
             <LibraryTrackItem
               {track}
-              {index}
               isActive={player.currentTrackId === track.id}
               isPlaying={player.currentTrackId === track.id &&
                 player.engine.isPlaying}

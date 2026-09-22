@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Component, Snippet } from 'svelte';
-    import type { Icon } from '@lucide/svelte';
     import { cn } from '$lib/utils';
 
 	interface Props {
@@ -23,7 +22,7 @@
 		<IconComponent class="size-4 text-muted-foreground shrink-0" />
 	{/if}
 
-	<h2 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+	<h2 class="text-xs font-semibold uppercase tracking-wider text-foreground">
 		{title}
 	</h2>
 

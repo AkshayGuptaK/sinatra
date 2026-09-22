@@ -1,6 +1,5 @@
-import { sinatraApi } from "$lib/api/sinatra";
-
 import { AudioEngine } from "./engine.svelte";
+import { sinatraApi } from "$lib/api/sinatra";
 import { type Track } from "$lib/types/track"
 
 
@@ -12,6 +11,8 @@ export class MusicPlayer {
   // Reactive Queue State
   queue = $state<Track[]>([]);
   currentIndex = $state<number>(-1);
+  isAutoDj = $state(false);
+  isFetchingAutoDj = $state(false);
   isShuffle = $state(false);
   loopMode = $state<LoopMode>("none");
 
@@ -106,11 +107,49 @@ export class MusicPlayer {
     }
   }
 
+   /**
+   * Checks if the currently active track is the last track in the queue,
+   * and if so, fetches and enqueues more tracks via the backend.
+   */
+   async checkAndTriggerAutoDj() {
+    if (!this.isAutoDj || this.isFetchingAutoDj) return;
+
+    // Trigger only if we have an active track and it's the last one in the queue
+    const isLastTrack =
+      this.currentIndex >= 0 && this.currentIndex === this.queue.length - 1;
+
+    if (!isLastTrack || !this.currentTrackId) return;
+
+    try {
+      this.isFetchingAutoDj = true;
+
+      // Collect all track IDs currently in the queue to avoid repeats
+      const currentQueueIds = this.queue.map((t) => t.id);
+
+      const similarTracks = await sinatraApi.getSimilarTracks(
+        this.currentTrackId,
+        currentQueueIds,
+        5
+      );
+
+      if (similarTracks && similarTracks.length > 0) {
+        for (const track of similarTracks) {
+          this.enqueue(track);
+        }
+      }
+    } catch (err) {
+      console.error('Auto DJ failed to fetch recommendations:', err);
+    } finally {
+      this.isFetchingAutoDj = false;
+    }
+  }
+
   async playTrackAtIndex(index: number) {
     if (index < 0 || index >= this.queue.length) return;
     this.currentIndex = index;
     const track = this.queue[index];
     await this.engine.loadTrack(track.id, true);
+    this.checkAndTriggerAutoDj();
   }
 
   async next() {
@@ -156,6 +195,14 @@ export class MusicPlayer {
       this.currentIndex = activeTrack
         ? this.queue.findIndex((track) => track.id === activeTrack.id)
         : 0;
+    }
+  }
+
+  toggleAutoDj() {
+    this.isAutoDj = !this.isAutoDj;
+
+    if (this.isAutoDj) {
+      this.checkAndTriggerAutoDj();
     }
   }
 

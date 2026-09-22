@@ -140,7 +140,7 @@ class PostgresStore:
                title,
                artist,
                album,
-               musical_fruit AS mood,
+               mood,
                duration
         FROM nodes
         ORDER BY title ASC
@@ -220,7 +220,7 @@ class PostgresStore:
                n.title AS title,
                n.artist AS artist,
                n.album AS album,
-               n.musical_fruit AS mood,
+               n.mood AS mood,
                n.duration AS duration,
                ROUND((n.musical_embedding <=> t.musical_embedding)::numeric, 4) AS distance
         FROM nodes n, target t
@@ -262,6 +262,50 @@ class PostgresStore:
                 {"val": metadata_value},
             )
             return [row["filepath"] for row in cur.fetchall()]
+
+    def update_track_metadata(self, track_id: str, fields: Dict[str, Any]) -> bool:
+        """Updates editable metadata fields (title, artist, album, mood) for a track."""
+        allowed_fields = {
+            "title": "title",
+            "artist": "artist",
+            "album": "album",
+            "mood": "mood",
+        }
+
+        updates = []
+        values = []
+
+        print("updating")
+
+        for key, val in fields.items():
+            if key in allowed_fields:
+                col_name = allowed_fields[key]
+                updates.append(f"{col_name} = %s")
+                values.append(val if val is not None else "")
+
+        if not updates:
+            return False
+
+        updates.append("updated_at = NOW()")
+        values.append(track_id)
+
+        query = f"""
+            UPDATE nodes
+            SET {', '.join(updates)}
+            WHERE id = %s::uuid;
+        """
+
+        print("query is", query)
+
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(query, tuple(values))
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating track {track_id}: {e}")
+            self.conn.rollback()
+            return False
 
 
 _pg_instance = None

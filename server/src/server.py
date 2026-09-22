@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional, Any
+from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -89,6 +90,29 @@ async def get_library_tracks():
         return JSONResponse(content=tracks)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class TrackMetadataUpdate(BaseModel):
+    title: Optional[str] = None
+    artist: Optional[str] = None
+    album: Optional[str] = None
+    mood: Optional[str] = None
+
+
+@app.patch("/api/library/tracks/{track_id}")
+async def update_track(track_id: str, payload: TrackMetadataUpdate):
+    """Updates editable metadata attributes for a given track."""
+    print("received req")
+    updates = payload.model_dump(exclude_unset=True)
+    if not updates:
+        return {"status": "noop"}
+
+    db = get_pg()
+    success = db.update_track_metadata(track_id, updates)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update track metadata.")
+
+    return {"status": "success", "updated": updates}
 
 
 @app.get("/api/library/tracks/similar/{track_id}")

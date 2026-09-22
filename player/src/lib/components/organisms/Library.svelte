@@ -1,5 +1,6 @@
 <!-- src/lib/components/organisms/Library.svelte -->
 <script lang="ts">
+  import HeaderBanner from '$lib/components/molecules/HeaderBanner.svelte';
   import CommandBar from "$lib/components/molecules/CommandBar.svelte";
   import LibraryControls, {
     type LibraryViewMode,
@@ -60,16 +61,7 @@
     className
   )}
 >
-  <div
-    class="flex items-center gap-2 px-4 py-3 border-b bg-muted/20 select-none shrink-0"
-  >
-    <Library class="size-4 text-muted-foreground" />
-    <h2
-      class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-    >
-      Library
-    </h2>
-  </div>
+  <HeaderBanner title="Library" icon={Library} />
   <div class="flex flex-col w-full gap-3 shrink-0">
     <!-- Header Bar: Command Search (Center) + Controls & Summary (Right) -->
     <div

@@ -1,5 +1,6 @@
 <!-- src/lib/components/organisms/ActiveQueue.svelte -->
 <script lang="ts">
+  import HeaderBanner from '$lib/components/molecules/HeaderBanner.svelte';
   import QueueTrackItem from "$lib/components/molecules/QueueTrackItem.svelte";
   import QueueDurationSummary from "$lib/components/molecules/QueueDurationSummary.svelte";
   import QueueControls from "$lib/components/molecules/QueueControls.svelte";
@@ -48,18 +49,7 @@
     className
   )}
 >
-  <!-- Header / Queue Context Title -->
-  <div
-    class="flex items-center gap-2 px-4 py-3 border-b bg-muted/20 select-none"
-  >
-    <ListMusic class="size-4 text-muted-foreground" />
-    <h2
-      class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-    >
-      Queue
-    </h2>
-  </div>
-
+  <HeaderBanner title="Queue" icon={ListMusic} />
   <!-- Track List Container -->
   <div class="flex-1 overflow-y-auto p-2 space-y-0.5">
     {#if player.queue.length === 0}

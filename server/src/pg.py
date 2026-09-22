@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import psycopg
 from psycopg.rows import dict_row
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 import json
 from src.config import config
 
@@ -156,7 +156,7 @@ class PostgresStore:
                         "artist": r[2] or "Unknown Artist",
                         "album": r[3] or "",
                         "mood": r[4] or "",
-                        "duration": float(r[5])
+                        "duration": float(r[5]),
                     }
                     for r in result
                 ]
@@ -197,6 +197,59 @@ class PostgresStore:
         except Exception as e:
             print(f"Error finding similar track: {e}")
             return None
+
+    def get_similar_tracks_except_excluded(
+        self,
+        track_id: str,
+        excluded_ids: Optional[List[str]] = None,
+        limit: int = 5,
+    ) -> List[Dict[str, Any]]:
+        """Returns top similar tracks by cosine distance on musical_embedding,
+        excluding tracks in excluded_ids and the target track itself.
+        """
+        excluded_list = list(excluded_ids or [])
+        excluded_list.append(track_id)
+
+        query = """
+        WITH target AS (
+            SELECT musical_embedding
+            FROM nodes
+            WHERE id = %s::uuid
+        )
+        SELECT n.id::text,
+               n.title AS title,
+               n.artist AS artist,
+               n.album AS album,
+               n.musical_fruit AS mood,
+               n.duration AS duration,
+               ROUND((n.musical_embedding <=> t.musical_embedding)::numeric, 4) AS distance
+        FROM nodes n, target t
+        WHERE n.musical_embedding IS NOT NULL
+          AND t.musical_embedding IS NOT NULL
+          AND NOT (n.id = ANY(%s::uuid[]))
+        ORDER BY n.musical_embedding <=> t.musical_embedding ASC
+        LIMIT %s;
+        """
+
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(query, (track_id, excluded_list, limit))
+                rows = cur.fetchall()
+
+                return [
+                    {
+                        "id": r[0],
+                        "title": r[1] or "Unknown Title",
+                        "artist": r[2] or "Unknown Artist",
+                        "album": r[3] or "",
+                        "mood": r[4] or "",
+                        "duration": float(r[5]),
+                    }
+                    for r in rows
+                ]
+        except Exception as e:
+            print(f"Error finding similar tracks: {e}")
+            return []
 
     def filter_by_metadata(self, metadata_field, metadata_value):
         with self.conn.cursor(row_factory=dict_row) as cur:

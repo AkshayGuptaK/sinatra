@@ -1,3 +1,4 @@
+from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -85,6 +86,34 @@ async def get_library_tracks():
     try:
         db = get_pg()
         tracks = db.get_all_tracks()
+        return JSONResponse(content=tracks)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/library/tracks/similar/{track_id}")
+async def get_similar_library_tracks(
+    track_id: str,
+    stoplist: Optional[str] = Query(
+        default=None,
+        description="Comma-separated track IDs to exclude from recommendations",
+    ),
+    limit: int = Query(default=5, ge=1, le=50),
+):
+    """Returns requested number of library tracks similar to the given track,
+
+    excluding those stoplisted or already in the queue.
+    """
+    try:
+        excluded_ids = []
+        if stoplist:
+            excluded_ids = [tid.strip() for tid in stoplist.split(",") if tid.strip()]
+
+        db = get_pg()
+        tracks = db.get_similar_tracks_except_excluded(
+            track_id=track_id, excluded_ids=excluded_ids, limit=limit
+        )
+
         return JSONResponse(content=tracks)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -56,7 +56,7 @@ def sync_fruits():
     if updates:
         print(f"💾 Updating {len(updates)} moods in DB...")
         with db.conn.cursor() as cur:
-            cur.executemany("UPDATE nodes SET musical_fruit = %s WHERE id = %s", updates)
+            cur.executemany("UPDATE nodes SET mood = %s WHERE id = %s", updates)
         db.conn.commit()
         print("✅ Metadata sync complete.")
     else:

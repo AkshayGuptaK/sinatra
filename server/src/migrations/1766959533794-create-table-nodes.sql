@@ -5,10 +5,10 @@ CREATE TABLE nodes (
     title        TEXT,
     artist       TEXT,
     album        TEXT,
+    mood varchar(20),
 
     musical_embedding vector(1024),
     cluster_id INTEGER,
-    musical_fruit varchar(20),
     features jsonb,
 
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),

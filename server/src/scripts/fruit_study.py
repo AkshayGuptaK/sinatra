@@ -11,13 +11,13 @@ def analyze_fruit():
 
     with db.conn.cursor() as cur:
         cur.execute(
-            "SELECT id, filepath, musical_embedding FROM nodes WHERE musical_fruit = %s AND musical_embedding IS NOT NULL",
+            "SELECT id, filepath, musical_embedding FROM nodes WHERE mood = %s AND musical_embedding IS NOT NULL",
             (TARGET_MOOD,),
         )
         fruit_rows = cur.fetchall()
 
         cur.execute(
-            "SELECT id, filepath, musical_embedding FROM nodes WHERE musical_fruit != %s AND musical_fruit IS NOT NULL AND musical_embedding IS NOT NULL ORDER BY RANDOM() LIMIT 500",
+            "SELECT id, filepath, musical_embedding FROM nodes WHERE mood != %s AND mood IS NOT NULL AND musical_embedding IS NOT NULL ORDER BY RANDOM() LIMIT 500",
             (TARGET_MOOD,),
         )
         noise_rows = cur.fetchall()

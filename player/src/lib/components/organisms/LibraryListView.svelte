@@ -29,10 +29,7 @@
 </script>
 
 <div
-  class={cn(
-    "flex flex-col w-full h-full min-h-0 overflow-hidden",
-    className
-  )}
+  class={cn("flex flex-col w-full h-full min-h-0 overflow-hidden", className)}
 >
   <!-- Sticky Header -->
   <div
@@ -62,19 +59,23 @@
         No tracks found.
       </div>
     {:else}
-      <InfiniteScrollList items={library.filteredTracks} batchSize={100} class="h-full">
-        {#snippet children(track, index)}
-          <LibraryTrackItem
-            {track}
-            {index}
-            isActive={player.currentTrackId === track.id}
-            isPlaying={player.currentTrackId === track.id &&
-              player.engine.isPlaying}
-            onPlay={handlePlay}
-            onEnqueue={handleEnqueue}
-          />
-        {/snippet}
-      </InfiniteScrollList>
+        <InfiniteScrollList
+          items={library.filteredTracks}
+          batchSize={100}
+          class="h-full"
+        >
+          {#snippet children(track, index)}
+            <LibraryTrackItem
+              {track}
+              {index}
+              isActive={player.currentTrackId === track.id}
+              isPlaying={player.currentTrackId === track.id &&
+                player.engine.isPlaying}
+              onPlay={handlePlay}
+              onEnqueue={handleEnqueue}
+            />
+          {/snippet}
+        </InfiniteScrollList>
     {/if}
   </div>
 </div>

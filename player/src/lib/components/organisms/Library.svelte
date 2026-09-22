@@ -70,10 +70,10 @@
       Library
     </h2>
   </div>
-  <div class={cn("flex flex-col w-full h-full min-h-0 gap-3", className)}>
+  <div class="flex flex-col w-full gap-3 shrink-0">
     <!-- Header Bar: Command Search (Center) + Controls & Summary (Right) -->
     <div
-      class="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 py-2"
+      class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-2"
     >
       <CommandBar
         onSearchChange={handleSearchChange}

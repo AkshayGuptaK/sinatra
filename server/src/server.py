@@ -13,6 +13,7 @@ from src.visualizer import (
     fetch_library_path,
     render_map_page_html,
 )
+from src.pg import get_pg
 
 autodj = AutoDJ()
 
@@ -74,6 +75,17 @@ async def get_library_map_data():
     try:
         points = fetch_library_map_points()
         return JSONResponse(content=points)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/library/tracks")
+async def get_library_tracks():
+    """Returns all library tracks with metadata."""
+    try:
+        db = get_pg()
+        tracks = db.get_all_tracks()
+        return JSONResponse(content=tracks)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

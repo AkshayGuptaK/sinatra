@@ -134,8 +134,37 @@ class PostgresStore:
                 for fname, ts in cur.fetchall()
             ]
 
+    def get_all_tracks(self):
+        query = """
+        SELECT id::text,
+               title,
+               artist,
+               album,
+               musical_fruit AS mood,
+        FROM nodes
+        ORDER BY title ASC
+        """
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(query)
+                result = cur.fetchall()
+                tracks = [
+                    {
+                        "id": r[0],
+                        "title": r[1] or "Unknown Title",
+                        "artist": r[2] or "Unknown Artist",
+                        "album": r[3] or "",
+                        "mood": r[4] or "",
+                    }
+                    for r in result
+                ]
+            return tracks
+        except Exception as e:
+            print(f"Error loading tracks: {e}")
+            return None
+
     def get_track_path_by_id(self, track_id):
-        print('getting', track_id)
+        print("getting", track_id)
         query = """
         SELECT filepath FROM nodes WHERE id = %s;
         """

@@ -5,6 +5,7 @@
   import { library } from "$lib/audio/library.svelte";
   import { player } from "$lib/audio/player.svelte";
   import { findNearestPoint } from "$lib/utils/math";
+  import MapTooltip from "$lib/components/molecules/MapTooltip.svelte";
   import type { Track } from "$lib/types/track";
   import { cn } from "$lib/utils";
 
@@ -20,6 +21,10 @@
   let transform = $state(d3.zoomIdentity);
   let zoomBehavior: d3.ZoomBehavior<HTMLCanvasElement, unknown> | null = null;
   let hasAutoZoomed = $state(false);
+
+  let hoveredTrack = $state<Track | null>(null);
+  let tooltipPos = $state<{ x: number; y: number }>({ x: 0, y: 0 });
+  let isHoveringTooltip = $state(false);
 
   // Explicit, psychophysically grounded semantic colors for the 13 core emotions
   const EMOTION_COLORS: Record<string, string> = {
@@ -225,7 +230,78 @@
       ctx.fill();
     }
 
+    if (
+      hoveredTrack &&
+      hoveredTrack.coord_x != null &&
+      hoveredTrack.coord_y != null
+    ) {
+      ctx.beginPath();
+      ctx.arc(
+        hoveredTrack.coord_x,
+        hoveredTrack.coord_y,
+        dotRadius * 1.8,
+        0,
+        Math.PI * 2
+      );
+      ctx.strokeStyle = theme.haloBorder;
+      ctx.lineWidth = 1.5 / transform.k;
+      ctx.stroke();
+    }
+
     ctx.globalAlpha = 1.0;
+  }
+
+  function handlePointerMove(event: PointerEvent) {
+    if (isHoveringTooltip || !canvasEl || !containerEl) return;
+    const rect = canvasEl.getBoundingClientRect();
+
+    const screenX = event.clientX - rect.left;
+    const screenY = event.clientY - rect.top;
+
+    const targetWorld = {
+      x: (screenX - transform.x) / transform.k,
+      y: (screenY - transform.y) / transform.k,
+    };
+
+    const nearest = findNearestPoint(
+      library.filteredTracks,
+      targetWorld,
+      (t) =>
+        t.coord_x != null && t.coord_y != null
+          ? { x: t.coord_x, y: t.coord_y }
+          : null,
+      12 / transform.k
+    );
+
+    if (nearest) {
+      hoveredTrack = nearest;
+
+      // Smart positioning: flip left if near right edge, flip top if near bottom edge
+      const tooltipWidth = 300;
+      const offsetX =
+        screenX + tooltipWidth > rect.width
+          ? screenX - tooltipWidth - 10
+          : screenX + 15;
+
+      // If cursor is in the lower half, position tooltip above the cursor so it doesn't clip below
+      const offsetY =
+        screenY > rect.height * 0.5
+          ? Math.max(10, screenY - 320)
+          : screenY + 15;
+
+      tooltipPos = { x: offsetX, y: offsetY };
+    } else {
+      hoveredTrack = null;
+    }
+
+    draw();
+  }
+
+  function handlePointerLeave() {
+    if (!isHoveringTooltip) {
+      hoveredTrack = null;
+      draw();
+    }
   }
 
   function handleCanvasClick(event: MouseEvent) {
@@ -299,7 +375,9 @@
     const _active = player.currentTrack?.id;
 
     if (!hasAutoZoomed && _tracks.length > 0 && zoomBehavior) {
-      const hasCoords = _tracks.some((t) => t.coord_x != null && t.coord_y != null);
+      const hasCoords = _tracks.some(
+        (t) => t.coord_x != null && t.coord_y != null
+      );
       if (hasCoords) {
         fitToBounds(false);
         hasAutoZoomed = true;
@@ -321,6 +399,25 @@
   <canvas
     bind:this={canvasEl}
     onclick={handleCanvasClick}
+    onpointermove={handlePointerMove}
+    onpointerleave={handlePointerLeave}
     class="block w-full h-full"
   ></canvas>
+
+  {#if hoveredTrack}
+    <MapTooltip
+      track={hoveredTrack}
+      x={tooltipPos.x}
+      y={tooltipPos.y}
+      isPlaying={player.currentTrack?.id === hoveredTrack.id}
+      isQueued={queuedTrackIds.has(hoveredTrack.id)}
+      onEnqueue={(t) => player.enqueue(t)}
+      onPointerEnter={() => { isHoveringTooltip = true; }}
+      onPointerLeave={() => {
+        isHoveringTooltip = false;
+        hoveredTrack = null;
+        draw();
+      }}
+    />
+  {/if}
 </div>

@@ -144,6 +144,51 @@ export class MusicPlayer {
     this.checkAndTriggerAutoDj();
   }
 
+  moveTrack(fromIndex: number, toIndex: number) {
+    if (
+      fromIndex < 0 ||
+      fromIndex >= this.queue.length ||
+      toIndex < 0 ||
+      toIndex >= this.queue.length ||
+      fromIndex === toIndex
+    ) {
+      return;
+    }
+
+    const [movedTrack] = this.queue.splice(fromIndex, 1);
+    this.queue.splice(toIndex, 0, movedTrack);
+
+    if (!this.isShuffle && movedTrack) {
+      const origFromIdx = this.originalQueue.findIndex(
+        (t) => t.id === movedTrack.id
+      );
+      if (origFromIdx !== -1) {
+        const [origTrack] = this.originalQueue.splice(origFromIdx, 1);
+        // Find reference neighbor in originalQueue to insert at the matching location
+        const targetNeighbor =
+          this.queue[toIndex > 0 ? toIndex - 1 : toIndex + 1];
+        const neighborIdx = targetNeighbor
+          ? this.originalQueue.findIndex((t) => t.id === targetNeighbor.id)
+          : -1;
+
+        if (neighborIdx !== -1) {
+          const insertIdx = toIndex > 0 ? neighborIdx + 1 : neighborIdx;
+          this.originalQueue.splice(insertIdx, 0, origTrack);
+        } else {
+          this.originalQueue.splice(toIndex, 0, origTrack);
+        }
+      }
+    }
+
+    if (this.currentIndex === fromIndex) {
+      this.currentIndex = toIndex;
+    } else if (fromIndex < this.currentIndex && toIndex >= this.currentIndex) {
+      this.currentIndex -= 1;
+    } else if (fromIndex > this.currentIndex && toIndex <= this.currentIndex) {
+      this.currentIndex += 1;
+    }
+  }
+
   async playTrackAtIndex(index: number) {
     if (index < 0 || index >= this.queue.length) return;
     this.currentIndex = index;

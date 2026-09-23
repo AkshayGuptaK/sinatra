@@ -1,6 +1,6 @@
 <!-- src/lib/components/organisms/ActiveQueue.svelte -->
 <script lang="ts">
-  import HeaderBanner from '$lib/components/molecules/HeaderBanner.svelte';
+  import HeaderBanner from "$lib/components/molecules/HeaderBanner.svelte";
   import QueueTrackItem from "$lib/components/molecules/QueueTrackItem.svelte";
   import QueueDurationSummary from "$lib/components/molecules/QueueDurationSummary.svelte";
   import QueueControls from "$lib/components/molecules/QueueControls.svelte";
@@ -13,6 +13,9 @@
   }
 
   let { class: className = "" }: Props = $props();
+
+  let draggedIndex = $state<number | null>(null);
+  let dropTargetIndex = $state<number | null>(null);
 
   // Cumulative duration of all tracks in the queue
   let totalDuration = $derived(
@@ -41,6 +44,37 @@
   function handleTrackRemove(index: number) {
     player.removeTrackAtIndex(index);
   }
+
+  function handleDragStart(e: DragEvent, index: number) {
+    draggedIndex = index;
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", String(index));
+    }
+  }
+
+  function handleDragOver(e: DragEvent, index: number) {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = "move";
+    }
+    dropTargetIndex = index;
+  }
+
+  function handleDrop(e: DragEvent, targetIndex: number) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedIndex !== null && draggedIndex !== targetIndex) {
+      player.moveTrack(draggedIndex, targetIndex);
+    }
+    draggedIndex = null;
+    dropTargetIndex = null;
+  }
+
+  function handleDragEnd() {
+    draggedIndex = null;
+    dropTargetIndex = null;
+  }
 </script>
 
 <div
@@ -65,8 +99,18 @@
           {index}
           isActive={index === player.currentIndex}
           isPlaying={index === player.currentIndex && player.engine.isPlaying}
+          class={cn(
+            draggedIndex === index && "opacity-40",
+            dropTargetIndex === index &&
+              draggedIndex !== index &&
+              "border-t-2 border-primary"
+          )}
           onSelect={handleTrackSelect}
           onRemove={handleTrackRemove}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onDragEnd={handleDragEnd}
         />
       {/each}
     {/if}

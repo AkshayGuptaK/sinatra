@@ -16,18 +16,20 @@ export class MusicLibrary {
     const query = this.searchQuery.trim().toLowerCase();
     if (!query) return this.tracks;
 
+    const queryTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+
     return this.tracks.filter((track) => {
       if (this.columnFilterKey !== "all") {
         const val = track[this.columnFilterKey];
         return val ? String(val).toLowerCase().includes(query) : false;
       }
 
-      return (
-        (track.title && track.title.toLowerCase().includes(query)) ||
-        (track.artist && track.artist.toLowerCase().includes(query)) ||
-        (track.album && track.album.toLowerCase().includes(query)) ||
-        (track.mood && track.mood.toLowerCase().includes(query))
-      );
+      const combined = [track.title, track.artist, track.album, track.mood]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return queryTokens.every((token) => combined.includes(token));
     });
   });
 

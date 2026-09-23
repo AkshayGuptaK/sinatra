@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { type Track } from "$lib/types/track"
+  import { type Track } from "$lib/types/track";
   import { formatTime } from "$lib/utils/time";
-  import { Volume2, X } from "@lucide/svelte";
+  import { Volume2, X, GripVertical } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import { cn } from "$lib/utils";
 
@@ -13,6 +13,10 @@
     class?: string;
     onSelect?: (index: number) => void;
     onRemove?: (index: number) => void;
+    onDragStart?: (e: DragEvent, index: number) => void;
+    onDragOver?: (e: DragEvent, index: number) => void;
+    onDrop?: (e: DragEvent, index: number) => void;
+    onDragEnd?: () => void;
   }
 
   let {
@@ -23,6 +27,10 @@
     class: className = "",
     onSelect,
     onRemove,
+    onDragStart,
+    onDragOver,
+    onDrop,
+    onDragEnd,
   }: Props = $props();
 
   let displayTitle = $derived(track.title || "Unknown Title");
@@ -37,6 +45,11 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
+  draggable="true"
+  ondragstart={(e) => onDragStart?.(e, index)}
+  ondragover={(e) => { console.log("draggy"); onDragOver?.(e, index);}}
+  ondrop={(e) => onDrop?.(e, index)}
+  ondragend={onDragEnd}
   onclick={() => onSelect?.(index)}
   class={cn(
     "group flex items-center justify-between gap-3 px-3 py-2 rounded-lg cursor-pointer select-none transition-colors text-sm",
@@ -48,6 +61,12 @@
 >
   <!-- Playing Indicator -->
   <div class="flex items-center gap-2 min-w-0">
+    <div
+      class="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+      title="Drag to reorder"
+    >
+      <GripVertical class="size-3.5" />
+    </div>
     <div class="relative flex items-center justify-center size-6 shrink-0">
       <span class="font-mono text-xs text-muted-foreground group-hover:hidden">
         {#if isActive && isPlaying}
@@ -55,7 +74,7 @@
         {/if}
       </span>
 
-      <!-- Remove From Queue Button (appears on row hover) -->
+      <!-- Remove From Queue Button -->
       <Button
         variant="ghost"
         size="icon"

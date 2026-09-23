@@ -6,7 +6,9 @@
   import { player } from "$lib/audio/player.svelte";
   import { findNearestPoint } from "$lib/utils/math";
   import MapTooltip from "$lib/components/molecules/MapTooltip.svelte";
+  import MapLegend from "$lib/components/molecules/MapLegend.svelte";
   import type { Track } from "$lib/types/track";
+  import { EMOTION_COLORS } from "$lib/constants/emotions";
   import { cn } from "$lib/utils";
 
   interface Props {
@@ -25,23 +27,6 @@
   let hoveredTrack = $state<Track | null>(null);
   let tooltipPos = $state<{ x: number; y: number }>({ x: 0, y: 0 });
   let tooltipEl = $state<HTMLDivElement | null>(null);
-
-  // Explicit, psychophysically grounded semantic colors for the 13 core emotions
-  const EMOTION_COLORS: Record<string, string> = {
-    angry: "#ef4444", // Stark Red
-    "indignant/defiant": "#f97316", // Fiery Orange
-    "energizing/pump-up": "#f59e0b", // Bright Amber
-    "joyful/cheerful": "#eab308", // Vibrant Yellow
-    amusing: "#84cc16", // Lime / Playful Green
-    "calm/relaxing/serene": "#10b981", // Soft Emerald
-    beautiful: "#06b6d4", // Cyan / Crystal Blue
-    dreamy: "#818cf8", // Lavender / Pastel Indigo
-    "erotic/desirous": "#ec4899", // Deep Magenta / Rose
-    "sad/depressing": "#3b82f6", // Deep Melancholy Blue
-    "anxious/tense": "#a855f7", // Electric Violet
-    "scary/fearful": "#64748b", // Shadow Slate
-    annoying: "#78716c", // Gritty Warm Gray
-  };
 
   interface CanvasThemeTokens {
     accentRing: string; // Ring around queued items
@@ -124,9 +109,9 @@
     const viewWidth = rect.width;
     const viewHeight = rect.height;
 
-    // 2. Compute scale factor (0.85 leaves 15% edge padding)
+    // 2. Compute scale factor
     const scaleX = (viewWidth * 0.85) / dataWidth;
-    const scaleY = (viewHeight * 0.85) / dataHeight;
+    const scaleY = (viewHeight * 0.9) / dataHeight;
     const k = Math.min(scaleX, scaleY);
 
     // 3. Compute translation to place midpoint at viewport center
@@ -293,20 +278,23 @@
       // Measure real tooltip dimensions dynamically if mounted, or use safe fallbacks
       const cardWidth = tooltipEl?.offsetWidth ?? 288;
       const cardHeight = tooltipEl?.offsetHeight ?? 600;
-      const gapX = 15, gapY = 50;
+      const gapX = 15,
+        gapY = 50;
 
-      // Horizontal positioning: prefer placing to the right; flip to left if overflowing
-      let posX = screenX - gapX;
-      if (posX + cardWidth > rect.width) {
+      // Horizontal positioning: prefer placing away from the center; flip if overflowing
+      let posX = 0;
+      if (screenX < rect.width / 2) {
         posX = screenX - cardWidth - gapX;
       }
-      // Clamp within canvas boundaries
+      if (screenX >= rect.width / 2) {
+        posX = screenX - gapX;
+      }
       posX = Math.max(gapX, Math.min(posX, rect.width - cardWidth - gapX));
 
       // Vertical positioning: prefer placing at center; adjust if overflowing
-      let posY = Math.max(screenY - cardHeight/2, gapY);
+      let posY = Math.max(screenY - cardHeight / 2, 0);
       if (posY + cardHeight > rect.height) {
-        posY = rect.height - cardHeight - gapY
+        posY = rect.height - cardHeight - gapY;
       }
 
       tooltipPos = { x: posX, y: posY };
@@ -428,6 +416,10 @@
     onpointerleave={handlePointerLeave}
     class="block w-full h-full"
   ></canvas>
+
+  <MapLegend
+    class="pointer-events-auto absolute right-3 top-3 z-40 max-w-[190px]"
+  />
 
   {#if hoveredTrack}
     <MapTooltip

@@ -24,7 +24,7 @@
 
   let hoveredTrack = $state<Track | null>(null);
   let tooltipPos = $state<{ x: number; y: number }>({ x: 0, y: 0 });
-  let isHoveringTooltip = $state(false);
+  let tooltipEl = $state<HTMLDivElement | null>(null);
 
   // Explicit, psychophysically grounded semantic colors for the 13 core emotions
   const EMOTION_COLORS: Record<string, string> = {
@@ -252,7 +252,21 @@
   }
 
   function handlePointerMove(event: PointerEvent) {
-    if (isHoveringTooltip || !canvasEl || !containerEl) return;
+    if (!canvasEl || !containerEl) return;
+
+    if (hoveredTrack && tooltipEl) {
+      const cardRect = tooltipEl.getBoundingClientRect();
+      const margin = 5;
+      if (
+        event.clientX >= cardRect.left - margin &&
+        event.clientX <= cardRect.right + margin &&
+        event.clientY >= cardRect.top - margin &&
+        event.clientY <= cardRect.bottom + margin
+      ) {
+        return;
+      }
+    }
+
     const rect = canvasEl.getBoundingClientRect();
 
     const screenX = event.clientX - rect.left;
@@ -276,20 +290,26 @@
     if (nearest) {
       hoveredTrack = nearest;
 
-      // Smart positioning: flip left if near right edge, flip top if near bottom edge
-      const tooltipWidth = 300;
-      const offsetX =
-        screenX + tooltipWidth > rect.width
-          ? screenX - tooltipWidth - 10
-          : screenX + 15;
+      // Measure real tooltip dimensions dynamically if mounted, or use safe fallbacks
+      const cardWidth = tooltipEl?.offsetWidth ?? 288;
+      const cardHeight = tooltipEl?.offsetHeight ?? 600;
+      const gapX = 15, gapY = 50;
 
-      // If cursor is in the lower half, position tooltip above the cursor so it doesn't clip below
-      const offsetY =
-        screenY > rect.height * 0.5
-          ? Math.max(10, screenY - 320)
-          : screenY + 15;
+      // Horizontal positioning: prefer placing to the right; flip to left if overflowing
+      let posX = screenX - gapX;
+      if (posX + cardWidth > rect.width) {
+        posX = screenX - cardWidth - gapX;
+      }
+      // Clamp within canvas boundaries
+      posX = Math.max(gapX, Math.min(posX, rect.width - cardWidth - gapX));
 
-      tooltipPos = { x: offsetX, y: offsetY };
+      // Vertical positioning: prefer placing at center; adjust if overflowing
+      let posY = Math.max(screenY - cardHeight/2, gapY);
+      if (posY + cardHeight > rect.height) {
+        posY = rect.height - cardHeight - gapY
+      }
+
+      tooltipPos = { x: posX, y: posY };
     } else {
       hoveredTrack = null;
     }
@@ -297,11 +317,16 @@
     draw();
   }
 
-  function handlePointerLeave() {
-    if (!isHoveringTooltip) {
-      hoveredTrack = null;
-      draw();
+  function handlePointerLeave(event: PointerEvent) {
+    if (
+      tooltipEl &&
+      event.relatedTarget instanceof Node &&
+      tooltipEl.contains(event.relatedTarget)
+    ) {
+      return;
     }
+    hoveredTrack = null;
+    draw();
   }
 
   function handleCanvasClick(event: MouseEvent) {
@@ -406,17 +431,18 @@
 
   {#if hoveredTrack}
     <MapTooltip
+      bind:el={tooltipEl}
       track={hoveredTrack}
       x={tooltipPos.x}
       y={tooltipPos.y}
       isPlaying={player.currentTrack?.id === hoveredTrack.id}
       isQueued={queuedTrackIds.has(hoveredTrack.id)}
       onEnqueue={(t) => player.enqueue(t)}
-      onPointerEnter={() => { isHoveringTooltip = true; }}
-      onPointerLeave={() => {
-        isHoveringTooltip = false;
-        hoveredTrack = null;
-        draw();
+      onPointerLeave={(e) => {
+        if (e.relatedTarget !== canvasEl) {
+          hoveredTrack = null;
+          draw();
+        }
       }}
     />
   {/if}

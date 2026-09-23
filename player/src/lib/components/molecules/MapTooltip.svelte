@@ -9,8 +9,8 @@
     isPlaying: boolean;
     isQueued: boolean;
     onEnqueue: (track: Track) => void;
-    onPointerEnter?: () => void;
-    onPointerLeave?: () => void;
+    onPointerLeave?: (e: PointerEvent) => void;
+    el?: HTMLDivElement | null
   }
 
   let {
@@ -20,8 +20,8 @@
     isPlaying,
     isQueued,
     onEnqueue,
-    onPointerEnter,
     onPointerLeave,
+    el = $bindable(),
   }: Props = $props();
 
   // Extract all emotions, sort descending, filter out near-zero values
@@ -32,15 +32,16 @@
         name,
         pct: Math.round(Number(score) * 100),
       }))
-      .filter((e) => e.pct > 0)
-      .sort((a, b) => b.pct - a.pct);
+      .filter((e) => e.pct > 35)
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 15)
   });
 </script>
 
 <!-- Floating Card Container -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  onpointerenter={onPointerEnter}
+  bind:this={el}
   onpointerleave={onPointerLeave}
   class="pointer-events-auto absolute z-50 w-72 rounded-lg border border-border/80 bg-card/95 p-3 text-card-foreground shadow-xl backdrop-blur-md transition-all select-none"
   style="left: {x + 16}px; top: {y + 16}px;"

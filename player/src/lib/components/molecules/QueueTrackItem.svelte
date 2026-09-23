@@ -47,12 +47,15 @@
 <div
   draggable="true"
   ondragstart={(e) => onDragStart?.(e, index)}
-  ondragover={(e) => { console.log("draggy"); onDragOver?.(e, index);}}
+  ondragover={(e) => {
+    console.log("draggy");
+    onDragOver?.(e, index);
+  }}
   ondrop={(e) => onDrop?.(e, index)}
   ondragend={onDragEnd}
   onclick={() => onSelect?.(index)}
   class={cn(
-    "group flex items-center justify-between gap-3 px-3 py-2 rounded-lg cursor-pointer select-none transition-colors text-sm",
+    "group flex items-center justify-between gap-3 px-2 py-2 rounded-lg cursor-pointer select-none transition-colors text-sm",
     isActive
       ? "bg-accent/70 text-accent-foreground font-medium"
       : "hover:bg-muted/50 text-foreground",
@@ -60,33 +63,39 @@
   )}
 >
   <!-- Playing Indicator -->
-  <div class="flex items-center gap-2 min-w-0">
-    <div
-      class="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-      title="Drag to reorder"
-    >
-      <GripVertical class="size-3.5" />
-    </div>
-    <div class="relative flex items-center justify-center size-6 shrink-0">
-      <span class="font-mono text-xs text-muted-foreground group-hover:hidden">
+  <div class="flex items-center gap-1 min-w-0">
+    <div class="flex items-center gap-1 shrink-0">
+      <span
+        class="flex items-center justify-center size-8 font-mono text-xs text-muted-foreground group-hover:hidden"
+      >
         {#if isActive && isPlaying}
           <Volume2 class="size-4 animate-pulse text-primary inline-block" />
         {/if}
       </span>
 
-      <!-- Remove From Queue Button -->
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={`Remove ${displayTitle} from queue`}
-        title="Remove from queue"
-        onclick={handleRemove}
-        class="hidden group-hover:flex size-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-      >
-        <X class="size-3.5" />
-      </Button>
-    </div>
+      <!-- Hover State: Hidden by default, reveals both Grip and X together -->
+      <div class="hidden group-hover:flex items-center">
+        <!-- Drag Handle -->
+        <div
+          class="cursor-grab active:cursor-grabbing py-1 text-muted-foreground/60 hover:text-foreground transition-colors"
+          title="Drag to reorder"
+        >
+          <GripVertical class="size-3.5" />
+        </div>
 
+        <!-- Remove Track Button -->
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Remove ${displayTitle} from queue`}
+          title="Remove from queue"
+          onclick={handleRemove}
+          class="size-4.5 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        >
+          <X class="size-3.5" />
+        </Button>
+      </div>
+    </div>
     <!-- Title & Artist -->
     <div class="flex flex-col min-w-0">
       <span class={cn("truncate font-medium", isActive && "text-primary")}>

@@ -81,7 +81,7 @@ def generate_library_coords(method: str = "kr", k: int = 5):
     with db.conn.cursor() as cur:
         cur.execute(
             """
-            SELECT filepath, emotions
+            SELECT filepath, emotions, emotions_normalized
             FROM nodes
             WHERE emotions IS NOT NULL;
             """
@@ -98,12 +98,34 @@ def generate_library_coords(method: str = "kr", k: int = 5):
     processed = 0
 
     # 3. Process and batch update coordinates
-    for filepath, emotions_data in rows:
+    THRESHOLD = 0.35
+
+    for filepath, emotions_data, norm_data in rows:
         if not isinstance(emotions_data, dict):
             continue
 
-        vec_24 = [float(emotions_data.get(emotion, 0.0)) for emotion in emotion_cols]
-        X = np.array([vec_24], dtype=np.float64)
+        norm_dict = norm_data if isinstance(norm_data, dict) else {}
+
+        # a. Build raw values array and normalized mask in identical emotion order
+        raw_vals = np.array(
+            [float(emotions_data.get(emotion, 0.0)) for emotion in emotion_cols],
+            dtype=np.float64,
+        )
+        norm_vals = np.array(
+            [float(norm_dict.get(emotion, 0.0)) for emotion in emotion_cols],
+            dtype=np.float64,
+        )
+
+        # b. Filter unnormalized values using normalized threshold (>= 0.35)
+        sparse_raw = np.where(norm_vals >= THRESHOLD, raw_vals, 0.0)
+
+        # c. Fallback: if all normalized values fall below 0.35, keep dominant unnormalized peak
+        if np.all(sparse_raw == 0.0):
+            top_idx = int(np.argmax(norm_vals)) if len(norm_dict) > 0 else int(np.argmax(raw_vals))
+            sparse_raw[top_idx] = raw_vals[top_idx]
+
+        # d. Predict 2D coordinates on the masked unnormalized array
+        X = np.array([sparse_raw], dtype=np.float64)
 
         preds = project_coords(X)[0]
         coord_x = float(preds[0])

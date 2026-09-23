@@ -37,7 +37,7 @@
 
 <div
   class={cn(
-    "flex flex-col md:flex-row items-center gap-6 w-full p-4 md:px-6 md:py-4 rounded-xl border bg-card text-card-foreground shadow-lg",
+    "flex flex-col md:flex-row items-center gap-6 w-full p-3 md:px-6 md:py-3 rounded-xl border bg-card text-card-foreground shadow-lg",
     className
   )}
 >

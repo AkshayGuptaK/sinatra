@@ -17,7 +17,7 @@
 
 <div
 	class={cn(
-		'flex flex-col gap-1.5 p-3 rounded-lg border border-border/70 bg-card/85 text-card-foreground shadow-lg backdrop-blur-md select-none',
+		'flex flex-col gap-2 p-3 rounded-lg border border-border/70 bg-card/85 text-card-foreground shadow-lg backdrop-blur-md select-none w-60 shrink-0',
 		className
 	)}
 >
@@ -25,9 +25,9 @@
 		Emotions
 	</h4>
 
-	<div class="flex flex-col gap-1 mt-0.5">
+	<div class="flex flex-col gap-2 mt-1">
 		{#each sortedEmotions as { name, color }}
-			<div class="flex items-center gap-2 text-xs">
+			<div class="flex items-center gap-3 text-xs">
 				<span
 					class="size-2.5 rounded-full shrink-0 shadow-xs"
 					style="background-color: {color};"

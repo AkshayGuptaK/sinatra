@@ -1,28 +1,16 @@
 <script lang="ts">
   import type { Track } from "$lib/types/track";
-  import { Plus, Check, Play } from "@lucide/svelte";
+  import { Check, Play } from "@lucide/svelte";
+  import { cn } from "$lib/utils";
 
   interface Props {
     track: Track;
-    x: number;
-    y: number;
     isPlaying: boolean;
     isQueued: boolean;
-    onEnqueue: (track: Track) => void;
-    onPointerLeave?: (e: PointerEvent) => void;
-    el?: HTMLDivElement | null
+    class?: string;
   }
 
-  let {
-    track,
-    x,
-    y,
-    isPlaying,
-    isQueued,
-    onEnqueue,
-    onPointerLeave,
-    el = $bindable(),
-  }: Props = $props();
+  let { track, isPlaying, isQueued, class: className = "" }: Props = $props();
 
   // Extract all emotions, sort descending, filter out near-zero values
   const sortedEmotions = $derived.by(() => {
@@ -34,17 +22,17 @@
       }))
       .filter((e) => e.pct > 35)
       .sort((a, b) => b.pct - a.pct)
-      .slice(0, 15)
+      .slice(0, 10);
   });
 </script>
 
 <!-- Floating Card Container -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  bind:this={el}
-  onpointerleave={onPointerLeave}
-  class="pointer-events-auto absolute z-50 w-72 rounded-lg border border-border/80 bg-card/95 p-3 text-card-foreground shadow-xl backdrop-blur-md transition-all select-none"
-  style="left: {x + 16}px; top: {y + 16}px;"
+  class={cn(
+    "flex flex-col w-full rounded-lg border border-border/80 bg-card/95 p-3 text-card-foreground backdrop-blur-md select-none",
+    className
+  )}
 >
   <!-- Header: Title, Artist, and Status Action -->
   <div
@@ -69,7 +57,7 @@
       {/if}
     </div>
 
-    <!-- Status Indicator / Queue Button -->
+    <!-- Status Indicator -->
     <div class="shrink-0 pt-0.5">
       {#if isPlaying}
         <span
@@ -85,19 +73,6 @@
           <Check class="size-3 text-primary" />
           In Queue
         </span>
-      {:else}
-        <button
-          type="button"
-          onclick={(e) => {
-            e.stopPropagation();
-            onEnqueue(track);
-          }}
-          class="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-          title="Add to Queue"
-        >
-          <Plus class="size-3.5" />
-          Queue
-        </button>
       {/if}
     </div>
   </div>

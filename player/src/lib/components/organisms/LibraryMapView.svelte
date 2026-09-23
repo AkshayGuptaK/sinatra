@@ -25,8 +25,6 @@
   let hasAutoZoomed = $state(false);
 
   let hoveredTrack = $state<Track | null>(null);
-  let tooltipPos = $state<{ x: number; y: number }>({ x: 0, y: 0 });
-  let tooltipEl = $state<HTMLDivElement | null>(null);
 
   interface CanvasThemeTokens {
     accentRing: string; // Ring around queued items
@@ -239,21 +237,7 @@
   function handlePointerMove(event: PointerEvent) {
     if (!canvasEl || !containerEl) return;
 
-    if (hoveredTrack && tooltipEl) {
-      const cardRect = tooltipEl.getBoundingClientRect();
-      const margin = 5;
-      if (
-        event.clientX >= cardRect.left - margin &&
-        event.clientX <= cardRect.right + margin &&
-        event.clientY >= cardRect.top - margin &&
-        event.clientY <= cardRect.bottom + margin
-      ) {
-        return;
-      }
-    }
-
     const rect = canvasEl.getBoundingClientRect();
-
     const screenX = event.clientX - rect.left;
     const screenY = event.clientY - rect.top;
 
@@ -272,47 +256,11 @@
       12 / transform.k
     );
 
-    if (nearest) {
-      hoveredTrack = nearest;
-
-      // Measure real tooltip dimensions dynamically if mounted, or use safe fallbacks
-      const cardWidth = tooltipEl?.offsetWidth ?? 288;
-      const cardHeight = tooltipEl?.offsetHeight ?? 600;
-      const gapX = 15,
-        gapY = 50;
-
-      // Horizontal positioning: prefer placing away from the center; flip if overflowing
-      let posX = 0;
-      if (screenX < rect.width / 2) {
-        posX = screenX - cardWidth - gapX;
-      }
-      if (screenX >= rect.width / 2) {
-        posX = screenX - gapX;
-      }
-      posX = Math.max(gapX, Math.min(posX, rect.width - cardWidth - gapX));
-
-      // Vertical positioning: prefer placing at center; adjust if overflowing
-      let posY = Math.max(screenY - cardHeight / 2, 0);
-      if (posY + cardHeight > rect.height) {
-        posY = rect.height - cardHeight - gapY;
-      }
-
-      tooltipPos = { x: posX, y: posY };
-    } else {
-      hoveredTrack = null;
-    }
-
+    hoveredTrack = nearest ?? null;
     draw();
   }
 
-  function handlePointerLeave(event: PointerEvent) {
-    if (
-      tooltipEl &&
-      event.relatedTarget instanceof Node &&
-      tooltipEl.contains(event.relatedTarget)
-    ) {
-      return;
-    }
+  function handlePointerLeave() {
     hoveredTrack = null;
     draw();
   }
@@ -401,41 +349,44 @@
 </script>
 
 <div
-  bind:this={containerEl}
   class={cn(
-    "relative w-full h-full overflow-hidden bg-card select-none cursor-grab active:cursor-grabbing",
+    "relative flex flex-row w-full h-full min-h-0 overflow-hidden bg-card select-none p-1 gap-3",
     className
   )}
 >
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-  <canvas
-    bind:this={canvasEl}
-    onclick={handleCanvasClick}
-    onpointermove={handlePointerMove}
-    onpointerleave={handlePointerLeave}
-    class="block w-full h-full"
-  ></canvas>
+  <div
+    bind:this={containerEl}
+    class="relative flex-1 min-w-0 h-full overflow-hidden cursor-grab active:cursor-grabbing"
+  >
+    <canvas
+      bind:this={canvasEl}
+      onclick={handleCanvasClick}
+      onpointermove={handlePointerMove}
+      onpointerleave={handlePointerLeave}
+      class="block w-full h-full"
+    ></canvas>
+  </div>
 
-  <MapLegend
-    class="pointer-events-auto absolute right-3 top-3 z-40 max-w-[190px]"
-  />
+  <aside
+    class="flex flex-col w-60 shrink-0 h-full overflow-hidden"
+  >
+    <!-- Top: Emotion Legend (interactive/scrollable if needed) -->
+    <div class="shrink-0">
+      <MapLegend class="w-full" />
+    </div>
 
-  {#if hoveredTrack}
-    <MapTooltip
-      bind:el={tooltipEl}
-      track={hoveredTrack}
-      x={tooltipPos.x}
-      y={tooltipPos.y}
-      isPlaying={player.currentTrack?.id === hoveredTrack.id}
-      isQueued={queuedTrackIds.has(hoveredTrack.id)}
-      onEnqueue={(t) => player.enqueue(t)}
-      onPointerLeave={(e) => {
-        if (e.relatedTarget !== canvasEl) {
-          hoveredTrack = null;
-          draw();
-        }
-      }}
-    />
-  {/if}
+    <!-- Bottom: Fixed Slot for Hover Details -->
+    <div class="flex-1 min-h-0 overflow-y-auto">
+      {#if hoveredTrack}
+        <MapTooltip
+          track={hoveredTrack}
+          isPlaying={player.currentTrack?.id === hoveredTrack.id}
+          isQueued={queuedTrackIds.has(hoveredTrack.id)}
+          class="w-full"
+        />
+      {/if}
+    </div>
+  </aside>
 </div>

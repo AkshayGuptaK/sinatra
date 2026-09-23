@@ -7,6 +7,7 @@
   } from "$lib/components/molecules/LibraryControls.svelte";
   import LibraryDurationSummary from "$lib/components/molecules/LibraryDurationSummary.svelte";
   import LibraryListView from "$lib/components/organisms/LibraryListView.svelte";
+  import LibraryMapView from '$lib/components/organisms/LibraryMapView.svelte';
   import { Library } from "@lucide/svelte";
   import { library } from "$lib/audio/library.svelte";
   import { player } from "$lib/audio/player.svelte";
@@ -92,11 +93,7 @@
     {#if viewMode === "list"}
       <LibraryListView {queuedTrackIds} />
     {:else}
-      <div
-        class="flex flex-col items-center justify-center h-full border rounded-xl bg-card text-muted-foreground"
-      >
-        <p class="text-sm">Mood Scatter Map Canvas will mount here.</p>
-      </div>
+      <LibraryMapView {queuedTrackIds} />
     {/if}
   </div>
   <LibraryDurationSummary

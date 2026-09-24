@@ -94,34 +94,36 @@
 
   <!-- View Mode Switcher -->
   <div class="flex items-center rounded-lg border bg-muted/40 p-0.5 text-xs">
-    <button
-      type="button"
+    <Button
+      variant="ghost"
+      size="icon"
       onclick={() => onViewChange?.("list")}
       aria-label="Switch to List View"
       title="List View"
       class={cn(
-        "flex items-center justify-center p-1.5 rounded-md transition-colors",
+        "size-7 p-1 rounded-md transition-colors",
         viewMode === "list"
-          ? "bg-background font-medium text-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground"
+          ? "bg-background font-medium text-foreground shadow-sm hover:bg-background"
+          : "!text-muted-foreground hover:text-foreground hover:bg-transparent"
       )}
     >
-      <List class="size-5" />
-    </button>
-    <button
-      type="button"
+      <List class="size-5 shrink-0" />
+    </Button>
+    <Button
+      variant="ghost"
+      size="icon"
       onclick={() => onViewChange?.("map")}
-      aria-label="Switch to Map View"
-      title="Map View"
+      aria-label="Switch to List View"
+      title="List View"
       class={cn(
-        "flex items-center justify-center p-1.5 rounded-md transition-colors",
+        "size-7 p-1 rounded-md transition-colors",
         viewMode === "map"
-          ? "bg-background font-medium text-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground"
+          ? "bg-background font-medium text-foreground shadow-sm hover:bg-background"
+          : "!text-muted-foreground hover:text-foreground hover:bg-transparent"
       )}
     >
       <MapPin class="size-5" />
-    </button>
+    </Button>
   </div>
 
   <!-- Anchored Inline Popover (below and aligned to the right) -->

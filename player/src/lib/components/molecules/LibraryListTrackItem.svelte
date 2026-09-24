@@ -5,6 +5,7 @@
   import { Volume2, Plus } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import InlineEditableCell from "$lib/components/atoms/InlineEditableCell.svelte";
+  import EditableTagList from "$lib/components/molecules/EditableTagList.svelte";
   import { cn } from "$lib/utils";
 
   interface Props {
@@ -38,7 +39,7 @@
 <div
   ondblclick={() => onEnqueue?.(track)}
   class={cn(
-    "group grid grid-cols-[1.5rem_minmax(180px,2fr)_minmax(140px,1.5fr)_minmax(140px,1.5fr)_minmax(100px,1fr)_5rem_3.5rem] items-center px-4 py-2 text-sm rounded-md transition-colors cursor-pointer select-none",
+    "group grid grid-cols-[1.5rem_minmax(160px,2fr)_minmax(120px,1.5fr)_minmax(120px,1.5fr)_minmax(80px,0.6fr)_minmax(120px,1.5fr)_5rem_3.5rem] items-center px-4 py-2 text-sm rounded-md transition-colors cursor-pointer select-none",
     isActive
       ? "bg-accent/70 text-accent-foreground font-medium"
       : "hover:bg-muted/50 text-foreground",
@@ -97,9 +98,17 @@
       value={track.mood || ""}
       placeholder="—"
       class={track.mood
-        ? "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted border text-muted-foreground capitalize"
+        ? "text-xs font-medium text-muted-foreground"
         : "text-muted-foreground/60"}
       onSave={(val) => onUpdate?.({ mood: val })}
+    />
+  </div>
+
+  <!-- Tags -->
+  <div class="min-w-0 pr-2">
+    <EditableTagList
+      tags={track.tags ?? []}
+      onChange={(nextTags) => onUpdate?.({ tags: nextTags })}
     />
   </div>
 

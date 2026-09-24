@@ -97,6 +97,19 @@ class TrackMetadataUpdate(BaseModel):
     artist: Optional[str] = None
     album: Optional[str] = None
     mood: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+
+def sanitize_tags(raw_tags: List[str]) -> List[str]:
+    """Trims whitespace, lowercases, removes blanks, and deduplicates while preserving order."""
+    cleaned = []
+    seen = set()
+    for tag in raw_tags:
+        t = tag.strip().lower()
+        if t and t not in seen:
+            seen.add(t)
+            cleaned.append(t)
+    return cleaned
 
 
 @app.patch("/api/library/tracks/{track_id}")
@@ -105,6 +118,9 @@ async def update_track(track_id: str, payload: TrackMetadataUpdate):
     updates = payload.model_dump(exclude_unset=True)
     if not updates:
         return {"status": "noop"}
+
+    if "tags" in updates and updates["tags"] is not None:
+        updates["tags"] = sanitize_tags(updates["tags"])
 
     db = get_pg()
     success = db.update_track_metadata(track_id, updates)

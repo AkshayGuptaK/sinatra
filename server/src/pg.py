@@ -141,6 +141,7 @@ class PostgresStore:
                artist,
                album,
                mood,
+               tags,
                duration,
                emotions_normalized,
                coord_x,
@@ -159,10 +160,11 @@ class PostgresStore:
                         "artist": r[2] or "Unknown Artist",
                         "album": r[3] or "",
                         "mood": r[4] or "",
-                        "duration": float(r[5]),
-                        "emotions": r[6] or {},
-                        "coord_x": r[7] or 0,
-                        "coord_y": r[8] or 0
+                        "tags": r[5] or [],
+                        "duration": float(r[6]),
+                        "emotions": r[7] or {},
+                        "coord_x": r[8] or 0,
+                        "coord_y": r[9] or 0,
                     }
                     for r in result
                 ]
@@ -226,6 +228,7 @@ class PostgresStore:
                n.artist AS artist,
                n.album AS album,
                n.mood AS mood,
+               n.tags AS tags,
                n.duration AS duration,
                ROUND((n.musical_embedding <=> t.musical_embedding)::numeric, 4) AS distance
         FROM nodes n, target t
@@ -248,7 +251,8 @@ class PostgresStore:
                         "artist": r[2] or "Unknown Artist",
                         "album": r[3] or "",
                         "mood": r[4] or "",
-                        "duration": float(r[5]),
+                        "tags": r[5] or "",
+                        "duration": float(r[6]),
                     }
                     for r in rows
                 ]
@@ -269,12 +273,13 @@ class PostgresStore:
             return [row["filepath"] for row in cur.fetchall()]
 
     def update_track_metadata(self, track_id: str, fields: Dict[str, Any]) -> bool:
-        """Updates editable metadata fields (title, artist, album, mood) for a track."""
+        """Updates editable metadata fields (title, artist, album, mood, tags) for a track."""
         allowed_fields = {
             "title": "title",
             "artist": "artist",
             "album": "album",
             "mood": "mood",
+            "tags": "tags",
         }
 
         updates = []
@@ -284,7 +289,11 @@ class PostgresStore:
             if key in allowed_fields:
                 col_name = allowed_fields[key]
                 updates.append(f"{col_name} = %s")
-                values.append(val if val is not None else "")
+
+                if col_name == "tags":
+                    values.append(list(val) if val is not None else [])
+                else:
+                    values.append(val if val is not None else "")
 
         if not updates:
             return False

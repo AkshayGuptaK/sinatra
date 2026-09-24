@@ -14,12 +14,13 @@
   let canvasEl = $state<HTMLCanvasElement | null>(null);
   let animId: number | null = null;
 
-  // Ballistic gravity state for peak caps
+  let currentHeights = $state<number[]>([]);
   let peaks = $state<{ height: number; speed: number; holdFrames: number }[]>(
     []
   );
 
   $effect(() => {
+    currentHeights = new Array(bars).fill(0);
     peaks = Array.from({ length: bars }, () => ({
       height: 0,
       speed: 0,
@@ -29,6 +30,7 @@
 
   const GRAVITY = 0.01; // Downward acceleration
   const PEAK_HOLD = 20; // Frames to hover before dropping
+  const DECAY_RATE = 0.97; // Lower = drops faster
 
   function draw() {
     if (!canvasEl) return;
@@ -41,44 +43,65 @@
 
     ctx.clearRect(0, 0, w, h);
 
-    // Resolve CSS colors directly from the active skin
     const style = getComputedStyle(canvasEl);
     const barColor = style.getPropertyValue("--primary").trim() || "#38bdf8";
     const peakColor = style.getPropertyValue("--ring").trim() || barColor;
 
-    // Get normalized frequency levels [0.0 - 1.0]
-    const bands = isPlaying
-      ? player.engine.getFrequencyBands(bars)
-      : new Array(bars).fill(0);
-
     const gap = 1 * dpr;
     const barWidth = (w - gap * (bars - 1)) / bars;
     const capHeight = 1.5 * dpr;
+    const minHeight = 2 * dpr;
+
+    const bands = isPlaying ? player.engine.getFrequencyBands(bars) : [];
+    let hasActiveMotion = false;
 
     for (let i = 0; i < bars; i++) {
-      const target = bands[i];
-      const currentBarHeight = Math.max(2 * dpr, target * (h - capHeight));
+      let targetHeight: number;
+
+      if (isPlaying) {
+        const target = bands[i] ?? 0;
+        targetHeight = Math.max(minHeight, target * (h - capHeight));
+        currentHeights[i] = targetHeight;
+        hasActiveMotion = true;
+      } else {
+        currentHeights[i] = Math.max(
+          minHeight,
+          (currentHeights[i] ?? minHeight) * DECAY_RATE
+        );
+        targetHeight = currentHeights[i];
+
+        // Check if bar is still falling toward baseline
+        if (currentHeights[i] > minHeight + 0.1) {
+          hasActiveMotion = true;
+        }
+      }
+
       const x = i * (barWidth + gap);
-      const y = h - currentBarHeight;
+      const y = h - targetHeight;
 
       // 1. Draw animated frequency bar
       ctx.fillStyle = barColor;
       ctx.beginPath();
-      ctx.roundRect(x, y, barWidth, currentBarHeight, 1 * dpr);
+      ctx.roundRect(x, y, barWidth, targetHeight, 1 * dpr);
       ctx.fill();
 
       // 2. Ballistic Gravity Peak Hold
       const peak = peaks[i];
-      if (currentBarHeight >= peak.height) {
-        peak.height = currentBarHeight;
+      if (targetHeight >= peak.height) {
+        peak.height = targetHeight;
         peak.speed = 0;
         peak.holdFrames = PEAK_HOLD;
       } else {
         if (peak.holdFrames > 0) {
           peak.holdFrames--;
+          hasActiveMotion = true;
         } else {
           peak.speed += GRAVITY * dpr;
           peak.height = Math.max(0, peak.height - peak.speed);
+
+          if (peak.height > minHeight) {
+            hasActiveMotion = true;
+          }
         }
       }
 
@@ -90,20 +113,19 @@
       }
     }
 
-    if (isPlaying) {
+    if (isPlaying || hasActiveMotion) {
       animId = requestAnimationFrame(draw);
+    } else {
+      animId = null;
     }
   }
 
   $effect(() => {
+    // Start or keep loop alive whenever playing, or when toggling off so it can decay
     if (isPlaying) {
       if (!animId) animId = requestAnimationFrame(draw);
     } else {
-      if (animId) {
-        cancelAnimationFrame(animId);
-        animId = null;
-      }
-      draw();
+      if (!animId) animId = requestAnimationFrame(draw);
     }
   });
 

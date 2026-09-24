@@ -63,7 +63,6 @@
     className
   )}
 >
-  <!-- Playing Indicator -->
   <div class="flex items-center gap-1 min-w-0">
     <div class="flex items-center gap-1 shrink-0">
       <span
@@ -74,9 +73,7 @@
         {/if}
       </span>
 
-      <!-- Hover State: Hidden by default, reveals both Grip and X together -->
       <div class="hidden group-hover:flex items-center">
-        <!-- Drag Handle -->
         <div
           class="cursor-grab active:cursor-grabbing py-1 text-muted-foreground/60 hover:text-foreground transition-colors"
           title="Drag to reorder"
@@ -84,7 +81,6 @@
           <GripVertical class="size-3.5" />
         </div>
 
-        <!-- Remove Track Button -->
         <Button
           variant="ghost"
           size="icon"
@@ -97,7 +93,7 @@
         </Button>
       </div>
     </div>
-    <!-- Title & Artist -->
+
     <div class="flex flex-col min-w-0">
       <span class={cn("truncate font-medium", isActive && "text-primary")}>
         {displayTitle}
@@ -112,7 +108,6 @@
     {#if isActive}
       <MiniBarVisualizer {isPlaying} bars={8} />
     {/if}
-    <!-- Track Duration -->
     <span class="font-mono text-xs tabular-nums text-muted-foreground shrink-0">
       {formatTime(track.duration ?? 0)}
     </span>

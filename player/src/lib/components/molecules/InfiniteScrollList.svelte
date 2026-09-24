@@ -22,10 +22,9 @@
 
   let visibleItems = $derived(items.slice(0, displayCount));
 
-  // Reset page window whenever the underlying collection or query shrinks/changes
   $effect(() => {
-    if (items) {
-      displayCount = batchSize;
+    if (items.length < displayCount) {
+      displayCount = Math.max(batchSize, items.length);
     }
   });
 

@@ -19,7 +19,6 @@
 		const nextTags = [...tags];
 
 		if (!cleanVal) {
-			// If edited to empty string, delete the tag
 			nextTags.splice(index, 1);
 		} else {
 			nextTags[index] = cleanVal;
@@ -80,6 +79,7 @@
 		</div>
 	{/each}
 
+    <!-- svelte-ignore a11y_autofocus -->
 	{#if isAdding}
 		<input
 			type="text"

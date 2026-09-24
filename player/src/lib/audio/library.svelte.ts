@@ -89,6 +89,32 @@ export class MusicLibrary {
     }
   }
 
+  async addTagToTracks(trackIds: string[], tag: string): Promise<void> {
+    const cleanTag = tag.trim().toLowerCase();
+    if (!cleanTag || trackIds.length === 0) return;
+
+    const targetIds = new Set(trackIds);
+    const updatesToPersist: { id: string; tags: string[] }[] = [];
+
+    this.tracks = this.tracks.map((track) => {
+      if (!targetIds.has(track.id)) return track;
+
+      const existingTags = track.tags ?? [];
+      if (existingTags.includes(cleanTag)) return track;
+
+      const updatedTags = [...existingTags, cleanTag];
+      updatesToPersist.push({ id: track.id, tags: updatedTags });
+
+      return { ...track, tags: updatedTags };
+    });
+
+    await Promise.allSettled(
+      updatesToPersist.map(({ id, tags }) =>
+        sinatraApi.updateTrackMetadata(id, { tags })
+      )
+    );
+  }
+
   setFilter(query: string, key: ColumnFilterKey | "all" = "all") {
     this.searchQuery = query;
     this.columnFilterKey = key;

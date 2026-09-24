@@ -1,13 +1,13 @@
 <!-- src/lib/components/organisms/Library.svelte -->
 <script lang="ts">
-  import HeaderBanner from '$lib/components/molecules/HeaderBanner.svelte';
+  import HeaderBanner from "$lib/components/molecules/HeaderBanner.svelte";
   import CommandBar from "$lib/components/molecules/CommandBar.svelte";
   import LibraryControls, {
     type LibraryViewMode,
   } from "$lib/components/molecules/LibraryControls.svelte";
   import LibraryDurationSummary from "$lib/components/molecules/LibraryDurationSummary.svelte";
   import LibraryListView from "$lib/components/organisms/LibraryListView.svelte";
-  import LibraryMapView from '$lib/components/organisms/LibraryMapView.svelte';
+  import LibraryMapView from "$lib/components/organisms/LibraryMapView.svelte";
   import { Library } from "@lucide/svelte";
   import { library } from "$lib/audio/library.svelte";
   import { player } from "$lib/audio/player.svelte";
@@ -51,6 +51,12 @@
     }
   }
 
+  async function handleTagAll(tag: string) {
+    if (library.filteredTracks.length === 0 || !tag) return;
+    const targetIds = library.filteredTracks.map((t) => t.id);
+    await library.addTagToTracks(targetIds, tag);
+  }
+
   function handleEnqueueAll() {
     for (const track of library.filteredTracks) {
       player.enqueue(track);
@@ -82,6 +88,7 @@
           {viewMode}
           disabled={library.filteredTracks.length === 0}
           onViewChange={(mode) => (viewMode = mode)}
+          onTagAll={handleTagAll}
           onEnqueueAll={handleEnqueueAll}
         />
       </div>

@@ -3,6 +3,7 @@
   import { formatTime } from "$lib/utils/time";
   import { Volume2, X, GripVertical } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
+  import MiniBarVisualizer from "$lib/components/atoms/MiniBarVisualizer.svelte";
   import { cn } from "$lib/utils";
 
   interface Props {
@@ -107,8 +108,13 @@
     </div>
   </div>
 
-  <!-- Track Duration -->
-  <span class="font-mono text-xs tabular-nums text-muted-foreground shrink-0">
-    {formatTime(track.duration ?? 0)}
-  </span>
+  <div class="flex items-center justify-between gap-3 shrink-0">
+    {#if isActive}
+      <MiniBarVisualizer {isPlaying} bars={8} />
+    {/if}
+    <!-- Track Duration -->
+    <span class="font-mono text-xs tabular-nums text-muted-foreground shrink-0">
+      {formatTime(track.duration ?? 0)}
+    </span>
+  </div>
 </div>

@@ -4,6 +4,7 @@ export interface Track {
   artist: string;
   album?: string;
   mood?: string;
+  tags?: string[];
   duration: number;
   // Raw scores dictionary (e.g. { "energizing/pump-up": 0.55, ... })
   emotions?: Record<string, number> | null;

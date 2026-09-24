@@ -1,8 +1,6 @@
 import { sinatraApi } from "$lib/api/sinatra";
 import type { Track } from "$lib/types/track";
-import type { MetadataFields } from "$lib/types/metadata";
-
-export type ColumnFilterKey = "title" | "artist" | "album" | "mood" | "tags";
+import type { FilterableField, MetadataFields } from "$lib/types/metadata";
 
 export class MusicLibrary {
   tracks = $state<Track[]>([]);
@@ -10,7 +8,7 @@ export class MusicLibrary {
   error = $state<string | null>(null);
 
   searchQuery = $state("");
-  columnFilterKey = $state<ColumnFilterKey | "all" | "tag">("all");
+  columnFilterKey = $state<FilterableField | "all">("all");
 
   filteredTracks = $derived.by(() => {
     const query = this.searchQuery.trim().toLowerCase();
@@ -19,11 +17,9 @@ export class MusicLibrary {
     const queryTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
 
     return this.tracks.filter((track) => {
-      if (this.columnFilterKey === "tag" || this.columnFilterKey === "tags") {
+      if (this.columnFilterKey === "tags") {
         const q = query.toLowerCase();
-        return this.tracks.filter((track) =>
-          track.tags?.some((t) => t.includes(q))
-        );
+        return track.tags?.some((t) => t.includes(q));
       }
 
       if (this.columnFilterKey !== "all") {
@@ -115,7 +111,7 @@ export class MusicLibrary {
     );
   }
 
-  setFilter(query: string, key: ColumnFilterKey | "all" = "all") {
+  setFilter(query: string, key: FilterableField | "all" = "all") {
     this.searchQuery = query;
     this.columnFilterKey = key;
   }

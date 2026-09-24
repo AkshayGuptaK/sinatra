@@ -60,7 +60,6 @@
   <div class="truncate pr-4 font-medium" title={track.title}>
     <InlineEditableCell
       value={track.title}
-      placeholder="Unknown Title"
       class={cn("font-medium", isActive && "text-primary")}
       onSave={(val) => onUpdate?.({ title: val })}
     />
@@ -73,7 +72,6 @@
   >
     <InlineEditableCell
       value={track.artist}
-      placeholder="Unknown Artist"
       class="text-xs sm:text-sm text-muted-foreground"
       onSave={(val) => onUpdate?.({ artist: val })}
     />
@@ -86,7 +84,6 @@
   >
     <InlineEditableCell
       value={track.album || ""}
-      placeholder="—"
       class="text-xs sm:text-sm text-muted-foreground"
       onSave={(val) => onUpdate?.({ album: val })}
     />
@@ -96,7 +93,6 @@
   <div class="truncate pr-4 text-xs" title={track.mood}>
     <InlineEditableCell
       value={track.mood || ""}
-      placeholder="—"
       class={track.mood
         ? "text-xs font-medium text-muted-foreground"
         : "text-muted-foreground/60"}

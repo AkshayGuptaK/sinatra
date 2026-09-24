@@ -1,6 +1,8 @@
+import type { FilterableField } from "$lib/types/metadata";
+
 export type ParsedIntent =
   | { type: 'command'; command: 'play' | 'queue'; prompt: string }
-  | { type: 'column_filter'; column: 'artist' | 'album' | 'mood' | 'title'; query: string }
+  | { type: 'column_filter'; column: FilterableField; query: string }
   | { type: 'text_search'; query: string };
 
 export function parseCommandInput(input: string): ParsedIntent {
@@ -22,10 +24,10 @@ export function parseCommandInput(input: string): ParsedIntent {
     if (match) {
       const col = match[1].toLowerCase();
       const query = match[2] || '';
-      if (['artist', 'album', 'mood', 'title'].includes(col)) {
+      if (['artist', 'album', 'mood', 'title', 'tags'].includes(col)) {
         return {
           type: 'column_filter',
-          column: col as 'artist' | 'album' | 'mood' | 'title',
+          column: col as FilterableField,
           query
         };
       }

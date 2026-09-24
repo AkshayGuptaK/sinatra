@@ -156,8 +156,8 @@ class PostgresStore:
                 tracks = [
                     {
                         "id": r[0],
-                        "title": r[1] or "Unknown Title",
-                        "artist": r[2] or "Unknown Artist",
+                        "title": r[1] or "",
+                        "artist": r[2] or "",
                         "album": r[3] or "",
                         "mood": r[4] or "",
                         "tags": r[5] or [],

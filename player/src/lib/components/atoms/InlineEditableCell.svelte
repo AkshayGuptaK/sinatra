@@ -12,7 +12,7 @@
 
   let {
     value,
-    placeholder = "Empty",
+    placeholder = "-",
     class: className = "",
     inputClass = "",
     onSave,

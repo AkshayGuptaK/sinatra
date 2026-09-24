@@ -1,6 +1,11 @@
 import { sinatraApi } from "$lib/api/sinatra";
 import type { Track } from "$lib/types/track";
-import type { FilterableField, MetadataFields } from "$lib/types/metadata";
+import type {
+  FilterableField,
+  MetadataFields,
+  SortableField,
+  SortDirection,
+} from "$lib/types/metadata";
 
 export class MusicLibrary {
   tracks = $state<Track[]>([]);
@@ -10,9 +15,28 @@ export class MusicLibrary {
   searchQuery = $state("");
   columnFilterKey = $state<FilterableField | "all">("all");
 
-  filteredTracks = $derived.by(() => {
-    const query = this.searchQuery.trim().toLowerCase();
-    if (!query) return this.tracks;
+  sortColumn = $state<SortableField | null>(null);
+  sortDirection = $state<SortDirection>(null);
+
+  toggleSort(column: SortableField) {
+    if (this.sortColumn !== column) {
+      this.sortColumn = column;
+      this.sortDirection = "asc";
+      return;
+    }
+
+    if (this.sortDirection === "asc") {
+      this.sortDirection = "desc";
+    } else if (this.sortDirection === "desc") {
+      this.sortDirection = null;
+      this.sortColumn = null;
+    } else {
+      this.sortDirection = "asc";
+    }
+  }
+
+  filterTracks(query: string) {
+    if (!query) return [...this.tracks];
 
     const queryTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
 
@@ -40,6 +64,29 @@ export class MusicLibrary {
 
       return queryTokens.every((token) => combined.includes(token));
     });
+  }
+
+  sortTracks(tracks: Track[]) {
+    if (this.sortColumn && this.sortDirection) {
+      const sortColumn = this.sortColumn
+      const dirMultiplier = this.sortDirection === "asc" ? 1 : -1;
+      tracks.sort((a, b) => {
+        if (sortColumn === "duration") {
+          return ((a.duration ?? 0) - (b.duration ?? 0)) * dirMultiplier;
+        } // time sorting is broken
+
+        const aVal = String(a[sortColumn] ?? "");
+        const bVal = String(b[sortColumn] ?? "");
+        return aVal.localeCompare(bVal) * dirMultiplier;
+      });
+    }
+    return tracks;
+  }
+
+  displayedTracks = $derived.by(() => {
+    const query = this.searchQuery.trim().toLowerCase();
+    const filteredTracks = this.filterTracks(query);
+    return this.sortTracks(filteredTracks);
   });
 
   constructor() {

@@ -24,7 +24,7 @@
 
   // Total duration of current filtered view
   let filteredDuration = $derived(
-    library.filteredTracks.reduce((acc, t) => acc + (t.duration ?? 0), 0)
+    library.displayedTracks.reduce((acc, t) => acc + (t.duration ?? 0), 0)
   );
 
   const queuedTrackIds = $derived(new Set(player.queue.map((t) => t.id)));
@@ -45,20 +45,20 @@
         intent.prompt
       );
       // Trigger local LLM / MCP action hook here
-    } else if (library.filteredTracks.length > 0) {
+    } else if (library.displayedTracks.length > 0) {
       // Pressing Enter on pure searches loads current search view into queue
-      player.setQueue(library.filteredTracks, 0, true);
+      player.setQueue(library.displayedTracks, 0, true);
     }
   }
 
   async function handleTagAll(tag: string) {
-    if (library.filteredTracks.length === 0 || !tag) return;
-    const targetIds = library.filteredTracks.map((t) => t.id);
+    if (library.displayedTracks.length === 0 || !tag) return;
+    const targetIds = library.displayedTracks.map((t) => t.id);
     await library.addTagToTracks(targetIds, tag);
   }
 
   function handleEnqueueAll() {
-    for (const track of library.filteredTracks) {
+    for (const track of library.displayedTracks) {
       player.enqueue(track);
     }
   }
@@ -86,7 +86,7 @@
       >
         <LibraryControls
           {viewMode}
-          disabled={library.filteredTracks.length === 0}
+          disabled={library.displayedTracks.length === 0}
           onViewChange={(mode) => (viewMode = mode)}
           onTagAll={handleTagAll}
           onEnqueueAll={handleEnqueueAll}
@@ -104,7 +104,7 @@
     {/if}
   </div>
   <LibraryDurationSummary
-    trackCount={library.filteredTracks.length}
+    trackCount={library.displayedTracks.length}
     totalDuration={filteredDuration}
   />
 </div>

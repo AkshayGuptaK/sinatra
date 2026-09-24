@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Search, Sparkles, Funnel, X } from "@lucide/svelte";
-  import { Input } from "$lib/components/ui/input";
   import { Button } from "$lib/components/ui/button";
+  import TextInput from "$lib/components/atoms/TextInput.svelte";
   import {
     parseCommandInput,
     type ParsedIntent,
@@ -146,22 +146,16 @@
       {/if}
     </div>
 
-    <Input
+    <TextInput
       bind:ref={inputEl}
-      type="text"
+      bind:value={rawInput}
       placeholder="Search songs, :artist, or /play something upbeat... (Esc to clear)"
-      value={rawInput}
-      autocomplete="off"
-      autocorrect="off"
-      autocapitalize="off"
-      spellcheck="false"
       oninput={handleInput}
       onkeydown={handleKeydown}
       onfocus={() => (isFocused = true)}
       onblur={() => setTimeout(() => (isFocused = false), 150)}
       class="pl-9 pr-9 h-10 w-full bg-background/80 backdrop-blur border-muted-foreground/30 focus-visible:ring-1"
     />
-
     <!-- Clear Action Button -->
     {#if rawInput.length > 0}
       <Button

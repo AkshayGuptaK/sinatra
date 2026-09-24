@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
   import { cn } from "$lib/utils";
+  import TextInput from "$lib/components/atoms/TextInput.svelte";
 
   interface Props {
     value: string;
@@ -57,21 +58,17 @@
 </script>
 
 {#if isEditing}
-  <input
-    bind:this={inputEl}
-    type="text"
+  <TextInput
+    bind:ref={inputEl}
     bind:value={editValue}
+    variant="inline"
     onblur={handleSave}
     onkeydown={handleKeyDown}
     onclick={stopEventPropagation}
     ondblclick={stopEventPropagation}
     onpointerdown={stopEventPropagation}
-    autocomplete="off"
-    autocorrect="off"
-    autocapitalize="off"
-    spellcheck="false"
     class={cn(
-      "w-full bg-background border border-primary/50 text-foreground px-1.5 py-0.5 rounded text-xs outline-none shadow-xs ring-1 ring-ring",
+      "border-primary/50 px-1.5 text-xs shadow-xs ring-1 ring-ring",
       inputClass
     )}
   />

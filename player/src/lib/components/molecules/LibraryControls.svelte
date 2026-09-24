@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
   import { Button } from "$lib/components/ui/button";
+  import TextInput from "$lib/components/atoms/TextInput.svelte";
   import { List, CirclePlus, MapPin, Tag, Check, X } from "@lucide/svelte";
   import { cn } from "$lib/utils";
 
@@ -128,13 +129,12 @@
     <div
       class="absolute right-0 top-full mt-2 z-50 flex items-center gap-1.5 p-1.5 rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100"
     >
-      <input
-        bind:this={inputEl}
-        type="text"
+      <TextInput
+        bind:ref={inputEl}
         bind:value={tagInput}
         onkeydown={handleKeyDown}
         placeholder="tag name..."
-        class="h-7 w-36 px-2 text-xs rounded border border-border bg-background text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary lowercase"
+        class="h-7 w-36 px-2 text-xs rounded focus:outline-hidden focus-visible:ring-0 focus:ring-primary lowercase"
       />
       <Button
         variant="ghost"

@@ -12,8 +12,8 @@
 
   let { class: className = "" }: Props = $props();
 
-  let currentTitle = $derived(player.currentTrack?.title || "Unknown");
-  let currentArtist = $derived(player.currentTrack?.artist || "Unknown");
+  let currentTitle = $derived(player.currentTrack ? player.currentTrack.title || "Unknown" : "");
+  let currentArtist = $derived(player.currentTrack ? player.currentTrack.artist || player.currentTrack?.album || "Unknown": "");
 
   let volume = $state(1);
 

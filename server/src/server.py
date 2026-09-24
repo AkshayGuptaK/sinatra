@@ -109,7 +109,7 @@ def sanitize_tags(raw_tags: List[str]) -> List[str]:
         if t and t not in seen:
             seen.add(t)
             cleaned.append(t)
-    return cleaned
+    return sorted(cleaned)
 
 
 @app.patch("/api/library/tracks/{track_id}")

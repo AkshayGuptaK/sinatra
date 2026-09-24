@@ -62,6 +62,12 @@ export class MusicLibrary {
     }
   }
 
+  private cleanAndSortTags(tags: string[]) {
+    return Array.from(
+      new Set(tags.map((t) => t.trim().toLowerCase()).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b));
+  }
+
   async updateTrackMetadata(
     trackId: string,
     fields: MetadataFields
@@ -70,6 +76,10 @@ export class MusicLibrary {
     if (trackIndex === -1) return;
 
     const originalTrack = { ...this.tracks[trackIndex] };
+
+    if (fields.tags !== undefined) {
+      fields.tags = this.cleanAndSortTags(fields.tags);
+    }
 
     this.tracks[trackIndex] = {
       ...originalTrack,
@@ -90,23 +100,18 @@ export class MusicLibrary {
     if (!cleanTag || trackIds.length === 0) return;
 
     const targetIds = new Set(trackIds);
-    const updatesToPersist: { id: string; tags: string[] }[] = [];
 
-    this.tracks = this.tracks.map((track) => {
-      if (!targetIds.has(track.id)) return track;
+    const tracksToUpdate = this.tracks.filter(
+      (t) => targetIds.has(t.id) && !(t.tags ?? []).includes(cleanTag)
+    );
 
-      const existingTags = track.tags ?? [];
-      if (existingTags.includes(cleanTag)) return track;
-
-      const updatedTags = [...existingTags, cleanTag];
-      updatesToPersist.push({ id: track.id, tags: updatedTags });
-
-      return { ...track, tags: updatedTags };
-    });
+    if (tracksToUpdate.length === 0) return;
 
     await Promise.allSettled(
-      updatesToPersist.map(({ id, tags }) =>
-        sinatraApi.updateTrackMetadata(id, { tags })
+      tracksToUpdate.map((track) =>
+        this.updateTrackMetadata(track.id, {
+          tags: [...(track.tags ?? []), cleanTag],
+        })
       )
     );
   }

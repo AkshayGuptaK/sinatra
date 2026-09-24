@@ -26,9 +26,7 @@
       nextTags[index] = cleanVal;
     }
 
-    // Deduplicate
-    const deduplicated = Array.from(new Set(nextTags));
-    onChange?.(deduplicated);
+    onChange?.(nextTags);
   }
 
   function handleRemoveTag(index: number, e: MouseEvent) {

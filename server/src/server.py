@@ -64,6 +64,14 @@ app.add_middleware(
     expose_headers=["Content-Range", "Accept-Ranges"],
 )
 
+MIME_MAP = {
+    ".mp3": "audio/mpeg",
+    ".flac": "audio/flac",
+    ".opus": "audio/ogg",
+    ".ogg": "audio/ogg",
+    ".m4a": "audio/mp4",
+    ".wav": "audio/wav",
+}
 
 @app.get("/map", response_class=HTMLResponse)
 async def get_library_map():
@@ -162,8 +170,11 @@ async def get_similar_library_tracks(
 async def stream_track(track_id: str):
     """Streams audio for playback."""
     file_path = fetch_library_path(track_id)
+    if not file_path or not file_path.exists():
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    media_type = MIME_MAP.get(file_path.suffix.lower(), "application/octet-stream")
     return FileResponse(
-        path=file_path,
-        media_type="audio/mpeg" if Path(file_path).suffix.lower() == ".mp3" else None,
-        filename=file_path,
+        path=str(file_path),
+        media_type=media_type,
+        filename=file_path.name,
     )

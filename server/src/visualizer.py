@@ -51,7 +51,8 @@ CORE_13_EMOTIONS = [
 
 def fetch_library_path(track_id):
     db = get_pg()
-    return db.get_track_path_by_id(track_id)
+    filepath = db.get_track_path_by_id(track_id)
+    return Path(filepath) if filepath else None
 
 
 def fetch_library_map_points() -> List[Dict[str, Any]]:

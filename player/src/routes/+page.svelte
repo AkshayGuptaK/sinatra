@@ -1,21 +1,18 @@
 <script lang="ts">
   import "../app.css";
-  import NowPlaying from "$lib/components/organisms/NowPlaying.svelte";
-  import ActiveQueue from "$lib/components/organisms/ActiveQueue.svelte";
-  import Library from "$lib/components/organisms/Library.svelte";
-  import { player } from '$lib/audio/player.svelte';
-  import { getCurrentWindow } from '@tauri-apps/api/window';
+  import Player from "$lib/components/templates/Player.svelte";
+  import { player } from "$lib/audio/player.svelte";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
 
-  // Format: "Artist - Title" if playing/loaded, empty string otherwise
   let pageTitle = $derived.by(() => {
     const track = player.currentTrack;
-    if (!track) return '';
+    if (!track) return "";
 
     const artist = track.artist?.trim();
     const title = track.title?.trim();
 
     if (artist && title) return `${artist} - ${title}`;
-    return title || artist || '';
+    return title || artist || "";
   });
 
   // Sync to native macOS window title bar
@@ -26,20 +23,11 @@
   });
 </script>
 
-<main class="flex h-screen w-screen p-4 bg-background text-foreground overflow-hidden select-none">
-  <div class="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
-    <div class="flex-1 min-h-0 w-full">
-      <Library class="h-full w-full" />
-    </div>
-
-    <div class="w-full shrink-0">
-      <NowPlaying class="w-full" />
-    </div>
-  </div>
-
-  <aside class="w-80 lg:w-96 shrink-0 h-full flex flex-col">
-    <ActiveQueue class="h-full w-full max-w-none" />
-  </aside>
+<main
+  data-skin="resonance"
+  class="dark h-screen w-screen p-2 bg-background text-foreground overflow-hidden select-none"
+>
+  <Player/>
 </main>
 
 <style>

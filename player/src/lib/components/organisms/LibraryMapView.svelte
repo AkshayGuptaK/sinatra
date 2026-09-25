@@ -77,7 +77,7 @@
   export function fitToBounds(animate = true) {
     if (!canvasEl || !containerEl || !zoomBehavior) return;
 
-    const tracks = library.filteredTracks.filter(
+    const tracks = library.displayedTracks.filter(
       (t) => t.coord_x != null && t.coord_y != null
     );
 
@@ -108,8 +108,8 @@
     const viewHeight = rect.height;
 
     // 2. Compute scale factor
-    const scaleX = (viewWidth * 0.85) / dataWidth;
-    const scaleY = (viewHeight * 0.9) / dataHeight;
+    const scaleX = (viewWidth * 0.95) / dataWidth;
+    const scaleY = (viewHeight * 0.95) / dataHeight;
     const k = Math.min(scaleX, scaleY);
 
     // 3. Compute translation to place midpoint at viewport center
@@ -154,7 +154,7 @@
     );
 
     const activeTrackId = player.currentTrack?.id;
-    const tracksToRender = library.filteredTracks;
+    const tracksToRender = library.displayedTracks;
 
     const dotRadius = Math.max(0.01, 4 / transform.k);
 
@@ -247,7 +247,7 @@
     };
 
     const nearest = findNearestPoint(
-      library.filteredTracks,
+      library.displayedTracks,
       targetWorld,
       (t) =>
         t.coord_x != null && t.coord_y != null
@@ -275,7 +275,7 @@
     };
 
     const closestTrack = findNearestPoint(
-      library.filteredTracks,
+      library.displayedTracks,
       targetWorld,
       (t) =>
         t.coord_x != null && t.coord_y != null
@@ -331,7 +331,7 @@
 
   // Re-draw automatically whenever the filtered list, queue, or active track updates
   $effect(() => {
-    const _tracks = library.filteredTracks;
+    const _tracks = library.displayedTracks;
     const _queued = queuedTrackIds;
     const _active = player.currentTrack?.id;
 

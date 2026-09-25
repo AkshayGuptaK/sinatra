@@ -5,7 +5,7 @@
   import { Button } from "$lib/components/ui/button";
   import MiniBarVisualizer from "$lib/components/atoms/MiniBarVisualizer.svelte";
   import { cn } from "$lib/utils";
-  import { trackDisplay } from "$lib/utils/display";
+  import { getTrackDisplayAttribution, getTrackDisplayTitle } from "$lib/utils/display";
 
   interface Props {
     track: Track;
@@ -35,8 +35,8 @@
     onDragEnd,
   }: Props = $props();
 
-  let displayTitle = $derived(trackDisplay(track).title);
-  let displayArtist = $derived(trackDisplay(track).by);
+  let displayTitle = $derived(getTrackDisplayTitle(track));
+  let displayArtist = $derived(getTrackDisplayAttribution(track));
 
   function handleRemove(event: MouseEvent) {
     event.stopPropagation();
@@ -99,7 +99,7 @@
       <span class={cn("truncate font-medium", isActive && "text-primary")}>
         {displayTitle}
       </span>
-      <span class="truncate text-xs text-muted-foreground">
+      <span class="truncate min-h-3 text-xs text-muted-foreground">
         {displayArtist}
       </span>
     </div>

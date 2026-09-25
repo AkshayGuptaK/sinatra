@@ -104,6 +104,7 @@
   <div class="min-w-0 pr-2">
     <EditableTagList
       tags={track.tags ?? []}
+      maxVisible={2}
       onChange={(nextTags) => onUpdate?.({ tags: nextTags })}
     />
   </div>

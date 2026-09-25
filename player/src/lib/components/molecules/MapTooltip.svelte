@@ -2,6 +2,7 @@
   import type { Track } from "$lib/types/track";
   import { Check, Play } from "@lucide/svelte";
   import { cn } from "$lib/utils";
+  import { getTrackDisplayAttribution, getTrackDisplayTitle } from "$lib/utils/display";
 
   interface Props {
     track: Track;
@@ -11,6 +12,9 @@
   }
 
   let { track, isPlaying, isQueued, class: className = "" }: Props = $props();
+
+  let displayTitle = $derived(getTrackDisplayTitle(track));
+  let displayArtist = $derived(getTrackDisplayAttribution(track));
 
   // Extract all emotions, sort descending, filter out near-zero values
   const sortedEmotions = $derived.by(() => {
@@ -41,12 +45,12 @@
     <div class="min-w-0 flex-1">
       <h3
         class="truncate text-sm font-semibold text-foreground"
-        title={track.title}
+        title={displayTitle}
       >
-        {track.title || "Unknown Title"}
+        {displayTitle}
       </h3>
-      <p class="truncate text-xs text-muted-foreground" title={track.artist}>
-        {track.artist || "Unknown Artist"}
+      <p class="truncate text-xs text-muted-foreground" title={displayArtist}>
+        {displayArtist}
       </p>
       {#if track.mood}
         <span

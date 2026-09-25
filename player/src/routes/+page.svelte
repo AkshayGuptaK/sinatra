@@ -3,17 +3,18 @@
   import Player from "$lib/components/templates/Player.svelte";
   import { player } from "$lib/audio/player.svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { trackDisplay } from "$lib/utils/display";
+  import { getTrackDisplayAttribution, getTrackDisplayTitle } from "$lib/utils/display";
 
   let pageTitle = $derived.by(() => {
     const track = player.currentTrack;
-    const {title, by} = trackDisplay(track)
+    const title = getTrackDisplayTitle(track)
+    const attribution = getTrackDisplayAttribution(track)
 
-    if (by && title) return `${by} - ${title}`;
+    if (attribution && title) return `${attribution} - ${title}`;
     return title;
   });
 
-  // Sync to native macOS window title bar
+  // Sync to native window title bar
   $effect(() => {
     const titleToSet = pageTitle;
     document.title = titleToSet;

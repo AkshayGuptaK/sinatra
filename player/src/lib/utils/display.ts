@@ -1,9 +1,11 @@
 import type { Track } from "$lib/types/track";
 
-export function trackDisplay(track: Track | null) {
-  if (!track) return { title: "", by: "" };
-  return {
-    title: track.title || "Unknown",
-    by: track.artist || track.album || "",
-  };
+export function getTrackDisplayTitle(track: Track | null): string {
+  if (!track) return "";
+  return track.title || "Unknown";
+}
+
+export function getTrackDisplayAttribution(track: Track | null): string {
+  if (!track) return "";
+  return track.artist || track.album || "";
 }

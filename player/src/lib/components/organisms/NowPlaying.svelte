@@ -5,7 +5,7 @@
   import VolumeControl from "$lib/components/molecules/VolumeControl.svelte";
   import { player } from "$lib/audio/player.svelte";
   import { cn } from "$lib/utils";
-  import { trackDisplay } from "$lib/utils/display";
+  import { getTrackDisplayAttribution, getTrackDisplayTitle } from "$lib/utils/display";
 
   interface Props {
     class?: string;
@@ -13,8 +13,8 @@
 
   let { class: className = "" }: Props = $props();
 
-  let currentTitle = $derived(trackDisplay(player.currentTrack).title);
-  let currentArtist = $derived(trackDisplay(player.currentTrack).by);
+  let currentTitle = $derived(getTrackDisplayTitle(player.currentTrack));
+  let currentArtist = $derived(getTrackDisplayAttribution(player.currentTrack));
 
   let volume = $state(1);
 

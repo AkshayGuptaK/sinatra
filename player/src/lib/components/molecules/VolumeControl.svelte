@@ -89,6 +89,9 @@
          [&_[data-slot=slider-thumb]]:border-[2.5px]
          [&_[data-slot=slider-thumb]]:border-primary
          [&_[data-slot=slider-thumb]]:shadow-xs
+		 [&_[data-slot=slider-thumb]]:w-2.5
+         [&_[data-slot=slider-thumb]]:h-5
+         [&_[data-slot=slider-thumb]]:rounded-sm
          hover:[&_[data-slot=slider-thumb]]:scale-110
          transition-transform"
     />

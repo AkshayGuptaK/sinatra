@@ -30,6 +30,19 @@
 
   let hoveredTrack = $state<ProjectableTrack | null>(null);
 
+  const tracksToRender = $derived(
+    library.displayedTracks.filter(isTrackWithCoordinates)
+  );
+
+  const highlightedTrack = $derived(
+    library.highlightedTrackId
+      ? (tracksToRender.find((t) => t.id === library.highlightedTrackId) ??
+          null)
+      : null
+  );
+
+  const activeTooltipTrack = $derived(hoveredTrack ?? highlightedTrack);
+
   interface CanvasThemeTokens {
     accentRing: string; // Ring around queued items
     haloGlow: string; // Active track outer halo
@@ -78,7 +91,7 @@
   /**
    * Calculates bounds and sets D3 Zoom to fit all points snugly within the view.
    */
-  export function fitToBounds(animate = true) {
+  function fitToBounds(animate = true) {
     if (!canvasEl || !containerEl || !zoomBehavior) return;
 
     const tracks = library.displayedTracks.filter(
@@ -197,10 +210,21 @@
     theme: CanvasThemeTokens,
     dotRadius: number
   ) {
+    const outerRadius = dotRadius * 2.5;
+
+    // Soft translucent wash (shows clearly over unqueued and queued dots)
     ctx.beginPath();
-    ctx.arc(track.coord_x, track.coord_y, dotRadius * 1.8, 0, Math.PI * 2);
+    ctx.arc(track.coord_x, track.coord_y, outerRadius, 0, Math.PI * 2);
+    ctx.fillStyle = theme.haloGlow;
+    ctx.globalAlpha = 0.45;
+    ctx.fill();
+
+    // Outer beacon ring
+    ctx.beginPath();
+    ctx.arc(track.coord_x, track.coord_y, outerRadius, 0, Math.PI * 2);
     ctx.strokeStyle = theme.haloBorder;
-    ctx.lineWidth = 1.5 / transform.k;
+    ctx.lineWidth = 1.75 / transform.k;
+    ctx.globalAlpha = 0.95;
     ctx.stroke();
   }
 
@@ -229,9 +253,6 @@
     );
 
     const activeTrackId = player.currentTrack?.id;
-    const tracksToRender = library.displayedTracks.filter(
-      isTrackWithCoordinates
-    );
     const dotRadius = Math.max(0.01, 4 / transform.k);
 
     for (const track of tracksToRender) {
@@ -245,9 +266,6 @@
     }
 
     if (hoveredTrack) drawHightlightHalo(ctx, hoveredTrack, theme, dotRadius);
-    const highlightedTrack = tracksToRender.find(
-      (t) => t.id === library.highlightedTrackId
-    );
     if (highlightedTrack)
       drawHightlightHalo(ctx, highlightedTrack, theme, dotRadius);
 
@@ -276,7 +294,7 @@
       12 / transform.k
     );
 
-    hoveredTrack = nearest as ProjectableTrack ?? null;
+    hoveredTrack = (nearest as ProjectableTrack) ?? null;
     draw();
   }
 
@@ -351,20 +369,14 @@
 
   // Re-draw automatically
   $effect(() => {
-    const _tracks = library.displayedTracks;
+    tracksToRender;
     queuedTrackIds;
     player.currentTrack?.id;
-    const _highlight = library.highlightedTrackId;
-    console.log("updating", _highlight);
+    highlightedTrack;
 
-    if (!hasAutoZoomed && _tracks.length > 0 && zoomBehavior) {
-      const hasCoords = _tracks.some(
-        (t) => t.coord_x != null && t.coord_y != null
-      );
-      if (hasCoords) {
-        fitToBounds(false);
-        hasAutoZoomed = true;
-      }
+    if (!hasAutoZoomed && tracksToRender.length > 0 && zoomBehavior) {
+      fitToBounds(false);
+      hasAutoZoomed = true;
     }
     draw();
   });
@@ -399,11 +411,11 @@
 
     <!-- Bottom: Fixed Slot for Hover Details -->
     <div class="flex-1 min-h-0 overflow-y-auto">
-      {#if hoveredTrack}
+      {#if activeTooltipTrack}
         <MapTooltip
-          track={hoveredTrack}
-          isPlaying={player.currentTrack?.id === hoveredTrack.id}
-          isQueued={queuedTrackIds.has(hoveredTrack.id)}
+          track={activeTooltipTrack}
+          isPlaying={player.currentTrack?.id === activeTooltipTrack.id}
+          isQueued={queuedTrackIds.has(activeTooltipTrack.id)}
           class="w-full"
         />
       {/if}

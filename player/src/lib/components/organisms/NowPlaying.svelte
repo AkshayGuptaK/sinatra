@@ -5,7 +5,10 @@
   import VolumeControl from "$lib/components/molecules/VolumeControl.svelte";
   import { player } from "$lib/audio/player.svelte";
   import { cn } from "$lib/utils";
-  import { getTrackDisplayAttribution, getTrackDisplayTitle } from "$lib/utils/display";
+  import {
+    getTrackDisplayAttribution,
+    getTrackDisplayTitle,
+  } from "$lib/utils/display";
 
   interface Props {
     class?: string;

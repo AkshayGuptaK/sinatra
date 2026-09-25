@@ -276,7 +276,7 @@
       12 / transform.k
     );
 
-    hoveredTrack = nearest ?? null;
+    hoveredTrack = nearest as ProjectableTrack ?? null;
     draw();
   }
 

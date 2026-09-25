@@ -48,7 +48,7 @@
     --popover-foreground: oklch(0.96 0.01 250);
 
     /* Primary Accent / Active States */
-    --primary: oklch(0.8317 0.0866 283.63);
+    --primary: oklch(0.75 0.1315 281.31);
     --primary-foreground: oklch(0.12 0.02 260);
 
     /* Secondary Surfaces */

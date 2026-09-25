@@ -18,6 +18,8 @@ export class MusicLibrary {
   sortColumn = $state<SortableField | null>(null);
   sortDirection = $state<SortDirection>(null);
 
+  highlightedTrackId = $state<string | null>(null);
+
   toggleSort(column: SortableField) {
     if (this.sortColumn !== column) {
       this.sortColumn = column;
@@ -171,6 +173,11 @@ export class MusicLibrary {
   clearFilter() {
     this.searchQuery = "";
     this.columnFilterKey = "all";
+  }
+
+  setHighlightedTrack(id: string | null) {
+    const a = this.highlightedTrackId
+    this.highlightedTrackId = id;
   }
 }
 

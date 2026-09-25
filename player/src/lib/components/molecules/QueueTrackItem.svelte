@@ -5,11 +5,16 @@
   import { Button } from "$lib/components/ui/button";
   import MiniBarVisualizer from "$lib/components/atoms/MiniBarVisualizer.svelte";
   import { cn } from "$lib/utils";
-  import { getTrackDisplayAttribution, getTrackDisplayTitle } from "$lib/utils/display";
+  import {
+    getTrackDisplayAttribution,
+    getTrackDisplayTitle,
+  } from "$lib/utils/display";
 
   interface Props {
     track: Track;
     index: number;
+    onHover: (trackId: string) => void;
+    onHoverEnd: (trackId: string) => void;
     isActive?: boolean;
     isPlaying?: boolean;
     class?: string;
@@ -27,6 +32,8 @@
     isActive = false,
     isPlaying = false,
     class: className = "",
+    onHover,
+    onHoverEnd,
     onSelect,
     onRemove,
     onDragStart,
@@ -47,6 +54,8 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
+  onpointerenter={() => onHover(track.id)}
+  onpointerleave={() => onHoverEnd(track.id)}
   draggable="true"
   ondragstart={(e) => onDragStart?.(e, index)}
   ondragover={(e) => {

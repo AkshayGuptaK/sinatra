@@ -1,14 +1,23 @@
+import type { MakeNonNullable } from "./utils";
+
 export interface Track {
   id: string;
   title: string;
   artist: string;
-  album?: string;
-  mood?: string;
-  tags?: string[];
+  album: string;
+  mood: string;
+  tags: string[];
   duration: number;
-  // Raw scores dictionary (e.g. { "energizing/pump-up": 0.55, ... })
-  emotions?: Record<string, number> | null;
+  emotions: Record<string, number> | null;
   // 2D manifold projection coordinates
-  coord_x?: number | null;
-  coord_y?: number | null;
+  coord_x: number | null;
+  coord_y: number | null;
+}
+
+export type ProjectableTrack = MakeNonNullable<Track, "coord_x" | "coord_y">;
+
+export function isTrackWithCoordinates(
+  track: Track
+): track is ProjectableTrack {
+  return track.coord_x !== null && track.coord_y !== null;
 }

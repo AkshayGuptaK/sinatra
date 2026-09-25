@@ -7,7 +7,11 @@
   import { findNearestPoint } from "$lib/utils/math";
   import MapTooltip from "$lib/components/molecules/MapTooltip.svelte";
   import MapLegend from "$lib/components/molecules/MapLegend.svelte";
-  import type { Track } from "$lib/types/track";
+  import {
+    isTrackWithCoordinates,
+    type ProjectableTrack,
+    type Track,
+  } from "$lib/types/track";
   import { EMOTION_COLORS } from "$lib/constants/emotions";
   import { cn } from "$lib/utils";
 
@@ -24,7 +28,7 @@
   let zoomBehavior: d3.ZoomBehavior<HTMLCanvasElement, unknown> | null = null;
   let hasAutoZoomed = $state(false);
 
-  let hoveredTrack = $state<Track | null>(null);
+  let hoveredTrack = $state<ProjectableTrack | null>(null);
 
   interface CanvasThemeTokens {
     accentRing: string; // Ring around queued items
@@ -129,6 +133,77 @@
     }
   }
 
+  function drawNormalTrack(
+    ctx: CanvasRenderingContext2D,
+    track: ProjectableTrack,
+    theme: CanvasThemeTokens,
+    dotRadius: number
+  ) {
+    ctx.beginPath();
+    ctx.arc(track.coord_x, track.coord_y, dotRadius, 0, Math.PI * 2);
+    ctx.fillStyle = getTrackColor(track) || theme.defaultDot;
+    ctx.globalAlpha = 0.85;
+    ctx.fill();
+  }
+
+  function drawQueuedTrack(
+    ctx: CanvasRenderingContext2D,
+    track: ProjectableTrack,
+    theme: CanvasThemeTokens,
+    dotRadius: number
+  ) {
+    // Outer accent ring
+    ctx.beginPath();
+    ctx.arc(track.coord_x, track.coord_y, 1.625 * dotRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = theme.accentRing;
+    ctx.lineWidth = 1.5 / transform.k;
+    ctx.globalAlpha = 0.9;
+    ctx.stroke();
+
+    // Core point
+    ctx.beginPath();
+    ctx.arc(track.coord_x, track.coord_y, dotRadius, 0, Math.PI * 2);
+    ctx.fillStyle = getTrackColor(track) || theme.defaultDot;
+    ctx.globalAlpha = 1.0;
+    ctx.fill();
+  }
+
+  function drawActiveTrack(
+    ctx: CanvasRenderingContext2D,
+    track: ProjectableTrack,
+    theme: CanvasThemeTokens,
+    dotRadius: number
+  ) {
+    //  Outer bright halo
+    ctx.beginPath();
+    ctx.arc(track.coord_x, track.coord_y, 2.25 * dotRadius, 0, Math.PI * 2);
+    ctx.fillStyle = theme.haloGlow;
+    ctx.fill();
+    ctx.strokeStyle = theme.haloBorder;
+    ctx.lineWidth = 2 / transform.k;
+    ctx.stroke();
+
+    // Core
+    ctx.beginPath();
+    ctx.arc(track.coord_x, track.coord_y, 1.25 * dotRadius, 0, Math.PI * 2);
+    ctx.fillStyle = theme.activeCore;
+    ctx.globalAlpha = 1.0;
+    ctx.fill();
+  }
+
+  function drawHightlightHalo(
+    ctx: CanvasRenderingContext2D,
+    track: ProjectableTrack,
+    theme: CanvasThemeTokens,
+    dotRadius: number
+  ) {
+    ctx.beginPath();
+    ctx.arc(track.coord_x, track.coord_y, dotRadius * 1.8, 0, Math.PI * 2);
+    ctx.strokeStyle = theme.haloBorder;
+    ctx.lineWidth = 1.5 / transform.k;
+    ctx.stroke();
+  }
+
   function draw() {
     if (!canvasEl) return;
     const ctx = canvasEl.getContext("2d");
@@ -154,82 +229,27 @@
     );
 
     const activeTrackId = player.currentTrack?.id;
-    const tracksToRender = library.displayedTracks;
-
+    const tracksToRender = library.displayedTracks.filter(
+      isTrackWithCoordinates
+    );
     const dotRadius = Math.max(0.01, 4 / transform.k);
 
-    // Draw non-playing and non-queued points first
     for (const track of tracksToRender) {
-      if (track.coord_x == null || track.coord_y == null) continue;
-      if (track.id === activeTrackId || queuedTrackIds.has(track.id)) continue;
-
-      ctx.beginPath();
-      ctx.arc(track.coord_x, track.coord_y, dotRadius, 0, Math.PI * 2);
-      ctx.fillStyle = getTrackColor(track) || theme.defaultDot;
-      ctx.globalAlpha = 0.85;
-      ctx.fill();
+      if (track.id === activeTrackId) {
+        drawActiveTrack(ctx, track, theme, dotRadius);
+      } else if (queuedTrackIds.has(track.id)) {
+        drawQueuedTrack(ctx, track, theme, dotRadius);
+      } else {
+        drawNormalTrack(ctx, track, theme, dotRadius);
+      }
     }
 
-    // Draw Queued tracks (slightly larger with an outer accent stroke)
-    for (const track of tracksToRender) {
-      if (track.coord_x == null || track.coord_y == null) continue;
-      if (track.id === activeTrackId || !queuedTrackIds.has(track.id)) continue;
-
-      // Outer accent ring
-      ctx.beginPath();
-      ctx.arc(track.coord_x, track.coord_y, 1.625 * dotRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = theme.accentRing;
-      ctx.lineWidth = 1.5 / transform.k;
-      ctx.globalAlpha = 0.9;
-      ctx.stroke();
-
-      // Core point
-      ctx.beginPath();
-      ctx.arc(track.coord_x, track.coord_y, dotRadius, 0, Math.PI * 2);
-      ctx.fillStyle = getTrackColor(track) || theme.defaultDot;
-      ctx.globalAlpha = 1.0;
-      ctx.fill();
-    }
-
-    // Draw Actively Playing track (top-most priority with bold pulse halo)
-    for (const track of tracksToRender) {
-      if (track.coord_x == null || track.coord_y == null) continue;
-      if (track.id !== activeTrackId) continue;
-
-      // Outer bright halo
-      ctx.beginPath();
-      ctx.arc(track.coord_x, track.coord_y, 2.25 * dotRadius, 0, Math.PI * 2);
-      ctx.fillStyle = theme.haloGlow;
-      ctx.fill();
-      ctx.strokeStyle = theme.haloBorder;
-      ctx.lineWidth = 2 / transform.k;
-      ctx.stroke();
-
-      // Core
-      ctx.beginPath();
-      ctx.arc(track.coord_x, track.coord_y, 1.25 * dotRadius, 0, Math.PI * 2);
-      ctx.fillStyle = theme.activeCore;
-      ctx.globalAlpha = 1.0;
-      ctx.fill();
-    }
-
-    if (
-      hoveredTrack &&
-      hoveredTrack.coord_x != null &&
-      hoveredTrack.coord_y != null
-    ) {
-      ctx.beginPath();
-      ctx.arc(
-        hoveredTrack.coord_x,
-        hoveredTrack.coord_y,
-        dotRadius * 1.8,
-        0,
-        Math.PI * 2
-      );
-      ctx.strokeStyle = theme.haloBorder;
-      ctx.lineWidth = 1.5 / transform.k;
-      ctx.stroke();
-    }
+    if (hoveredTrack) drawHightlightHalo(ctx, hoveredTrack, theme, dotRadius);
+    const highlightedTrack = tracksToRender.find(
+      (t) => t.id === library.highlightedTrackId
+    );
+    if (highlightedTrack)
+      drawHightlightHalo(ctx, highlightedTrack, theme, dotRadius);
 
     ctx.globalAlpha = 1.0;
   }
@@ -329,11 +349,13 @@
     };
   });
 
-  // Re-draw automatically whenever the filtered list, queue, or active track updates
+  // Re-draw automatically
   $effect(() => {
     const _tracks = library.displayedTracks;
-    const _queued = queuedTrackIds;
-    const _active = player.currentTrack?.id;
+    queuedTrackIds;
+    player.currentTrack?.id;
+    const _highlight = library.highlightedTrackId;
+    console.log("updating", _highlight);
 
     if (!hasAutoZoomed && _tracks.length > 0 && zoomBehavior) {
       const hasCoords = _tracks.some(
@@ -369,9 +391,7 @@
     ></canvas>
   </div>
 
-  <aside
-    class="flex flex-col w-60 shrink-0 h-full overflow-hidden"
-  >
+  <aside class="flex flex-col w-60 shrink-0 h-full overflow-hidden">
     <!-- Top: Emotion Legend (interactive/scrollable if needed) -->
     <div class="shrink-0">
       <MapLegend class="w-full" />

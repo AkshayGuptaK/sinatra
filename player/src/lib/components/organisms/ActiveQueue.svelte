@@ -5,6 +5,7 @@
   import QueueDurationSummary from "$lib/components/molecules/QueueDurationSummary.svelte";
   import QueueControls from "$lib/components/molecules/QueueControls.svelte";
   import { player } from "$lib/audio/player.svelte";
+  import { library } from "$lib/audio/library.svelte";
   import { cn } from "$lib/utils";
   import { ListMusic } from "@lucide/svelte";
 
@@ -105,9 +106,15 @@
               dropTargetIndex === index &&
               draggedIndex !== index &&
               (index < draggedIndex
-              ? "border-t-2 border-primary"
-              : "border-b-2 border-primary")
+                ? "border-t-2 border-primary"
+                : "border-b-2 border-primary")
           )}
+          onHover={(trackId: string) => library.setHighlightedTrack(trackId)}
+          onHoverEnd={(trackId: string) => {
+            if (library.highlightedTrackId === trackId) {
+              library.setHighlightedTrack(null);
+            }
+          }}
           onSelect={handleTrackSelect}
           onRemove={handleTrackRemove}
           onDragStart={handleDragStart}

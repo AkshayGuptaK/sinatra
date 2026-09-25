@@ -101,9 +101,12 @@
           isPlaying={index === player.currentIndex && player.engine.isPlaying}
           class={cn(
             draggedIndex === index && "opacity-40",
-            dropTargetIndex === index &&
+            draggedIndex !== null &&
+              dropTargetIndex === index &&
               draggedIndex !== index &&
-              "border-t-2 border-primary"
+              (index < draggedIndex
+              ? "border-t-2 border-primary"
+              : "border-b-2 border-primary")
           )}
           onSelect={handleTrackSelect}
           onRemove={handleTrackRemove}

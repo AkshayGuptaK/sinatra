@@ -5,6 +5,7 @@
   import { Button } from "$lib/components/ui/button";
   import MiniBarVisualizer from "$lib/components/atoms/MiniBarVisualizer.svelte";
   import { cn } from "$lib/utils";
+  import { trackDisplay } from "$lib/utils/display";
 
   interface Props {
     track: Track;
@@ -34,8 +35,8 @@
     onDragEnd,
   }: Props = $props();
 
-  let displayTitle = $derived(track.title || "Unknown Title");
-  let displayArtist = $derived(track.artist || "Unknown Artist");
+  let displayTitle = $derived(trackDisplay(track).title);
+  let displayArtist = $derived(trackDisplay(track).by);
 
   function handleRemove(event: MouseEvent) {
     event.stopPropagation();

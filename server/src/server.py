@@ -9,15 +9,12 @@ from contextlib import asynccontextmanager
 from src.config import config
 from src.sync import sync_store
 from src.watcher import watch_files
-from src.autodj import AutoDJ
 from src.visualizer import (
     fetch_library_map_points,
     fetch_library_path,
     render_map_page_html,
 )
 from src.pg import get_pg
-
-autodj = AutoDJ()
 
 
 async def _safety_net_poller():
@@ -27,26 +24,15 @@ async def _safety_net_poller():
         await asyncio.sleep(config("sync_interval"))
 
 
-async def _autodj_poller():
-    while True:
-        try:
-            autodj.check_and_queue()
-        except Exception as e:
-            print(f"AutoDJ failed: {e}")
-        await asyncio.sleep(10)
-
-
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     watcher_task = asyncio.create_task(watch_files())
     poller_task = asyncio.create_task(_safety_net_poller())
-    dj_task = asyncio.create_task(_autodj_poller())
 
     yield
 
     watcher_task.cancel()
     poller_task.cancel()
-    dj_task.cancel()
 
 
 app = FastAPI(lifespan=_lifespan)
@@ -72,6 +58,7 @@ MIME_MAP = {
     ".m4a": "audio/mp4",
     ".wav": "audio/wav",
 }
+
 
 @app.get("/map", response_class=HTMLResponse)
 async def get_library_map():

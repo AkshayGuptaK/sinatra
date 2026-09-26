@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
-  import { Button } from "$lib/components/ui/button";
   import TextInput from "$lib/components/atoms/TextInput.svelte";
+  import ControlButton from "$lib/components/atoms/ControlButton.svelte";
   import { List, CirclePlus, MapPin, Tag, Check, X } from "@lucide/svelte";
   import { cn } from "$lib/utils";
 
@@ -13,7 +13,7 @@
     class?: string;
     onViewChange?: (mode: LibraryViewMode) => void;
     onTagAll?: (tag: string) => void;
-    onEnqueueAll?: () => void;
+    onEnqueueAll: () => void;
   }
 
   let {
@@ -61,69 +61,51 @@
 </script>
 
 <div class={cn("relative flex items-center gap-2 select-none", className)}>
-  <!-- Tag All Matches -->
-  <Button
-    variant="ghost"
-    size="icon"
-    {disabled}
-    aria-label="Add tag to all filtered tracks"
+  <ControlButton
+    icon={Tag}
+    label="Add tag to all filtered tracks"
     title="Tag all filtered tracks"
-    onclick={toggleOpen}
-    class={cn(
-      "size-9 transition-colors",
-      isOpen
-        ? "bg-accent text-accent-foreground"
-        : "text-muted-foreground hover:text-foreground"
-    )}
-  >
-    <Tag class="size-5" />
-  </Button>
-
-  <!-- Enqueue All Matches -->
-  <Button
-    variant="ghost"
-    size="icon"
+    onClick={toggleOpen}
     {disabled}
-    aria-label="Enqueue all filtered tracks"
+    class={isOpen
+      ? "bg-accent text-primary"
+      : "text-muted-foreground hover:text-secondary-foreground"}
+  ></ControlButton>
+
+  <ControlButton
+    icon={CirclePlus}
+    label="Enqueue all filtered tracks"
     title="Enqueue all"
-    onclick={onEnqueueAll}
-    class="size-9 text-muted-foreground hover:text-foreground"
-  >
-    <CirclePlus class="size-5" />
-  </Button>
+    onClick={onEnqueueAll}
+    {disabled}
+  ></ControlButton>
 
   <!-- View Mode Switcher -->
   <div class="flex items-center rounded-lg border bg-muted/40 p-0.5 text-xs">
-    <Button
-      variant="ghost"
-      size="icon"
-      onclick={() => onViewChange?.("list")}
-      aria-label="Switch to List View"
+    <ControlButton
+      icon={List}
+      onClick={() => onViewChange?.("list")}
+      label="Switch to List View"
       title="List View"
       class={cn(
-        "size-7 p-1 rounded-md transition-colors",
+        "size-7 p-1 rounded-md",
         viewMode === "list"
-          ? "bg-background font-medium text-foreground shadow-sm hover:bg-background"
-          : "!text-muted-foreground hover:text-foreground hover:bg-transparent"
+          ? "bg-background font-medium text-primary shadow-sm hover:text-primary"
+          : "text-muted-foreground hover:text-secondary-foreground hover:bg-transparent"
       )}
-    >
-      <List class="size-5 shrink-0" />
-    </Button>
-    <Button
-      variant="ghost"
-      size="icon"
-      onclick={() => onViewChange?.("map")}
-      aria-label="Switch to List View"
-      title="List View"
+    ></ControlButton>
+    <ControlButton
+      icon={MapPin}
+      onClick={() => onViewChange?.("map")}
+      label="Switch to Map View"
+      title="Map View"
       class={cn(
-        "size-7 p-1 rounded-md transition-colors",
+        "size-7 p-1 rounded-md",
         viewMode === "map"
-          ? "bg-background font-medium text-foreground shadow-sm hover:bg-background"
-          : "!text-muted-foreground hover:text-foreground hover:bg-transparent"
+          ? "bg-background font-medium text-primary shadow-sm hover:text-primary"
+          : "text-muted-foreground hover:text-secondary-foreground hover:bg-transparent"
       )}
-    >
-      <MapPin class="size-5" />
-    </Button>
+    ></ControlButton>
   </div>
 
   <!-- Anchored Inline Popover (below and aligned to the right) -->
@@ -138,27 +120,23 @@
         placeholder="tag name..."
         class="h-7 w-36 px-2 text-xs rounded focus:outline-hidden focus-visible:ring-0 focus:ring-primary lowercase"
       />
-      <Button
-        variant="ghost"
-        size="icon"
-        onclick={handleSubmit}
-        class="size-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
+      <ControlButton
+        icon={Check}
+        onClick={handleSubmit}
         title="Apply Tag"
-      >
-        <Check class="size-3.5" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onclick={() => {
+        class="size-7"
+        iconClass="size-3.5"
+      ></ControlButton>
+      <ControlButton
+        icon={X}
+        onClick={() => {
           isOpen = false;
           tagInput = "";
         }}
-        class="size-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
         title="Cancel"
-      >
-        <X class="size-3.5" />
-      </Button>
+        class="size-7 hover:text-destructive hover:bg-destructive/10"
+        iconClass="size-3.5"
+      ></ControlButton>
     </div>
   {/if}
 </div>

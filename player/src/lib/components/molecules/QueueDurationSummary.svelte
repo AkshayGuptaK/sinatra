@@ -30,7 +30,7 @@
 
 	<!-- Progress / Total Duration -->
 	<div class="flex items-center gap-1.5 tabular-nums">
-		<span class="text-foreground font-medium">{formatTime(elapsedDuration)}</span>
+		<span class="text-secondary-foreground font-medium">{formatTime(elapsedDuration)}</span>
 		<span>/</span>
 		<span>{formatTime(totalDuration)}</span>
 	</div>

@@ -86,7 +86,7 @@
 >
   <HeaderBanner title="Queue" icon={ListMusic} />
   <!-- Track List Container -->
-  <div class="flex-1 overflow-y-auto p-2 space-y-0.5">
+  <div class="flex-1 overflow-y-auto px-2 py-4 space-y-0.5">
     {#if player.queue.length === 0}
       <div
         class="flex flex-col items-center justify-center h-full text-center p-4"

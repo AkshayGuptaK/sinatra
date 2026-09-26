@@ -53,7 +53,7 @@
 
     /* Secondary Surfaces */
     --secondary: oklch(0.26 0.03 260);
-    --secondary-foreground: oklch(0.96 0.01 250);
+    --secondary-foreground: oklch(0.8172 0.1242 215.73);
 
     /* Muted & Inactive States */
     --muted: oklch(0.25 0.02 260);

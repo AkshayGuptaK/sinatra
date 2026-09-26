@@ -19,10 +19,10 @@
 	)}
 >
 	{#if IconComponent}
-		<IconComponent class="size-4 text-muted-foreground shrink-0" />
+		<IconComponent class="size-4 text-secondary-foreground shrink-0" />
 	{/if}
 
-	<h2 class="text-xs font-semibold uppercase tracking-wider text-foreground">
+	<h2 class="text-xs font-semibold uppercase tracking-wider text-secondary-foreground">
 		{title}
 	</h2>
 

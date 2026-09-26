@@ -21,7 +21,7 @@
 		className
 	)}
 >
-	<h4 class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground pb-1 border-b border-border/40">
+	<h4 class="text-[10px] font-semibold uppercase tracking-wider text-secondary-foreground pb-1 border-b border-border/40">
 		Emotions
 	</h4>
 

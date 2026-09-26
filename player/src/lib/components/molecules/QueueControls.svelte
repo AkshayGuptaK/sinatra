@@ -1,7 +1,7 @@
 <!-- src/lib/components/molecules/QueueControls.svelte -->
 <script lang="ts">
   import ToggleButton from "$lib/components/atoms/ToggleButton.svelte";
-  import { Button } from "$lib/components/ui/button";
+  import ControlButton from "$lib/components/atoms/ControlButton.svelte";
   import {
     SkipBack,
     SkipForward,
@@ -20,12 +20,12 @@
     hasNext?: boolean;
     disabled?: boolean;
     class?: string;
-    onPrevious?: () => void;
-    onNext?: () => void;
-    onAutoDjToggle?: (nextAutoDj: boolean) => void;
-    onShuffleToggle?: (nextShuffle: boolean) => void;
-    onRepeatAllToggle?: (nextRepeat: boolean) => void;
-    onClearQueue?: () => void;
+    onPrevious: () => void;
+    onNext: () => void;
+    onAutoDjToggle: (nextAutoDj: boolean) => void;
+    onShuffleToggle: (nextShuffle: boolean) => void;
+    onRepeatAllToggle: (nextRepeat: boolean) => void;
+    onClearQueue: () => void;
   }
 
   let {
@@ -52,26 +52,26 @@
   )}
 >
   <div class="flex items-center gap-1">
-    <!-- Play Order Actions (Shuffling / Looping) -->
+    <!-- Play Order Actions -->
     <ToggleButton
-    active={isAutoDj}
-    inactiveIcon={Disc3}
-    activeIcon={Disc3}
-    inactiveLabel="Enable auto DJ"
-    activeLabel="Disable auto DJ"
-    inactiveVariant="ghost"
-    activeVariant="secondary"
-    size="icon"
-    {disabled}
-    iconClass="size-4"
-    class={cn(
-      "size-8 transition-colors",
-      isAutoDj
-        ? "text-primary font-medium"
-        : "text-muted-foreground hover:text-foreground"
-    )}
-    onToggle={(next) => onAutoDjToggle?.(next)}
-  />
+      active={isAutoDj}
+      inactiveIcon={Disc3}
+      activeIcon={Disc3}
+      inactiveLabel="Enable auto DJ"
+      activeLabel="Disable auto DJ"
+      inactiveVariant="ghost"
+      activeVariant="secondary"
+      size="icon"
+      {disabled}
+      iconClass="size-4"
+      class={cn(
+        "size-8 transition-colors",
+        isAutoDj
+          ? "text-primary font-medium"
+          : "text-muted-foreground hover:text-foreground"
+      )}
+      onToggle={(next) => onAutoDjToggle?.(next)}
+    />
 
     <ToggleButton
       active={isShuffle}
@@ -114,43 +114,36 @@
     />
   </div>
 
-  <!-- Track Skipping Actions (Previous / Next) -->
+  <!-- Track Skipping Actions -->
   <div class="flex items-center gap-1">
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label="Play previous track"
+    <ControlButton
+      icon={SkipBack}
+      label="Play previous track"
       title="Previous track"
       disabled={disabled || !hasPrevious}
-      onclick={onPrevious}
-      class="size-8 text-muted-foreground hover:text-foreground"
-    >
-      <SkipBack class="size-4" />
-    </Button>
+      onClick={onPrevious}
+      class="size-8"
+      iconClass="size-4"
+    ></ControlButton>
 
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label="Play next track"
+    <ControlButton
+      icon={SkipForward}
+      label="Play next track"
       title="Next track"
       disabled={disabled || !hasNext}
-      onclick={onNext}
-      class="size-8 text-muted-foreground hover:text-foreground"
-    >
-      <SkipForward class="size-4" />
-    </Button>
+      onClick={onNext}
+      class="size-8"
+      iconClass="size-4"
+    ></ControlButton>
   </div>
 
-  <!-- Clear Queue -->
-  <Button
-    variant="ghost"
-    size="icon"
-    aria-label="Clear queue"
+  <ControlButton
+    icon={CircleX}
+    label="Clear queue"
     title="Clear queue"
     {disabled}
-    onclick={onClearQueue}
-    class="size-8 text-muted-foreground hover:text-destructive transition-colors"
-  >
-    <CircleX class="size-4" />
-  </Button>
+    onClick={onClearQueue}
+    class="size-8 hover:text-destructive"
+    iconClass="size-4"
+  ></ControlButton>
 </div>

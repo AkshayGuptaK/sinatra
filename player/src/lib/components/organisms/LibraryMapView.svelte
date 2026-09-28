@@ -187,19 +187,39 @@
     theme: CanvasThemeTokens,
     dotRadius: number
   ) {
-    //  Outer bright halo
+    const coreColor = getTrackColor(track) || theme.defaultDot;
+    const haloRadius = dotRadius * 2.2;
+
+    // 1. Soft radial glow using the track's actual emotion color
+    const gradient = ctx.createRadialGradient(
+      track.coord_x,
+      track.coord_y,
+      dotRadius * 0.8,
+      track.coord_x,
+      track.coord_y,
+      haloRadius
+    );
+    gradient.addColorStop(0, coreColor);
+    gradient.addColorStop(1, "transparent");
+
     ctx.beginPath();
-    ctx.arc(track.coord_x, track.coord_y, 2.25 * dotRadius, 0, Math.PI * 2);
-    ctx.fillStyle = theme.haloGlow;
+    ctx.arc(track.coord_x, track.coord_y, haloRadius, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.globalAlpha = 0.55;
     ctx.fill();
-    ctx.strokeStyle = theme.haloBorder;
-    ctx.lineWidth = 2 / transform.k;
+
+    // 2. Sharp primary accent perimeter ring
+    ctx.beginPath();
+    ctx.arc(track.coord_x, track.coord_y, haloRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = theme.accentRing;
+    ctx.lineWidth = 1.5 / transform.k;
+    ctx.globalAlpha = 0.85;
     ctx.stroke();
 
-    // Core
+    // 3. Saturated Core Dot
     ctx.beginPath();
-    ctx.arc(track.coord_x, track.coord_y, 1.25 * dotRadius, 0, Math.PI * 2);
-    ctx.fillStyle = theme.activeCore;
+    ctx.arc(track.coord_x, track.coord_y, dotRadius * 1.1, 0, Math.PI * 2);
+    ctx.fillStyle = coreColor;
     ctx.globalAlpha = 1.0;
     ctx.fill();
   }
@@ -323,7 +343,11 @@
     );
 
     if (closestTrack) {
-      player.enqueue(closestTrack);
+      if (queuedTrackIds.has(closestTrack.id)) {
+        player.removeTrackById(closestTrack.id);
+      } else {
+        player.enqueue(closestTrack);
+      }
     }
   }
 

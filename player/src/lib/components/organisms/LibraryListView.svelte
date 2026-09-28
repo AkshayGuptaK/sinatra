@@ -66,7 +66,11 @@
       sortDirection={getSortDirection("mood")}
       onToggleSort={() => handleSort("mood")}
     />
-    <div>Tags</div>
+    <ColumnHeaderCell
+      label="Tags"
+      sortDirection={getSortDirection("tags")}
+      onToggleSort={() => handleSort("tags")}
+    />
     <div class="flex justify-end pr-2">
       <ColumnHeaderCell
         label="Duration"

@@ -70,12 +70,21 @@ export class MusicLibrary {
 
   sortTracks(tracks: Track[]) {
     if (this.sortColumn && this.sortDirection) {
-      const sortColumn = this.sortColumn
+      const sortColumn = this.sortColumn;
       const dirMultiplier = this.sortDirection === "asc" ? 1 : -1;
       tracks.sort((a, b) => {
         if (sortColumn === "duration") {
           return ((a.duration ?? 0) - (b.duration ?? 0)) * dirMultiplier;
-        } // time sorting is broken
+        }
+
+        if (sortColumn === "tags") {
+          if (a.tags.length !== b.tags.length) {
+            return (a.tags.length - b.tags.length) * dirMultiplier;
+          }
+          const aFirst = a.tags[0] ?? "";
+          const bFirst = b.tags[0] ?? "";
+          return aFirst.localeCompare(bFirst) * dirMultiplier;
+        }
 
         const aVal = String(a[sortColumn] ?? "");
         const bVal = String(b[sortColumn] ?? "");
@@ -176,7 +185,7 @@ export class MusicLibrary {
   }
 
   setHighlightedTrack(id: string | null) {
-    const a = this.highlightedTrackId
+    const a = this.highlightedTrackId;
     this.highlightedTrackId = id;
   }
 }

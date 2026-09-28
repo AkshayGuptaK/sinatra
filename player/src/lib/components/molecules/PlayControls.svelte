@@ -51,7 +51,7 @@
     size="icon"
     {disabled}
     iconClass="size-5 fill-current"
-    class="rounded-full size-11 shadow-md hover:scale-105 active:scale-95 transition-transform ring-1 ring-white/20 shadow-[0_2px_8px_-1px_rgba(0,0,0,0.35),0_1px_2px_rgba(0,0,0,0.2)]"
+    activeClass="rounded-full size-11 shadow-md hover:scale-105 active:scale-95 transition-transform ring-1 ring-white/20 shadow-[0_2px_8px_-1px_rgba(0,0,0,0.35),0_1px_2px_rgba(0,0,0,0.2)]"
     onToggle={(next) => onPlayToggle?.(next)}
   />
 
@@ -78,12 +78,8 @@
     size="icon"
     {disabled}
     iconClass="size-4"
-    class={cn(
-      "transition-colors",
-      isLooping
-        ? "text-primary font-medium"
-        : "text-muted-foreground hover:text-foreground"
-    )}
+    activeClass="text-primary font-medium"
+    inactiveClass="text-muted-foreground"
     onToggle={(next) => onLoopToggle?.(next)}
   />
 </div>

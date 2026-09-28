@@ -64,12 +64,8 @@
       size="icon"
       {disabled}
       iconClass="size-4"
-      class={cn(
-        "size-8 transition-colors",
-        isAutoDj
-          ? "text-primary font-medium"
-          : "text-muted-foreground hover:text-foreground"
-      )}
+      activeClass="size-8 text-primary font-medium"
+      inactiveClass="size-8 text-muted-foreground "
       onToggle={(next) => onAutoDjToggle?.(next)}
     />
 
@@ -84,12 +80,8 @@
       size="icon"
       {disabled}
       iconClass="size-4"
-      class={cn(
-        "size-8 transition-colors",
-        isShuffle
-          ? "text-primary font-medium"
-          : "text-muted-foreground hover:text-foreground"
-      )}
+      activeClass="size-8 text-primary font-medium"
+      inactiveClass="size-8 text-muted-foreground "
       onToggle={(next) => onShuffleToggle?.(next)}
     />
 
@@ -104,12 +96,8 @@
       size="icon"
       {disabled}
       iconClass="size-4"
-      class={cn(
-        "size-8 transition-colors",
-        isRepeatAll
-          ? "text-primary font-medium"
-          : "text-muted-foreground hover:text-foreground"
-      )}
+      activeClass="size-8 text-primary font-medium"
+      inactiveClass="size-8 text-muted-foreground "
       onToggle={(next) => onRepeatAllToggle?.(next)}
     />
   </div>

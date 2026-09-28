@@ -28,8 +28,8 @@
   type="button"
   onclick={onToggleSort}
   class={cn(
-    "group inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors hover:text-foreground cursor-pointer select-none focus:outline-hidden",
-    sortDirection ? "text-foreground" : "text-muted-foreground",
+    "group inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors hover:text-secondary-foreground cursor-pointer select-none focus:outline-hidden",
+    sortDirection ? "text-primary" : "text-muted-foreground",
     align === "right" ? "justify-end" : "justify-start",
     className
   )}
@@ -42,9 +42,9 @@
 
   <span class="inline-flex items-center">
     {#if sortDirection === "asc"}
-      <ArrowUp class="size-3 text-primary shrink-0" />
+      <ArrowUp class="size-3 shrink-0" />
     {:else if sortDirection === "desc"}
-      <ArrowDown class="size-3 text-primary shrink-0" />
+      <ArrowDown class="size-3 shrink-0" />
     {:else}
       <ChevronsUpDown
         class="size-3 opacity-0 group-hover:opacity-40 transition-opacity shrink-0"

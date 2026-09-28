@@ -65,12 +65,8 @@
     size="icon"
     {disabled}
     iconClass="size-4"
-    class={cn(
-      "transition-colors",
-      isMuted
-        ? "text-destructive hover:text-destructive"
-        : "text-muted-foreground hover:text-foreground"
-    )}
+    activeClass="text-muted-foreground"
+    inactiveClass="text-destructive hover:text-destructive"
     onToggle={handleMuteToggle}
   />
 

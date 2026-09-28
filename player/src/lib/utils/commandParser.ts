@@ -3,6 +3,7 @@ import type { FilterableField } from "$lib/types/metadata";
 export type ParsedIntent =
   | { type: "command"; command: "play" | "queue"; prompt: string }
   | { type: "column_filter"; column: FilterableField; query: string }
+  | { type: "state_filter"; filter: "queued"; query: string }
   | { type: "text_search"; query: string };
 
 export function parseCommandInput(input: string): ParsedIntent {
@@ -20,20 +21,29 @@ export function parseCommandInput(input: string): ParsedIntent {
       return { type: "command", command: "queue", prompt };
   }
 
-  // 2. Explicit Column Filters: :artist Sinatra, :mood calm
+  // 2. Explicit Column and State Filters: :artist Sinatra, :mood calm, :queued
   if (trimmed.startsWith(":")) {
     const match = trimmed.match(/^:([a-zA-Z]+)\s*(.*)$/);
     if (match) {
-      const col = match[1].toLowerCase();
+      const prefix = match[1].toLowerCase();
       const query = match[2] || "";
-      if (["artist", "album", "mood", "title", "tags"].includes(col)) {
+
+      if (prefix === "queued" || prefix === "q") {
         return {
-          type: "column_filter",
-          column: col as FilterableField,
+          type: "state_filter",
+          filter: "queued",
           query,
         };
       }
-      if (col === "tag") {
+
+      if (["artist", "album", "mood", "title", "tags"].includes(prefix)) {
+        return {
+          type: "column_filter",
+          column: prefix as FilterableField,
+          query,
+        };
+      }
+      if (prefix === "tag") {
         return { type: "column_filter", column: "tags", query };
       }
     }

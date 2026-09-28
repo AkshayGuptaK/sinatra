@@ -5,6 +5,7 @@ export type MetadataFields = Partial<
 >;
 
 export type FilterableField = "title" | "artist" | "album" | "mood" | "tags";
+export type FilterKey = FilterableField | "queued" | "all"
 
 export type SortableField = FilterableField | "duration";
 export type SortDirection = 'asc' | 'desc' | null;

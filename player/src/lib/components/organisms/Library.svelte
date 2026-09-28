@@ -34,6 +34,8 @@
       library.setFilter(intent.query, "all");
     } else if (intent.type === "column_filter") {
       library.setFilter(intent.query, intent.column);
+    } else if (intent.type === 'state_filter') {
+      library.setFilter(intent.query, intent.filter)
     }
   }
 

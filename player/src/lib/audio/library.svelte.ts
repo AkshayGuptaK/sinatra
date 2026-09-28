@@ -1,11 +1,12 @@
 import { sinatraApi } from "$lib/api/sinatra";
 import type { Track } from "$lib/types/track";
 import type {
-  FilterableField,
+  FilterKey,
   MetadataFields,
   SortableField,
   SortDirection,
 } from "$lib/types/metadata";
+import { player } from "$lib/audio/player.svelte";
 
 export class MusicLibrary {
   tracks = $state<Track[]>([]);
@@ -13,7 +14,7 @@ export class MusicLibrary {
   error = $state<string | null>(null);
 
   searchQuery = $state("");
-  columnFilterKey = $state<FilterableField | "all">("all");
+  filterKey = $state<FilterKey>("all");
 
   sortColumn = $state<SortableField | null>(null);
   sortDirection = $state<SortDirection>(null);
@@ -37,33 +38,55 @@ export class MusicLibrary {
     }
   }
 
+  getCombinedSearchableString(track: Track): string {
+    return [
+      track.title,
+      track.artist,
+      track.album,
+      track.mood,
+      track.tags?.join(" "),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+  }
+
+  filterQueuedTracks(query: string) {
+    const queuedIds = new Set(player.queue.map((t) => t.id));
+    const queuedTracks = this.tracks.filter((track) => queuedIds.has(track.id));
+    if (!query) return queuedTracks;
+
+    const queryTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+
+    return queuedTracks.filter((track) => {
+      const combined = this.getCombinedSearchableString(track);
+      return queryTokens.every((token) => combined.includes(token));
+    });
+  }
+
   filterTracks(query: string) {
+    const filterKey = this.filterKey
+
+    if (filterKey === "queued") {
+      return this.filterQueuedTracks(query);
+    }
+
     if (!query) return [...this.tracks];
 
     const queryTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
 
     return this.tracks.filter((track) => {
-      if (this.columnFilterKey === "tags") {
+      if (filterKey === "tags") {
         const q = query.toLowerCase();
         return track.tags?.some((t) => t.includes(q));
       }
 
-      if (this.columnFilterKey !== "all") {
-        const val = track[this.columnFilterKey];
+      if (filterKey !== "all") {
+        const val = track[filterKey];
         return val ? String(val).toLowerCase().includes(query) : false;
       }
 
-      const combined = [
-        track.title,
-        track.artist,
-        track.album,
-        track.mood,
-        track.tags?.join(" "),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
+      const combined = this.getCombinedSearchableString(track);
       return queryTokens.every((token) => combined.includes(token));
     });
   }
@@ -174,14 +197,14 @@ export class MusicLibrary {
     );
   }
 
-  setFilter(query: string, key: FilterableField | "all" = "all") {
+  setFilter(query: string, key: FilterKey = "all") {
     this.searchQuery = query;
-    this.columnFilterKey = key;
+    this.filterKey = key;
   }
 
   clearFilter() {
     this.searchQuery = "";
-    this.columnFilterKey = "all";
+    this.filterKey = "all";
   }
 
   setHighlightedTrack(id: string | null) {

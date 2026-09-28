@@ -61,6 +61,11 @@
       label: ":tag <name>",
       desc: "Filter library strictly by tag",
     },
+    {
+      prefix: ":q",
+      label: ":q <query>",
+      desc: "Filter library within currently queued tracks",
+    },
   ];
 
   let matchingSuggestions = $derived.by(() => {

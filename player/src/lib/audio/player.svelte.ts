@@ -144,6 +144,36 @@ export class MusicPlayer {
     this.checkAndTriggerAutoDj();
   }
 
+  removeTrackById(id: string) {
+    if (!id || this.queue.length === 0) return;
+
+    const currentPlayingTrack = this.queue[this.currentIndex];
+    const isPlayingTrackTarget = currentPlayingTrack?.id === id;
+
+    let removedBeforeCurrent = 0;
+    for (let i = 0; i < this.currentIndex; i++) {
+      if (this.queue[i].id === id) {
+        removedBeforeCurrent++;
+      }
+    }
+
+    this.queue = this.queue.filter((t) => t.id !== id);
+    this.originalQueue = this.originalQueue.filter((t) => t.id !== id);
+
+    if (this.queue.length === 0) {
+      this.clearQueue();
+    } else if (isPlayingTrackTarget) {
+      if (this.currentIndex >= this.queue.length) {
+        this.currentIndex = this.queue.length - 1;
+      }
+      this.playTrackAtIndex(this.currentIndex);
+    } else {
+      this.currentIndex -= removedBeforeCurrent;
+    }
+
+    this.checkAndTriggerAutoDj();
+  }
+
   moveTrack(fromIndex: number, toIndex: number) {
     if (
       fromIndex < 0 ||

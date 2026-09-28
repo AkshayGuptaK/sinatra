@@ -29,6 +29,10 @@
     player.enqueue(track);
   }
 
+  function handleDequeue(track: Track) {
+    player.removeTrackById(track.id);
+  }
+
   function getSortDirection(col: SortableField): SortDirection {
     return library.sortColumn === col ? library.sortDirection : null;
   }
@@ -112,6 +116,7 @@
             isQueued={queuedTrackIds.has(track.id)}
             onPlay={handlePlay}
             onEnqueue={handleEnqueue}
+            onDequeue={handleDequeue}
             onUpdate={(fields) => library.updateTrackMetadata(track.id, fields)}
           />
         {/snippet}

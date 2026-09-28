@@ -16,6 +16,7 @@
     class?: string;
     onPlay?: (track: Track) => void;
     onEnqueue?: (track: Track) => void;
+    onDequeue?: (track: Track) => void;
     onUpdate?: (fields: MetadataFields) => void;
   }
 
@@ -26,6 +27,7 @@
     isQueued = false,
     class: className = "",
     onEnqueue,
+    onDequeue,
     onUpdate,
   }: Props = $props();
 
@@ -51,8 +53,20 @@
     {#if isActive && isPlaying}
       <Volume2 class="size-4 text-primary animate-pulse" />
     {:else if isQueued}
-      <span class="size-1.5 rounded-full bg-primary/60 group-hover:bg-primary"
-      ></span>
+      <button
+        type="button"
+        onclick={(e) => {
+          e.stopPropagation();
+          onDequeue?.(track);
+        }}
+        class="group/dequeue flex items-center justify-center size-5 p-0 rounded-full hover:bg-destructive/10 transition-colors cursor-pointer"
+        title="Remove from queue"
+        aria-label="Remove from queue"
+      >
+        <span
+          class="size-1.5 rounded-full bg-primary/60 group-hover:bg-primary group-hover/dequeue:bg-destructive transition-colors"
+        ></span>
+      </button>
     {/if}
   </div>
 

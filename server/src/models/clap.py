@@ -22,7 +22,6 @@ class ClapEmbedder:
 
         print(f"Loading CLAP ({self.MODEL_ID}) on {self.device}...")
 
-        # Loads directly from ~/.cache/huggingface/hub/models--laion--larger_clap_music
         self.processor = AutoProcessor.from_pretrained(self.MODEL_ID)
         self.model = ClapModel.from_pretrained(self.MODEL_ID).to(self.device)
         self.model.eval()
@@ -44,9 +43,15 @@ class ClapEmbedder:
         # Read mono audio at 48kHz via FileSystemSource (FFmpeg)
         waveform = FileSystemSource.read_file(filepath, self.target_sampling_rate, 1)
 
+        if waveform is None:
+            raise ValueError(f"Decoder returned None for {filepath}")
+
         if hasattr(waveform, "numpy"):
             waveform = waveform.numpy()
         waveform = np.asarray(waveform).squeeze()
+
+        if waveform.size == 0:
+            raise ValueError(f"Decoded audio has 0 samples: {filepath}")
 
         # CLAP works with chunks up to ~10-30s; center crop to 30s max
         MAX_SAMPLES = 30 * self.target_sampling_rate  # 1,440,000 samples @ 48kHz

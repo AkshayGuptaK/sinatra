@@ -12,6 +12,10 @@ function appendConstraintToParams(
     params.append("filter_type", "column");
     params.append("filter_field", constraint.column);
     params.append("filter_query", constraint.query);
+  } else if (constraint.type === "duration_filter") {
+    params.append("filter_type", "duration");
+    params.append("filter_operator", constraint.operator);
+    params.append("filter_seconds", constraint.seconds.toString());
   } else if (constraint.type === "text_search" && constraint.query) {
     params.append("filter_type", "text");
     params.append("filter_query", constraint.query);

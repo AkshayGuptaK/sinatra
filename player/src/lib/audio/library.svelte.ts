@@ -75,6 +75,20 @@ export class MusicLibrary {
         return val ? String(val).toLowerCase().includes(q) : false;
       }
 
+      case "duration_filter": {
+        const duration = track.duration ?? 0;
+        switch (filter.operator) {
+          case ">":
+            return duration > filter.seconds;
+          case "<":
+            return duration < filter.seconds;
+          case ">=":
+            return duration >= filter.seconds;
+          case "<=":
+            return duration <= filter.seconds;
+        }
+      }
+
       case "text_search": {
         const q = filter.query.trim();
         if (!q) return true;

@@ -1,7 +1,15 @@
 import type { FilterableField } from "$lib/types/metadata";
+import { parseDurationToSeconds } from "./time";
+
+export type ComparisonOperator = ">" | "<" | ">=" | "<=";
 
 export type FilterIntent =
   | { type: "column_filter"; column: FilterableField; query: string }
+  | {
+      type: "duration_filter";
+      operator: ComparisonOperator;
+      seconds: number;
+    }
   | { type: "queued_filter"; filter: FilterIntent }
   | { type: "text_search"; query: string };
 
@@ -50,6 +58,23 @@ export function parseFilterCommand(input: string): FilterIntent {
           query: rest,
         };
       }
+
+      if (prefix === "duration") {
+        const opMatch = rest.match(/^(>=|<=|>|<)\s*(.+)$/);
+        if (opMatch) {
+          const operator = opMatch[1] as ComparisonOperator;
+          const timeStr = opMatch[2].trim();
+          const seconds = parseDurationToSeconds(timeStr);
+
+          if (seconds !== null) {
+            return {
+              type: "duration_filter",
+              operator,
+              seconds
+            };
+          }
+        }
+      }
     }
   }
   return { type: "text_search", query: input };
@@ -70,8 +95,6 @@ export function parseActionCommand(input: string): ParsedIntent {
   if (cmd === "q" || cmd === "queue") {
     return { type: "action_command", action: "queue", prompt: rest };
   }
-
-  console.log("parse", cmd, rest)
 
   if (cmd === "dj" || cmd === "autodj") {
     return {

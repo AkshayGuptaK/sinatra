@@ -13,6 +13,7 @@
   } from "@lucide/svelte";
   import ToggleButton from "$lib/components/atoms/ToggleButton.svelte";
   import ControlButton from "$lib/components/atoms/ControlButton.svelte";
+  import { formatTime } from "$lib/utils/time";
 
   interface Props {
     isAutoDj?: boolean;
@@ -54,6 +55,8 @@
     switch (filter.type) {
       case "column_filter":
         return `:${filter.column} ${filter.query}`;
+      case "duration_filter":
+        return `:d ${filter.operator} ${formatTime(filter.seconds)}`;
       case "text_search":
         return `"${filter.query}"`;
       case "queued_filter":

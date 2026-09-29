@@ -8,24 +8,23 @@ from src.sources import *
 
 
 class MusicalEmbedder:
+    MODEL_ID = "m-a-p/MERT-v1-330M"
+
     def __init__(self):
         self.device = None
         self._set_device()
         self.target_sampling_rate = 24000
 
-        current_file = Path(__file__).resolve()
-        project_root = current_file.parents[1]
-        model_dir = project_root / "src" / "models" / "mert"
-
-        print(f"Loading MERT from local path: {model_dir}...")
+        print(f"Loading {self.MODEL_ID} on {self.device}...")
 
         self.processor = Wav2Vec2FeatureExtractor.from_pretrained(
-            model_dir, local_files_only=True, trust_remote_code=True
+            self.MODEL_ID, trust_remote_code=True
         )
 
         self.model = AutoModel.from_pretrained(
-            model_dir, local_files_only=True, trust_remote_code=True
+            self.MODEL_ID, trust_remote_code=True
         ).to(self.device)
+        self.model.eval()
 
     def _set_device(self):
         if torch.backends.mps.is_available():
@@ -33,6 +32,7 @@ class MusicalEmbedder:
             print("FeatureExtractor: Using MPS")
         elif torch.cuda.is_available():
             self.device = "cuda"
+            print("FeatureExtractor: Using CUDA")
         else:
             self.device = "cpu"
             print("FeatureExtractor: Using CPU")

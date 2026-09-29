@@ -30,7 +30,11 @@
   const queuedTrackIds = $derived(new Set(player.queue.map((t) => t.id)));
 
   function handleSearchChange(intent: ParsedIntent) {
-    if (intent.type === "action_command" || intent.type === "autodj_constraint") {
+    if (
+      intent.type === "agent_action" ||
+      intent.type === "filter_action" ||
+      intent.type === "autodj_constraint"
+    ) {
       // potentially clear library filter?
       return;
     }
@@ -38,13 +42,22 @@
   }
 
   function handleCommandSubmit(intent: ParsedIntent) {
-    if (intent.type === "action_command") {
+    if (intent.type === "agent_action") {
       console.log(
         "Dispatching agent intent to Sinatra MCP:",
         intent.action,
         intent.prompt
       );
       // TODO: Trigger local LLM / MCP action hook here
+    } else if (intent.type === "filter_action") {
+      const matchingTracks = library.getFilteredTracks(intent.filter);
+      if (intent.action === "play") {
+        player.setQueue(matchingTracks, 0, true);
+      } else {
+        for (const track of matchingTracks) {
+          player.enqueue(track);
+        }
+      }
     } else if (intent.type === "autodj_constraint") {
       player.setAutoDjConstraint(intent.filter);
       return;

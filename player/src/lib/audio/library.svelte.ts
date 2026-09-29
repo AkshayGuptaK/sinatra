@@ -113,15 +113,18 @@ export class MusicLibrary {
     });
   }
 
+  getFilteredTracks(filter: FilterIntent): Track[] {
+    const queuedIds = new Set(player.queue.map((t) => t.id));
+    return this.tracks.filter((track) =>
+      this.matchesFilter(track, filter, queuedIds)
+    );
+  }
+
   filterTracks(): Track[] {
     if (!this.activeFilter) {
       return [...this.tracks];
     }
-
-    const queuedIds = new Set(player.queue.map((t) => t.id));
-    return this.tracks.filter((track) =>
-      this.matchesFilter(track, this.activeFilter!, queuedIds)
-    );
+    return this.getFilteredTracks(this.activeFilter);
   }
 
   sortTracks(tracks: Track[]) {

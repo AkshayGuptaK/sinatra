@@ -56,7 +56,7 @@
       case "column_filter":
         return `:${filter.column} ${filter.query}`;
       case "duration_filter":
-        return `:d ${filter.operator} ${formatTime(filter.seconds)}`;
+        return `:duration ${filter.operator} ${formatTime(filter.seconds)}`;
       case "text_search":
         return `"${filter.query}"`;
       case "queued_filter":

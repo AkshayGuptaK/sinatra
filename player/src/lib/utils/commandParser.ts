@@ -14,7 +14,8 @@ export type FilterIntent =
   | { type: "text_search"; query: string };
 
 export type ParsedIntent =
-  | { type: "action_command"; action: "play" | "queue"; prompt: string }
+  | { type: "agent_action"; action: "play" | "queue"; prompt: string }
+  | { type: "filter_action"; action: "play" | "queue"; filter: FilterIntent }
   | { type: "autodj_constraint"; filter: FilterIntent }
   | FilterIntent;
 
@@ -88,20 +89,38 @@ export function parseActionCommand(input: string): ParsedIntent {
   const cmd = parts[0]?.toLowerCase();
   const rest = parts.slice(1).join(" ").trim();
 
-  if (cmd === "p" || cmd === "play") {
-    return { type: "action_command", action: "play", prompt: rest };
-  }
-
-  if (cmd === "q" || cmd === "queue") {
-    return { type: "action_command", action: "queue", prompt: rest };
-  }
-
   if (cmd === "dj" || cmd === "autodj") {
     return {
       type: "autodj_constraint",
       filter: parseFilterCommand(rest),
     };
   }
+
+  let action;
+
+  if (cmd === "p" || cmd === "play") {
+    action = "play";
+  }
+
+  if (cmd === "q" || cmd === "queue") {
+    action = "queue";
+  }
+
+  if (action === "play" || action === "queue") {
+    if (rest.startsWith(":")) {
+      return {
+        type: "filter_action",
+        action,
+        filter: parseFilterCommand(rest),
+      };
+    }
+    return {
+      type: "agent_action",
+      action,
+      prompt: rest,
+    }
+  }
+
   return nullCommand;
 }
 

@@ -145,6 +145,8 @@ async def get_similar_library_tracks(
         default=None,
         description="Filter query term to enforce as a hard boundary",
     ),
+    filter_operator: Optional[str] = Query(default=None),
+    filter_seconds: Optional[float] = Query(default=None),
 ):
     """Returns requested number of library tracks similar to the given track,
     excluding those stoplisted, constrained by an optional AutoDJ filter.
@@ -162,6 +164,8 @@ async def get_similar_library_tracks(
             filter_type=filter_type,
             filter_field=filter_field,
             filter_query=filter_query,
+            filter_operator=filter_operator,
+            filter_seconds=filter_seconds,
         )
 
         return JSONResponse(content=tracks)

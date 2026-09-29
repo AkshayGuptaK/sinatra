@@ -249,6 +249,14 @@ class PostgresStore:
                     where_clauses.append(f"n.{field} ILIKE %s")
                     params.append(f"%{clean_query}%")
 
+            elif (
+                filter_type == "duration"
+                and filter_operator in (">", "<", ">=", "<=")
+                and filter_seconds is not None
+            ):
+                where_clauses.append(f"n.duration {filter_operator} %s")
+                params.append(filter_seconds)
+
             # 2. General cross-field text search
             elif filter_type == "text":
                 tokens = clean_query.split()

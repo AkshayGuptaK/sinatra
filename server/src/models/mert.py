@@ -7,7 +7,7 @@ from transformers import Wav2Vec2FeatureExtractor, AutoModel
 from src.sources import *
 
 
-class MusicalEmbedder:
+class MertEmbedder:
     MODEL_ID = "m-a-p/MERT-v1-330M"
 
     def __init__(self):
@@ -80,6 +80,6 @@ def get_musical_embedder():
     global _embedder_instance
 
     if _embedder_instance is None:
-        _embedder_instance = MusicalEmbedder()
+        _embedder_instance = MertEmbedder()
 
     return _embedder_instance

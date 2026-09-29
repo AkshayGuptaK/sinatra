@@ -54,11 +54,17 @@ class PostgresStore:
     def upsert_track(
         self,
         filepath: str,
-        embedding: List[float],
+        title: str,
+        artist: str,
+        album: str,
+        duration: float,
+        musical_embedding: List[float],
         emotions: Optional[Dict[str, float]] = None,
         emotion_vector: Optional[List[float]] = None,
         emotions_normalized: Optional[Dict[str, float]] = None,
         emotion_vector_normalized: Optional[List[float]] = None,
+        coord_x: Optional[float] = 0,
+        coord_y: Optional[float] = 0,
     ) -> None:
         # Format JSONB strings
         emotions_json = json.dumps(emotions) if emotions is not None else None
@@ -82,12 +88,18 @@ class PostgresStore:
             cur.execute(
                 """
                 INSERT INTO nodes (
-                    filepath, 
+                    filepath,
+                    title,
+                    artist,
+                    album,
+                    duration,
                     musical_embedding, 
                     emotions, 
                     emotion_vector,
                     emotions_normalized,
                     emotion_vector_normalized,
+                    coord_x,
+                    coord_y,
                     updated_at
                 )
                 VALUES (%s, %s, %s, %s::vector, %s, %s::vector, NOW())
@@ -97,15 +109,23 @@ class PostgresStore:
                     emotion_vector = EXCLUDED.emotion_vector,
                     emotions_normalized = EXCLUDED.emotions_normalized,
                     emotion_vector_normalized = EXCLUDED.emotion_vector_normalized,
+                    coord_x = EXCLUDED.coord_x,
+                    coord_y = EXCLUDED.coord_y,
                     updated_at = NOW();
                 """,
                 (
                     filepath,
-                    embedding,
+                    title,
+                    artist,
+                    album,
+                    duration,
+                    musical_embedding,
                     emotions_json,
                     emotion_vec_str,
                     emotions_norm_json,
                     emotion_norm_vec_str,
+                    coord_x,
+                    coord_y
                 ),
             )
 

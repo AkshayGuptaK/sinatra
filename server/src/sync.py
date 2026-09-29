@@ -5,6 +5,8 @@ from src.pg import get_pg
 from src.sources import *
 from src.embedding import get_musical_embedder
 from src.mood_scorer import get_mood_scorer
+from src.models.projector.mood_projector import get_mood_projector
+from src.audio_metadata import AudioMetadataExtractor
 
 ai_executor = ThreadPoolExecutor(max_workers=1)
 
@@ -15,16 +17,29 @@ def _process_single_file(path):
         raw_embedding = embedder.extract(path)
 
         scorer = get_mood_scorer()
-        emotions, emotion_vec, emotions_norm, emotion_norm_vec = scorer.score(raw_embedding)
+        emotions, emotion_vec, emotions_norm, emotion_norm_vec = scorer.score(
+            raw_embedding
+        )
+
+        projector = get_mood_projector()
+        coord_x, coord_y = projector.project_track(raw_moods, norm_moods)
+
+        meta = AudioMetadataExtractor.extract(filepath)
 
         db = get_pg()
         db.upsert_track(
             filepath=path,
+            title=meta.title,
+            artist=meta.artist,
+            album=meta.album,
+            duration=meta.duration,
             embedding=raw_embedding.tolist(),
             emotions=emotions,
             emotion_vector=emotion_vec,
             emotions_normalized=emotions_norm,
             emotion_vector_normalized=emotion_norm_vec,
+            coord_x=coord_x,
+            coord_y=coord_y,
         )
 
     except Exception as e:
@@ -36,7 +51,7 @@ async def _ingest_files(paths, store):
         return
 
     valid_paths = [p for p in paths if FileSystemSource.is_audio_file(p)]
-    
+
     if not valid_paths:
         print("No valid audio files to ingest.", flush=True)
         return

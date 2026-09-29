@@ -133,10 +133,21 @@ async def get_similar_library_tracks(
         description="Comma-separated track IDs to exclude from recommendations",
     ),
     limit: int = Query(default=5, ge=1, le=50),
+    filter_type: Optional[str] = Query(
+        default=None,
+        description="Type of filter constraint: 'column' or 'text'",
+    ),
+    filter_field: Optional[str] = Query(
+        default=None,
+        description="Target column if filter_type is 'column' (e.g., 'tags', 'artist', 'mood')",
+    ),
+    filter_query: Optional[str] = Query(
+        default=None,
+        description="Filter query term to enforce as a hard boundary",
+    ),
 ):
     """Returns requested number of library tracks similar to the given track,
-
-    excluding those stoplisted or already in the queue.
+    excluding those stoplisted, constrained by an optional AutoDJ filter.
     """
     try:
         excluded_ids = []
@@ -145,7 +156,12 @@ async def get_similar_library_tracks(
 
         db = get_pg()
         tracks = db.get_similar_tracks_except_excluded(
-            track_id=track_id, excluded_ids=excluded_ids, limit=limit
+            track_id=track_id,
+            excluded_ids=excluded_ids,
+            limit=limit,
+            filter_type=filter_type,
+            filter_field=filter_field,
+            filter_query=filter_query,
         )
 
         return JSONResponse(content=tracks)

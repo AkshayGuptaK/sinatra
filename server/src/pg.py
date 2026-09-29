@@ -210,48 +210,97 @@ class PostgresStore:
         track_id: str,
         excluded_ids: Optional[List[str]] = None,
         limit: int = 5,
+        filter_type: Optional[str] = None,
+        filter_field: Optional[str] = None,
+        filter_query: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Returns top similar tracks by cosine distance on musical_embedding,
-        excluding tracks in excluded_ids and the target track itself.
+        excluding tracks in excluded_ids and the target track itself,
+        optionally bounded by an AutoDJ filter constraint.
         """
         excluded_list = list(excluded_ids or [])
-        excluded_list.append(track_id)
+        if track_id not in excluded_list:
+            excluded_list.append(track_id)
 
-        query = """
+        # Base WHERE clauses and parameters
+        where_clauses = [
+            "n.musical_embedding IS NOT NULL",
+            "t.musical_embedding IS NOT NULL",
+            "NOT (n.id = ANY(%s::uuid[]))",
+        ]
+        params: List[Any] = [track_id, excluded_list]
+
+        # Dynamically inject filter boundaries if provided
+        if filter_query and filter_query.strip():
+            clean_query = filter_query.strip().lower()
+
+            # 1. Column-specific filters
+            if filter_type == "column" and filter_field:
+                field = filter_field.strip().lower()
+
+                if field in ("tags", "tag"):
+                    # Matches if the tag exists in the TEXT[] array (or partial match inside the array)
+                    where_clauses.append(
+                        "EXISTS (SELECT 1 FROM unnest(n.tags) AS tag WHERE tag ILIKE %s)"
+                    )
+                    params.append(f"%{clean_query}%")
+
+                elif field in ("artist", "album", "mood", "title"):
+                    where_clauses.append(f"n.{field} ILIKE %s")
+                    params.append(f"%{clean_query}%")
+
+            # 2. General cross-field text search
+            elif filter_type == "text":
+                tokens = clean_query.split()
+                for token in tokens:
+                    where_clauses.append(
+                        """
+                        (
+                            COALESCE(n.title, '') || ' ' ||
+                            COALESCE(n.artist, '') || ' ' ||
+                            COALESCE(n.album, '') || ' ' ||
+                            COALESCE(n.mood, '') || ' ' ||
+                            COALESCE(array_to_string(n.tags, ' '), '')
+                        ) ILIKE %s
+                        """
+                    )
+                    params.append(f"%{token}%")
+
+        params.append(limit)
+
+        query = f"""
         WITH target AS (
             SELECT musical_embedding
             FROM nodes
             WHERE id = %s::uuid
         )
         SELECT n.id::text,
-               n.title AS title,
-               n.artist AS artist,
-               n.album AS album,
-               n.mood AS mood,
-               n.tags AS tags,
-               n.duration AS duration,
+               COALESCE(n.title, 'Unknown Title') AS title,
+               COALESCE(n.artist, 'Unknown Artist') AS artist,
+               COALESCE(n.album, '') AS album,
+               COALESCE(n.mood, '') AS mood,
+               COALESCE(n.tags, ARRAY[]::text[]) AS tags,
+               COALESCE(n.duration, 0.0) AS duration,
                ROUND((n.musical_embedding <=> t.musical_embedding)::numeric, 4) AS distance
         FROM nodes n, target t
-        WHERE n.musical_embedding IS NOT NULL
-          AND t.musical_embedding IS NOT NULL
-          AND NOT (n.id = ANY(%s::uuid[]))
+        WHERE {' AND '.join(where_clauses)}
         ORDER BY n.musical_embedding <=> t.musical_embedding ASC
         LIMIT %s;
         """
 
         try:
             with self.conn.cursor() as cur:
-                cur.execute(query, (track_id, excluded_list, limit))
+                cur.execute(query, tuple(params))
                 rows = cur.fetchall()
 
                 return [
                     {
                         "id": r[0],
-                        "title": r[1] or "Unknown Title",
-                        "artist": r[2] or "Unknown Artist",
-                        "album": r[3] or "",
-                        "mood": r[4] or "",
-                        "tags": r[5] or "",
+                        "title": r[1],
+                        "artist": r[2],
+                        "album": r[3],
+                        "mood": r[4],
+                        "tags": list(r[5]) if r[5] is not None else [],
                         "duration": float(r[6]),
                     }
                     for r in rows

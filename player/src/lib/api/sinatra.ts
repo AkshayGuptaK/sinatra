@@ -1,7 +1,35 @@
 import type { Track } from "$lib/types/track";
 import type { MetadataFields } from "$lib/types/metadata";
+import type { FilterIntent } from "$lib/utils/commandParser";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+function appendConstraintToParams(
+  constraint: FilterIntent,
+  params: URLSearchParams
+) {
+  if (constraint.type === "column_filter") {
+    params.append("filter_type", "column");
+    params.append("filter_field", constraint.column);
+    params.append("filter_query", constraint.query);
+  } else if (constraint.type === "text_search" && constraint.query) {
+    params.append("filter_type", "text");
+    params.append("filter_query", constraint.query);
+  } else if (constraint.type === "queued_filter") {
+    // If a nested filter was passed (e.g. /dj :q :tag rock), unwrap the inner filter
+    if (constraint.filter.type === "column_filter") {
+      params.append("filter_type", "column");
+      params.append("filter_field", constraint.filter.column);
+      params.append("filter_query", constraint.filter.query);
+    } else if (
+      constraint.filter.type === "text_search" &&
+      constraint.filter.query
+    ) {
+      params.append("filter_type", "text");
+      params.append("filter_query", constraint.filter.query);
+    }
+  }
+}
 
 export const sinatraApi = {
   getStreamUrl(trackId: string): string {
@@ -20,12 +48,15 @@ export const sinatraApi = {
     trackId: string,
     fields: MetadataFields
   ): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/api/library/tracks/${encodeURIComponent(trackId)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(fields)
-    });
-  
+    const res = await fetch(
+      `${API_BASE_URL}/api/library/tracks/${encodeURIComponent(trackId)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fields),
+      }
+    );
+
     if (!res.ok) {
       throw new Error(`Failed to update track metadata: ${res.statusText}`);
     }
@@ -36,7 +67,8 @@ export const sinatraApi = {
   async getSimilarTracks(
     trackId: string,
     excludeIds: string[] = [],
-    limit: number = 3
+    limit: number,
+    constraint: FilterIntent | null = null
   ): Promise<Track[]> {
     const params = new URLSearchParams({
       limit: limit.toString(),
@@ -44,6 +76,10 @@ export const sinatraApi = {
 
     if (excludeIds.length > 0) {
       params.append("stoplist", excludeIds.join(","));
+    }
+
+    if (constraint) {
+      appendConstraintToParams(constraint, params)
     }
 
     const res = await fetch(

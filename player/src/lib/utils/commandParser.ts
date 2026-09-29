@@ -1,38 +1,37 @@
 import type { FilterableField } from "$lib/types/metadata";
 
-export type ParsedIntent =
-  | { type: "command"; command: "play" | "queue"; prompt: string }
+export type FilterIntent =
   | { type: "column_filter"; column: FilterableField; query: string }
-  | { type: "state_filter"; filter: "queued"; query: string }
+  | { type: "queued_filter"; filter: FilterIntent }
   | { type: "text_search"; query: string };
 
-export function parseCommandInput(input: string): ParsedIntent {
-  const trimmed = input.trim();
+export type ParsedIntent =
+  | { type: "action_command"; action: "play" | "queue"; prompt: string }
+  | { type: "autodj_constraint"; filter: FilterIntent }
+  | FilterIntent;
 
-  // 1. Natural Language / Agent Commands: /play, /q, /queue
-  if (trimmed.startsWith("/")) {
-    const parts = trimmed.slice(1).split(/\s+/);
-    const cmd = parts[0]?.toLowerCase();
-    const prompt = parts.slice(1).join(" ");
+const nullCommand: FilterIntent = { type: "text_search", query: "" };
 
-    if (cmd === "p" || cmd === "play")
-      return { type: "command", command: "play", prompt };
-    if (cmd === "q" || cmd === "queue")
-      return { type: "command", command: "queue", prompt };
-  }
+/**
+ * Recursively parses a filter expression.
+ * Supports:
+ * - Bare text: "turtle" -> text_search
+ * - Column filter: ":tag light rock" -> column_filter
+ * - Nested queued filter: ":q :tag rock", ":q turtle", ":q" -> queued_filter
+ */
+export function parseFilterCommand(input: string): FilterIntent {
+  if (!input) return nullCommand;
 
-  // 2. Explicit Column and State Filters: :artist Sinatra, :mood calm, :queued
-  if (trimmed.startsWith(":")) {
-    const match = trimmed.match(/^:([a-zA-Z]+)\s*(.*)$/);
+  if (input.startsWith(":")) {
+    const match = input.match(/^:([a-zA-Z]+)\s*(.*)$/);
     if (match) {
       const prefix = match[1].toLowerCase();
-      const query = match[2] || "";
+      const rest = match[2]?.trim() || "";
 
-      if (prefix === "queued" || prefix === "q") {
+      if (prefix === "q" || prefix === "queued") {
         return {
-          type: "state_filter",
-          filter: "queued",
-          query,
+          type: "queued_filter",
+          filter: parseFilterCommand(rest),
         };
       }
 
@@ -40,13 +39,55 @@ export function parseCommandInput(input: string): ParsedIntent {
         return {
           type: "column_filter",
           column: prefix as FilterableField,
-          query,
+          query: rest,
         };
       }
+      // Alias tag to tags
       if (prefix === "tag") {
-        return { type: "column_filter", column: "tags", query };
+        return {
+          type: "column_filter",
+          column: "tags",
+          query: rest,
+        };
       }
     }
   }
-  return { type: "text_search", query: trimmed };
+  return { type: "text_search", query: input };
+}
+
+/**
+ * Parses action commands starting with '/'
+ */
+export function parseActionCommand(input: string): ParsedIntent {
+  const parts = input.slice(1).split(/\s+/);
+  const cmd = parts[0]?.toLowerCase();
+  const rest = parts.slice(1).join(" ").trim();
+
+  if (cmd === "p" || cmd === "play") {
+    return { type: "action_command", action: "play", prompt: rest };
+  }
+
+  if (cmd === "q" || cmd === "queue") {
+    return { type: "action_command", action: "queue", prompt: rest };
+  }
+
+  console.log("parse", cmd, rest)
+
+  if (cmd === "dj" || cmd === "autodj") {
+    return {
+      type: "autodj_constraint",
+      filter: parseFilterCommand(rest),
+    };
+  }
+  return nullCommand;
+}
+
+export function parseCommandInput(input: string): ParsedIntent {
+  const trimmed = input.trim();
+
+  if (trimmed.startsWith("/")) {
+    return parseActionCommand(trimmed);
+  }
+
+  return parseFilterCommand(trimmed);
 }

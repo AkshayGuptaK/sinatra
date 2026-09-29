@@ -1,6 +1,7 @@
 import { AudioEngine } from "./engine.svelte";
 import { sinatraApi } from "$lib/api/sinatra";
 import { type Track } from "$lib/types/track";
+import type { FilterIntent } from "$lib/utils/commandParser";
 
 export type LoopMode = "none" | "one" | "all";
 
@@ -12,6 +13,7 @@ export class MusicPlayer {
   currentIndex = $state<number>(-1);
   isAutoDj = $state(false);
   isFetchingAutoDj = $state(false);
+  autoDjConstraint = $state<FilterIntent | null>(null);
   isShuffle = $state(false);
   loopMode = $state<LoopMode>("none");
 
@@ -72,6 +74,22 @@ export class MusicPlayer {
   }
 
   /**
+   * Sets or clears the active AutoDJ constraint.
+   */
+  setAutoDjConstraint(constraint: FilterIntent | null) {
+    // If setting empty text_search, treat it as clearing the constraint
+    if (constraint && constraint.type === "text_search" && !constraint.query) {
+      this.clearAutoDjConstraint();
+      return;
+    }
+    this.autoDjConstraint = constraint;
+  }
+
+  clearAutoDjConstraint() {
+    this.autoDjConstraint = null;
+  }
+
+  /**
    * Checks if the currently active track is the last track in the queue,
    * and if so, fetches and enqueues more tracks via the backend.
    */
@@ -92,13 +110,20 @@ export class MusicPlayer {
 
       const similarTracks = await sinatraApi.getSimilarTracks(
         this.currentTrackId,
-        currentQueueIds
+        currentQueueIds,
+        3,
+        this.autoDjConstraint
       );
 
       if (similarTracks && similarTracks.length > 0) {
         for (const track of similarTracks) {
           this.enqueue(track);
         }
+      } else if (this.autoDjConstraint) {
+        this.isAutoDj = false;
+        console.warn(
+          "AutoDJ: No more unplayed tracks matching the current constraint."
+        );
       }
     } catch (err) {
       console.error("Auto DJ failed to fetch recommendations:", err);

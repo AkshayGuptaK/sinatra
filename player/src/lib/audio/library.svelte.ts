@@ -1,21 +1,19 @@
 import { sinatraApi } from "$lib/api/sinatra";
 import type { Track } from "$lib/types/track";
 import type {
-  FilterKey,
   MetadataFields,
   SortableField,
   SortDirection,
 } from "$lib/types/metadata";
 import { player } from "$lib/audio/player.svelte";
+import type { FilterIntent } from "$lib/utils/commandParser";
 
 export class MusicLibrary {
   tracks = $state<Track[]>([]);
   isLoading = $state(false);
   error = $state<string | null>(null);
 
-  searchQuery = $state("");
-  filterKey = $state<FilterKey>("all");
-
+  activeFilter = $state<FilterIntent | null>(null);
   sortColumn = $state<SortableField | null>(null);
   sortDirection = $state<SortDirection>(null);
 
@@ -51,6 +49,43 @@ export class MusicLibrary {
       .toLowerCase();
   }
 
+  /**
+   * Helper that evaluates whether a track matches a FilterIntent recursively.
+   */
+  private matchesFilter(
+    track: Track,
+    filter: FilterIntent,
+    queuedIds: Set<string>
+  ): boolean {
+    switch (filter.type) {
+      case "queued_filter": {
+        if (!queuedIds.has(track.id)) return false;
+        return this.matchesFilter(track, filter.filter, queuedIds);
+      }
+
+      case "column_filter": {
+        const q = filter.query.trim().toLowerCase();
+        if (!q) return true;
+
+        if (filter.column === "tags") {
+          return track.tags?.some((t) => t.includes(q)) ?? false;
+        }
+
+        const val = track[filter.column];
+        return val ? String(val).toLowerCase().includes(q) : false;
+      }
+
+      case "text_search": {
+        const q = filter.query.trim();
+        if (!q) return true;
+
+        const queryTokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+        const combined = this.getCombinedSearchableString(track);
+        return queryTokens.every((token) => combined.includes(token));
+      }
+    }
+  }
+
   filterQueuedTracks(query: string) {
     const queuedIds = new Set(player.queue.map((t) => t.id));
     const queuedTracks = this.tracks.filter((track) => queuedIds.has(track.id));
@@ -64,31 +99,15 @@ export class MusicLibrary {
     });
   }
 
-  filterTracks(query: string) {
-    const filterKey = this.filterKey
-
-    if (filterKey === "queued") {
-      return this.filterQueuedTracks(query);
+  filterTracks(): Track[] {
+    if (!this.activeFilter) {
+      return [...this.tracks];
     }
 
-    if (!query) return [...this.tracks];
-
-    const queryTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
-
-    return this.tracks.filter((track) => {
-      if (filterKey === "tags") {
-        const q = query.toLowerCase();
-        return track.tags?.some((t) => t.includes(q));
-      }
-
-      if (filterKey !== "all") {
-        const val = track[filterKey];
-        return val ? String(val).toLowerCase().includes(query) : false;
-      }
-
-      const combined = this.getCombinedSearchableString(track);
-      return queryTokens.every((token) => combined.includes(token));
-    });
+    const queuedIds = new Set(player.queue.map((t) => t.id));
+    return this.tracks.filter((track) =>
+      this.matchesFilter(track, this.activeFilter!, queuedIds)
+    );
   }
 
   sortTracks(tracks: Track[]) {
@@ -118,8 +137,7 @@ export class MusicLibrary {
   }
 
   displayedTracks = $derived.by(() => {
-    const query = this.searchQuery.trim().toLowerCase();
-    const filteredTracks = this.filterTracks(query);
+    const filteredTracks = this.filterTracks();
     return this.sortTracks(filteredTracks);
   });
 
@@ -197,14 +215,16 @@ export class MusicLibrary {
     );
   }
 
-  setFilter(query: string, key: FilterKey = "all") {
-    this.searchQuery = query;
-    this.filterKey = key;
+  setFilter(filter: FilterIntent) {
+    if (filter.type === "text_search" && !filter.query) {
+      this.clearFilter();
+      return;
+    }
+    this.activeFilter = filter;
   }
 
   clearFilter() {
-    this.searchQuery = "";
-    this.filterKey = "all";
+    this.activeFilter = null;
   }
 
   setHighlightedTrack(id: string | null) {

@@ -30,26 +30,28 @@
   const queuedTrackIds = $derived(new Set(player.queue.map((t) => t.id)));
 
   function handleSearchChange(intent: ParsedIntent) {
-    if (intent.type === "text_search") {
-      library.setFilter(intent.query, "all");
-    } else if (intent.type === "column_filter") {
-      library.setFilter(intent.query, intent.column);
-    } else if (intent.type === 'state_filter') {
-      library.setFilter(intent.query, intent.filter)
+    if (intent.type === "action_command" || intent.type === "autodj_constraint") {
+      // potentially clear library filter?
+      return;
     }
+    library.setFilter(intent);
   }
 
   function handleCommandSubmit(intent: ParsedIntent) {
-    if (intent.type === "command") {
+    if (intent.type === "action_command") {
       console.log(
         "Dispatching agent intent to Sinatra MCP:",
-        intent.command,
+        intent.action,
         intent.prompt
       );
-      // Trigger local LLM / MCP action hook here
-    } else if (library.displayedTracks.length > 0) {
-      // Pressing Enter on pure searches loads current search view into queue
+      // TODO: Trigger local LLM / MCP action hook here
+    } else if (intent.type === "autodj_constraint") {
+      player.setAutoDjConstraint(intent.filter);
+      return;
+    } else if (library.displayedTracks.length == 0) {
       player.setQueue(library.displayedTracks, 0, true);
+    } else {
+      handleEnqueueAll();
     }
   }
 

@@ -58,10 +58,7 @@
   onpointerleave={() => onHoverEnd(track.id)}
   draggable="true"
   ondragstart={(e) => onDragStart?.(e, index)}
-  ondragover={(e) => {
-    console.log("draggy");
-    onDragOver?.(e, index);
-  }}
+  ondragover={(e) => onDragOver?.(e, index)}
   ondrop={(e) => onDrop?.(e, index)}
   ondragend={onDragEnd}
   onclick={() => onSelect?.(index)}

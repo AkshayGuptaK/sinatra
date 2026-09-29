@@ -27,14 +27,19 @@
 
   const COMMAND_SUGGESTIONS = [
     {
-      prefix: "/play",
+      prefix: "/p",
       label: "/play <prompt>",
       desc: "Replace queue with prompted music",
     },
     {
-      prefix: "/queue",
+      prefix: "/q",
       label: "/queue <prompt>",
       desc: "Add prompted music to the queue",
+    },
+    {
+      prefix: "/dj",
+      label: "/autodj :filterColumn filterValue",
+      desc: "Restrict autoDJ to only queue tracks matching the filter condition",
     },
     {
       prefix: ":title",
@@ -63,7 +68,7 @@
     },
     {
       prefix: ":q",
-      label: ":q <query>",
+      label: ":queued <query>",
       desc: "Filter library within currently queued tracks",
     },
   ];
@@ -82,6 +87,7 @@
     const target = e.target as HTMLInputElement;
     rawInput = target.value;
     const parsed = parseCommandInput(rawInput);
+    console.log("parsed", parsed)
     onSearchChange?.(parsed);
   }
 
@@ -116,10 +122,11 @@
       e.preventDefault();
       const parsed = parseCommandInput(rawInput);
       onCommandSubmit?.(parsed);
+      rawInput = "";
+      inputEl?.blur();
     } else if (e.key === "Escape") {
       rawInput = "";
       onSearchChange?.({ type: "text_search", query: "" });
-      inputEl?.blur();
     }
   }
 

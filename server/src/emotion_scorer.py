@@ -67,8 +67,15 @@ class EmotionScorer:
         self.weights = df[weight_cols].values.T.astype(np.float32)
         self.biases = df["intercept"].values.astype(np.float32)
 
-    # TODO: write comment
     def _load_calibration_stats(self) -> None:
+        """Derives empirical 1st and 99th percentile bounds from the model's own
+        predictions on the reference training embeddings.
+
+        Because L2-regularized Ridge regression shrinks prediction variance
+        relative to raw human survey ratings, normalizing incoming tracks
+        against the model's actual dynamic output range (y_pred) spreads
+        predicted scores cleanly across [0.0, 1.0] without compression.
+        """
         if not self.ref_path.exists():
             self.p_min = np.zeros(len(self.mood_names), dtype=np.float32)
             self.p_range = np.ones(len(self.mood_names), dtype=np.float32)

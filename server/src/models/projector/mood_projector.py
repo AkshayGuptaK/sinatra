@@ -15,7 +15,7 @@ class MoodProjector:
     unnormalized amplitude dynamics.
     """
 
-    THRESHOLD = 0.35
+    THRESHOLD = 0.4
 
     def __init__(self, method: str = "kr", k: int = 5):
         self.method = method.lower()
@@ -80,7 +80,7 @@ class MoodProjector:
         emotions: Dict[str, float],
         emotions_normalized: Optional[Dict[str, float]] = None,
     ) -> np.ndarray:
-        """Applies 0.35 normalized thresholding to filter unnormalized emotion scores."""
+        """Applies 0.4 normalized thresholding to filter unnormalized emotion scores."""
         norm_dict = emotions_normalized or {}
 
         raw_vals = np.array(

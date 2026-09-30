@@ -233,6 +233,8 @@ class PostgresStore:
         filter_type: Optional[str] = None,
         filter_field: Optional[str] = None,
         filter_query: Optional[str] = None,
+        filter_operator: Optional[str] = None,
+        filter_seconds: Optional[float] = None,
     ) -> List[Dict[str, Any]]:
         """Returns top similar tracks by cosine distance on musical_embedding,
         excluding tracks in excluded_ids and the target track itself,

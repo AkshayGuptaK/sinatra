@@ -35,6 +35,14 @@ class ClapEmbedder:
             return "cuda"
         return "cpu"
 
+    @staticmethod
+    def _l2_normalize(vector: np.ndarray) -> np.ndarray:
+        """Projects vector to unit length (norm = 1.0)."""
+        norm = np.linalg.norm(vector)
+        if norm > 1e-12:
+            return (vector / norm).astype(np.float32)
+        return vector.astype(np.float32)
+
     def extract(self, filepath: str) -> np.ndarray:
         """Extracts a 512-dimensional CLAP embedding from an audio file.
 
@@ -70,6 +78,10 @@ class ClapEmbedder:
 
         input_features = inputs["input_features"].to(self.device)
 
+        is_longer = inputs.get("is_longer")
+        if is_longer is not None:
+            is_longer = is_longer.to(self.device)
+
         with torch.no_grad():
             audio_embeds = self.model.get_audio_features(input_features=input_features)
             # If get_audio_features returns BaseModelOutputWithPooling or a dict/tuple:
@@ -86,9 +98,9 @@ class ClapEmbedder:
             if tensor.shape[-1] != 512 and hasattr(self.model, "audio_projection"):
                 tensor = self.model.audio_projection(tensor)
 
-            vector = tensor.squeeze().cpu().numpy().astype(np.float32)
+            vector = tensor.squeeze().cpu().numpy()
 
-        return vector
+        return self._l2_normalize(vector)
 
     def extract_text(self, text: Union[str, List[str]]) -> np.ndarray:
         """Extracts 512-dim embedding for natural language search queries."""
@@ -98,10 +110,30 @@ class ClapEmbedder:
         attention_mask = inputs["attention_mask"].to(self.device)
 
         with torch.no_grad():
-            text_embeds = self.model.get_text_features(
+            outputs = self.model.get_text_features(
                 input_ids=input_ids, attention_mask=attention_mask
             )
-            return text_embeds.cpu().numpy().astype(np.float32)
+
+            if isinstance(outputs, torch.Tensor):
+                embed = outputs
+            elif (
+                hasattr(outputs, "pooler_output") and outputs.pooler_output is not None
+            ):
+                embed = outputs.pooler_output
+            elif hasattr(outputs, "last_hidden_state"):
+                embed = outputs.last_hidden_state.mean(dim=1)
+            else:
+                embed = outputs[0]
+
+            if embed.shape[-1] != 512 and hasattr(self.model, "text_projection"):
+                embed = self.model.text_projection(embed)
+
+            vectors = embed.cpu().numpy()
+
+            if isinstance(text, str):
+                print("normalizing text")
+                return self._l2_normalize(vectors.squeeze(0))
+            return np.array([self._l2_normalize(v) for v in vectors])
 
 
 # Singleton helper

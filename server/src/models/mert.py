@@ -8,7 +8,7 @@ from src.sources import *
 
 
 class MertEmbedder:
-    MODEL_ID = "m-a-p/MERT-v1-330M"
+    MODEL_ID = "m-a-p/MERT-v2-30s"
 
     def __init__(self):
         self.device = None
@@ -76,7 +76,7 @@ class MertEmbedder:
 _embedder_instance = None
 
 
-def get_musical_embedder():
+def get_mert_embedder():
     global _embedder_instance
 
     if _embedder_instance is None:

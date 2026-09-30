@@ -3,8 +3,8 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from src.pg import get_pg
 from src.sources import *
-from src.models.mert import get_musical_embedder
-from src.mood_scorer import get_mood_scorer
+from src.models.mert import get_mert_embedder
+from src.emotion_scorer import get_emotion_scorer
 from src.models.projector.mood_projector import get_mood_projector
 from src.audio_metadata import AudioMetadataExtractor
 
@@ -13,10 +13,10 @@ ai_executor = ThreadPoolExecutor(max_workers=1)
 
 def _process_single_file(path):
     try:
-        musical_embedder = get_musical_embedder()
+        musical_embedder = get_mert_embedder()
         musical_embedding = musical_embedder.extract(path)
 
-        scorer = get_mood_scorer()
+        scorer = get_emotion_scorer()
         emotions, emotion_vec, emotions_norm, emotion_norm_vec = scorer.score(
             musical_embedding
         )

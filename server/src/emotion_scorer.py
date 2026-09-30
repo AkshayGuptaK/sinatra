@@ -5,7 +5,7 @@ import pandas as pd
 from src.config import config
 
 
-class MoodScorer:
+class EmotionScorer:
     """Computes calibrated Cowen mood dimensions from 1024-dim MERT embeddings.
 
     Loads fitted Ridge regression weights/biases and establishes baseline empirical
@@ -131,11 +131,11 @@ class MoodScorer:
         return raw_moods_dict, raw_mood_vector, norm_moods_dict, norm_mood_vector
 
 
-_scorer_instance: MoodScorer | None = None
+_scorer_instance: EmotionScorer | None = None
 
 
-def get_mood_scorer() -> MoodScorer:
+def get_emotion_scorer() -> EmotionScorer:
     global _scorer_instance
     if _scorer_instance is None:
-        _scorer_instance = MoodScorer()
+        _scorer_instance = EmotionScorer()
     return _scorer_instance

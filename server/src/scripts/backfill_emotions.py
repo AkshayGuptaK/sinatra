@@ -1,25 +1,36 @@
+import argparse
 import json
 import numpy as np
 from src.pg import get_pg
-from src.mood_scorer import get_mood_scorer
+from src.emotion_scorer import get_emotion_scorer
 
 BATCH_SIZE = 100
 
 
-def backfill_emotions():
+def backfill_emotions(overwrite: bool = False):
     db = get_pg()
-    scorer = get_mood_scorer()
+    scorer = get_emotion_scorer()
 
-    print("Fetching tracks needing emotional backfill...")
-    with db.conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT filepath, musical_embedding 
-            FROM nodes 
-            WHERE musical_embedding IS NOT NULL 
-              AND (emotions_normalized IS NULL OR emotion_vector_normalized IS NULL);
-            """
+    query = """
+        SELECT filepath, musical_embedding 
+        FROM nodes 
+        WHERE musical_embedding IS NOT NULL
+    """
+    if not overwrite:
+        query += (
+            " AND (emotions_normalized IS NULL OR emotion_vector_normalized IS NULL)"
         )
+    query += ";"
+
+    mode_str = (
+        "ALL tracks (OVERWRITE enabled)"
+        if overwrite
+        else "tracks needing emotional backfill"
+    )
+    print(f"Fetching {mode_str}...")
+
+    with db.conn.cursor() as cur:
+        cur.execute(query)
         rows = cur.fetchall()
 
     total_tracks = len(rows)
@@ -38,7 +49,7 @@ def backfill_emotions():
         else:
             emb = np.asarray(raw_embedding, dtype=np.float32)
 
-        # Unpack all 4 outputs
+        # Unpack all 4 outputs: raw dict, raw vec, norm dict, norm vec
         emotions, emotion_vec, emotions_norm, emotion_norm_vec = scorer.score(emb)
 
         update_payloads.append(
@@ -54,7 +65,7 @@ def backfill_emotions():
         if len(update_payloads) >= BATCH_SIZE:
             _flush_batch(db, update_payloads)
             processed += len(update_payloads)
-            print(f"Updated {processed}/{total_tracks} tracks...")
+            print(f"Updated {processed}/{total_tracks} tracks...", end="\r", flush=True)
             update_payloads = []
 
     if update_payloads:
@@ -62,7 +73,7 @@ def backfill_emotions():
         processed += len(update_payloads)
         print(f"Updated {processed}/{total_tracks} tracks.")
 
-    print("✅ Emotional backfill complete!")
+    print("\n✅ Emotional backfill complete!")
 
 
 def _flush_batch(db, batch_data):
@@ -83,4 +94,14 @@ def _flush_batch(db, batch_data):
 
 
 if __name__ == "__main__":
-    backfill_emotions()
+    parser = argparse.ArgumentParser(
+        description="Backfill emotion scores and vectors in PostgreSQL"
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Recompute and overwrite emotion vectors/scores for all tracks.",
+    )
+    args = parser.parse_args()
+
+    backfill_emotions(overwrite=args.overwrite)

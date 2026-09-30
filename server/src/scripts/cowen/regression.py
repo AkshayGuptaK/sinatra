@@ -13,7 +13,6 @@ DATASETS_DIR = config["project_root"] / "datasets"
 FEATURES_CSV = DATASETS_DIR / "cowen_features.csv"
 MERT_EMBEDDINGS_CSV = DATASETS_DIR / "cowen_mert_embeddings.csv"
 OUTPUT_FEATURES_WEIGHTS_CSV = DATASETS_DIR / "cowen_features_regression_weights.csv"
-OUTPUT_MERT_WEIGHTS_CSV = DATASETS_DIR / "cowen_mert_regression_weights.csv"
 
 # Dimensions dropped due to low cross-cultural stability or near-zero signal floor
 DROPPED_EMOTIONS = {

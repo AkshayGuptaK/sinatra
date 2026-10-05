@@ -22,9 +22,9 @@ def _process_single_file(path):
         )
 
         projector = get_mood_projector()
-        coord_x, coord_y = projector.project_track(raw_moods, norm_moods)
+        coord_x, coord_y = projector.project_track(emotions, emotions_norm)
 
-        meta = AudioMetadataExtractor.extract(filepath)
+        meta = AudioMetadataExtractor.extract(path)
 
         db = get_pg()
         db.upsert_track(

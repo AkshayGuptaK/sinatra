@@ -9,11 +9,6 @@ from contextlib import asynccontextmanager
 from src.config import config
 from src.sync import sync_store
 from src.watcher import watch_files
-from src.visualizer import (
-    fetch_library_map_points,
-    fetch_library_path,
-    render_map_page_html,
-)
 from src.pg import get_pg
 
 
@@ -58,22 +53,6 @@ MIME_MAP = {
     ".m4a": "audio/mp4",
     ".wav": "audio/wav",
 }
-
-
-@app.get("/map", response_class=HTMLResponse)
-async def get_library_map():
-    """Serves the interactive 2D emotion explorer UI."""
-    return HTMLResponse(content=render_map_page_html())
-
-
-@app.get("/api/map/data")
-async def get_library_map_data():
-    """Returns the dynamic coordinates and mood summaries for all projected tracks."""
-    try:
-        points = fetch_library_map_points()
-        return JSONResponse(content=points)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/library/tracks")
@@ -176,7 +155,9 @@ async def get_similar_library_tracks(
 @app.get("/api/audio/{track_id}")
 async def stream_track(track_id: str):
     """Streams audio for playback."""
-    file_path = fetch_library_path(track_id)
+    db = get_pg()
+    filepath = db.get_track_path_by_id(track_id)
+    file_path = Path(filepath) if filepath else None
     if not file_path or not file_path.exists():
         raise HTTPException(status_code=404, detail="Audio file not found")
     media_type = MIME_MAP.get(file_path.suffix.lower(), "application/octet-stream")

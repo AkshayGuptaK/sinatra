@@ -23,7 +23,7 @@ class TrackMetadata:
 
 class AudioMetadataExtractor:
     """Robust audio metadata and duration extractor.
-    
+
     Reads title, artist, album, and duration using Mutagen, falling back to
     container-specific decoders (FLAC, OggOpus), ffprobe subprocess extraction,
     and filesystem stem fallbacks.
@@ -49,7 +49,11 @@ class AudioMetadataExtractor:
             if val is not None:
                 if isinstance(val, (list, tuple)) and len(val) > 0:
                     val = val[0]
-                if hasattr(val, "text") and isinstance(val.text, (list, tuple)) and len(val.text) > 0:
+                if (
+                    hasattr(val, "text")
+                    and isinstance(val.text, (list, tuple))
+                    and len(val.text) > 0
+                ):
                     val = val.text[0]
                 elif hasattr(val, "value"):
                     val = val.value
@@ -66,8 +70,10 @@ class AudioMetadataExtractor:
         try:
             cmd = [
                 "ffprobe",
-                "-v", "quiet",
-                "-print_format", "json",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
                 "-show_format",
                 filepath,
             ]

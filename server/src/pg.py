@@ -102,7 +102,21 @@ class PostgresStore:
                     coord_y,
                     updated_at
                 )
-                VALUES (%s, %s, %s, %s::vector, %s, %s::vector, NOW())
+                VALUES (
+                    %s,             -- filepath
+                    %s,             -- title
+                    %s,             -- artist
+                    %s,             -- album
+                    %s,             -- duration
+                    %s::vector,     -- musical_embedding
+                    %s::jsonb,      -- emotions
+                    %s::vector,     -- emotion_vector
+                    %s::jsonb,      -- emotions_normalized
+                    %s::vector,     -- emotion_vector_normalized
+                    %s,             -- coord_x
+                    %s,             -- coord_y
+                    NOW()           -- updated_at
+                )
                 ON CONFLICT (filepath) DO UPDATE SET
                     musical_embedding = EXCLUDED.musical_embedding,
                     emotions = EXCLUDED.emotions,
@@ -125,7 +139,7 @@ class PostgresStore:
                     emotions_norm_json,
                     emotion_norm_vec_str,
                     coord_x,
-                    coord_y
+                    coord_y,
                 ),
             )
 

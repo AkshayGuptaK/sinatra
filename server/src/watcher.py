@@ -15,4 +15,4 @@ async def watch_files():
             
             elif change_type in (Change.added, Change.modified):
                 print(f"Watcher detected update: {path}", flush=True)
-                sync_file(path)
+                await sync_file(path)

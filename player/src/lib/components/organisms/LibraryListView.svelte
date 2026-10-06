@@ -118,6 +118,7 @@
             onEnqueue={handleEnqueue}
             onDequeue={handleDequeue}
             onUpdate={(fields) => library.updateTrackMetadata(track.id, fields)}
+            suggestTags={() => library.getNewTagSuggestions(track.id)}
           />
         {/snippet}
       </InfiniteScrollList>

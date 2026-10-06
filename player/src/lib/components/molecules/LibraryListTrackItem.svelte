@@ -6,6 +6,7 @@
   import { Button } from "$lib/components/ui/button";
   import InlineEditableCell from "$lib/components/atoms/InlineEditableCell.svelte";
   import EditableTagList from "$lib/components/molecules/EditableTagList.svelte";
+  import type { TagRecommendation } from "$lib/audio/library.svelte";
   import { cn } from "$lib/utils";
 
   interface Props {
@@ -18,6 +19,7 @@
     onEnqueue?: (track: Track) => void;
     onDequeue?: (track: Track) => void;
     onUpdate?: (fields: MetadataFields) => void;
+    suggestTags: () => Promise<TagRecommendation[]>
   }
 
   let {
@@ -29,6 +31,7 @@
     onEnqueue,
     onDequeue,
     onUpdate,
+    suggestTags
   }: Props = $props();
 
   function handleEnqueue(e: MouseEvent) {
@@ -115,11 +118,12 @@
   </div>
 
   <!-- Tags -->
-  <div class="min-w-0 pr-2">
+  <div class="group/tagcell relative flex items-center min-w-0 pr-2">
     <EditableTagList
       tags={track.tags ?? []}
       maxVisible={2}
       onChange={(nextTags) => onUpdate?.({ tags: nextTags })}
+      suggestTags={suggestTags}
     />
   </div>
 

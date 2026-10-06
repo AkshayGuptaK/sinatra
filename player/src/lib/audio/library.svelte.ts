@@ -239,10 +239,9 @@ export class MusicLibrary {
 
   async getNewTagSuggestions(
     trackId: string,
-    threshold: number = 0.5
   ): Promise<TagRecommendation[]> {
     try {
-      const res = await sinatraApi.getTagSuggestions(trackId, threshold);
+      const res = await sinatraApi.getTagSuggestions(trackId, 0.5);
       const existing = new Set(
         (res.existing_tags ?? []).map((t) => t.trim().toLowerCase())
       );

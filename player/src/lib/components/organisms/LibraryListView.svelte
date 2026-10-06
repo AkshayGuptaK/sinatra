@@ -181,7 +181,7 @@
           }
         }}
         suggestTags={() =>
-          library.getNewTagSuggestions(activeTaggingTrack!.id, 0.4)}
+          library.getNewTagSuggestions(activeTaggingTrack!.id)}
       />
     {/if}
   </Popover.Root>

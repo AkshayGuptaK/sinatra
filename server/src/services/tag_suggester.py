@@ -190,6 +190,7 @@ class BalancedRidgeTagSuggester(BaseTagSuggester):
         for idx, tag in enumerate(self.tag_names):
             score = float(clipped_scores[idx])
             if score >= threshold:
+                print(score, threshold)
                 suggestions[tag] = round(score, 4)
 
         # Return sorted by highest confidence first

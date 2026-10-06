@@ -1,6 +1,8 @@
 <script lang="ts">
   import LibraryTrackItem from "$lib/components/molecules/LibraryListTrackItem.svelte";
   import InfiniteScrollList from "$lib/components/molecules/InfiniteScrollList.svelte";
+  import * as Popover from "$lib/components/ui/popover";
+  import TagEditorPopover from "$lib/components/molecules/TagEditorPopover.svelte";
   import { library } from "$lib/audio/library.svelte";
   import { player } from "$lib/audio/player.svelte";
   import type { Track } from "$lib/types/track";
@@ -15,6 +17,36 @@
   }
 
   let { queuedTrackIds, class: className = "" }: Props = $props();
+
+  // Single shared Popover state
+  let activeTaggingTrack = $state<Track | null>(null);
+  let isPopoverOpen = $state(false);
+  let triggerAnchorEl = $state<HTMLElement | null>(null);
+
+  function handleOpenTagEditor(track: Track, triggerEl: HTMLElement) {
+    activeTaggingTrack = track;
+    triggerAnchorEl = triggerEl;
+    isPopoverOpen = true;
+  }
+
+  function handlePopoverClose(open: boolean) {
+    isPopoverOpen = open;
+    if (!open) {
+      activeTaggingTrack = null;
+      triggerAnchorEl = null;
+    }
+  }
+
+  $effect(() => {
+    if (activeTaggingTrack && isPopoverOpen) {
+      const exists = library.displayedTracks.some(
+        (t) => t.id === activeTaggingTrack?.id
+      );
+      if (!exists) {
+        handlePopoverClose(false);
+      }
+    }
+  });
 
   function handlePlay(track: Track) {
     const trackIndex = library.displayedTracks.findIndex(
@@ -118,10 +150,39 @@
             onEnqueue={handleEnqueue}
             onDequeue={handleDequeue}
             onUpdate={(fields) => library.updateTrackMetadata(track.id, fields)}
-            suggestTags={() => library.getNewTagSuggestions(track.id)}
+            activeTaggingTrackId={activeTaggingTrack?.id}
+            onOpenTagEditor={handleOpenTagEditor}
           />
         {/snippet}
       </InfiniteScrollList>
     {/if}
   </div>
+
+  <Popover.Root open={isPopoverOpen} onOpenChange={handlePopoverClose}>
+    <!-- Hidden anchor synced to the clicked row's '+' button -->
+    <Popover.Trigger
+      bind:ref={triggerAnchorEl}
+      tabindex={-1}
+      class="hidden"
+      aria-hidden="true"
+    />
+
+    {#if activeTaggingTrack}
+      <TagEditorPopover
+        bind:open={isPopoverOpen}
+        tags={activeTaggingTrack.tags ?? []}
+        trackTitle={activeTaggingTrack.title}
+        onOpenChange={handlePopoverClose}
+        onChange={(nextTags) => {
+          if (activeTaggingTrack) {
+            library.updateTrackMetadata(activeTaggingTrack.id, {
+              tags: nextTags,
+            });
+          }
+        }}
+        suggestTags={() =>
+          library.getNewTagSuggestions(activeTaggingTrack!.id, 0.4)}
+      />
+    {/if}
+  </Popover.Root>
 </div>

@@ -19,7 +19,8 @@
     onEnqueue?: (track: Track) => void;
     onDequeue?: (track: Track) => void;
     onUpdate?: (fields: MetadataFields) => void;
-    suggestTags: () => Promise<TagRecommendation[]>
+    activeTaggingTrackId?: string | null;
+    onOpenTagEditor?: (track: Track, triggerEl: HTMLElement) => void;
   }
 
   let {
@@ -31,7 +32,8 @@
     onEnqueue,
     onDequeue,
     onUpdate,
-    suggestTags
+    activeTaggingTrackId = null,
+    onOpenTagEditor,
   }: Props = $props();
 
   function handleEnqueue(e: MouseEvent) {
@@ -122,8 +124,9 @@
     <EditableTagList
       tags={track.tags ?? []}
       maxVisible={2}
+      isEditorOpen={activeTaggingTrackId === track.id}
       onChange={(nextTags) => onUpdate?.({ tags: nextTags })}
-      suggestTags={suggestTags}
+      onOpenTagEditor={(triggerEl) => onOpenTagEditor?.(track, triggerEl)}
     />
   </div>
 

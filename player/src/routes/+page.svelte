@@ -3,12 +3,15 @@
   import Player from "$lib/components/templates/Player.svelte";
   import { player } from "$lib/audio/player.svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { getTrackDisplayAttribution, getTrackDisplayTitle } from "$lib/utils/display";
+  import {
+    getTrackDisplayAttribution,
+    getTrackDisplayTitle,
+  } from "$lib/utils/display";
 
   let pageTitle = $derived.by(() => {
     const track = player.currentTrack;
-    const title = getTrackDisplayTitle(track)
-    const attribution = getTrackDisplayAttribution(track)
+    const title = getTrackDisplayTitle(track);
+    const attribution = getTrackDisplayAttribution(track);
 
     if (attribution && title) return `${attribution} - ${title}`;
     return title;
@@ -23,10 +26,9 @@
 </script>
 
 <main
-  data-skin="resonance"
-  class="dark h-screen w-screen p-2 bg-background text-foreground overflow-hidden select-none"
+  class="h-screen w-screen p-2 bg-background text-foreground overflow-hidden select-none"
 >
-  <Player/>
+  <Player />
 </main>
 
 <style>

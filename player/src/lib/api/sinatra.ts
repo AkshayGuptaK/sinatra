@@ -4,6 +4,12 @@ import type { FilterIntent } from "$lib/utils/commandParser";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+export interface SuggestTagsResponse {
+  track_id?: string;
+  existing_tags: string[];
+  suggestions: Record<string, number>;
+}
+
 function appendConstraintToParams(
   constraint: FilterIntent,
   params: URLSearchParams
@@ -83,7 +89,7 @@ export const sinatraApi = {
     }
 
     if (constraint) {
-      appendConstraintToParams(constraint, params)
+      appendConstraintToParams(constraint, params);
     }
 
     const res = await fetch(
@@ -95,6 +101,27 @@ export const sinatraApi = {
     if (!res.ok) {
       throw new Error(`Failed to fetch similar tracks: ${res.statusText}`);
     }
+    return res.json();
+  },
+
+  async getTagSuggestions(
+    trackId: string,
+    threshold: number = 0.5
+  ): Promise<SuggestTagsResponse> {
+    const params = new URLSearchParams({
+      threshold: threshold.toString(),
+    });
+
+    const res = await fetch(
+      `${API_BASE_URL}/api/suggestions/tags/${encodeURIComponent(
+        trackId
+      )}?${params.toString()}`
+    );
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch tag suggestions: ${res.statusText}`);
+    }
+
     return res.json();
   },
 };

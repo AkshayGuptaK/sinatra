@@ -163,17 +163,19 @@ class BalancedRidgeTagSuggester(BaseTagSuggester):
 
     def suggest_tags(
         self,
-        embedding: np.ndarray,
+        embedding: str,
         threshold: float = 0.50,
     ) -> Dict[str, float]:
         """
         Calculates tag suggestions for a 1024-D embedding.
         Returns a dict of {tag_name: confidence} sorted descending, where confidence >= threshold.
         """
+        vector = parse_vector(embedding)
+
         if not self.is_fitted or self.weights is None or self.scaler is None:
             raise RuntimeError("Tag suggester model is not fitted yet.")
 
-        vec = np.asarray(embedding, dtype=np.float32).reshape(1, -1)
+        vec = np.asarray(vector, dtype=np.float32).reshape(1, -1)
         if vec.shape[1] != 1024:
             raise ValueError(f"Expected 1024-D embedding, got {vec.shape[1]}")
 

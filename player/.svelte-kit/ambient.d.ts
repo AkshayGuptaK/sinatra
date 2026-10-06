@@ -112,7 +112,6 @@ declare module '$env/static/private' {
 	export const LC_TERMINAL: string;
 	export const _P9K_SSH_TTY: string;
 	export const SECURITYSESSIONID: string;
-	export const SQLITE_EXEMPT_PATH_FROM_VNODE_GUARDS: string;
 	export const COLORTERM: string;
 	export const npm_node_execpath: string;
 	export const NODE_ENV: string;
@@ -276,7 +275,6 @@ declare module '$env/dynamic/private' {
 		LC_TERMINAL: string;
 		_P9K_SSH_TTY: string;
 		SECURITYSESSIONID: string;
-		SQLITE_EXEMPT_PATH_FROM_VNODE_GUARDS: string;
 		COLORTERM: string;
 		npm_node_execpath: string;
 		NODE_ENV: string;

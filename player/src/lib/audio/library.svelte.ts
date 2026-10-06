@@ -8,6 +8,11 @@ import type {
 import { player } from "$lib/audio/player.svelte";
 import type { FilterIntent } from "$lib/utils/commandParser";
 
+export interface TagRecommendation {
+  tag: string;
+  confidence: number;
+}
+
 export class MusicLibrary {
   tracks = $state<Track[]>([]);
   isLoading = $state(false);
@@ -230,6 +235,32 @@ export class MusicLibrary {
         })
       )
     );
+  }
+
+  async getNewTagSuggestions(
+    trackId: string,
+    threshold: number = 0.5
+  ): Promise<TagRecommendation[]> {
+    try {
+      const res = await sinatraApi.getTagSuggestions(trackId, threshold);
+      const existing = new Set(
+        (res.existing_tags ?? []).map((t) => t.trim().toLowerCase())
+      );
+  
+      // Filter out tags already assigned to the track
+      const newSuggestions: TagRecommendation[] = Object.entries(res.suggestions || {})
+        .filter(([tag]) => !existing.has(tag.trim().toLowerCase()))
+        .map(([tag, confidence]) => ({
+          tag: tag.trim().toLowerCase(),
+          confidence,
+        }))
+        .sort((a, b) => b.confidence - a.confidence);
+  
+      return newSuggestions;
+    } catch (err) {
+      console.error(`Failed to get tag recommendations for track ${trackId}:`, err);
+      return [];
+    }
   }
 
   setFilter(filter: FilterIntent) {

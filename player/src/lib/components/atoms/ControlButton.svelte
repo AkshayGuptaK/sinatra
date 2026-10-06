@@ -8,7 +8,7 @@
     /** Icon to show */
     icon: Component<{ class?: string }>;
     /** Action to fire when clicking */
-    onClick: () => void;
+    onClick?: () => void;
     /** Accessible label describing the action */
     label?: string;
     /** Accessible title describing the action */
@@ -38,7 +38,7 @@
 
   function handleClick(event: MouseEvent) {
     event.stopPropagation();
-    onClick();
+    onClick?.();
   }
 </script>
 

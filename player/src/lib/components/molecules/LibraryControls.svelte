@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from "svelte";
+  import * as Popover from "$lib/components/ui/popover";
   import TextInput from "$lib/components/atoms/TextInput.svelte";
   import ControlButton from "$lib/components/atoms/ControlButton.svelte";
   import { List, CirclePlus, MapPin, Tag, Check, X } from "@lucide/svelte";
@@ -29,13 +30,14 @@
   let tagInput = $state("");
   let inputEl = $state<HTMLInputElement | null>(null);
 
-  async function toggleOpen() {
-    if (disabled) return;
-    isOpen = !isOpen;
-    if (isOpen) {
+  async function handleOpenChange(open: boolean) {
+    isOpen = open;
+    if (open) {
       tagInput = "";
       await tick();
       inputEl?.focus();
+    } else {
+      tagInput = "";
     }
   }
 
@@ -62,23 +64,62 @@
 
 <div class={cn("relative flex items-center gap-2 select-none", className)}>
   <ControlButton
-    icon={Tag}
-    label="Add tag to all filtered tracks"
-    title="Tag all filtered tracks"
-    onClick={toggleOpen}
-    {disabled}
-    class={isOpen
-      ? "bg-accent text-primary"
-      : "text-muted-foreground hover:text-secondary-foreground"}
-  ></ControlButton>
-
-  <ControlButton
     icon={CirclePlus}
     label="Enqueue all filtered tracks"
     title="Enqueue all"
     onClick={onEnqueueAll}
     {disabled}
   ></ControlButton>
+
+  <!-- Tag All Matches (Popover Wrapper) -->
+  <Popover.Root open={isOpen} onOpenChange={handleOpenChange}>
+    <Popover.Trigger>
+      {#snippet child({ props })}
+        <ControlButton
+          {...props}
+          icon={Tag}
+          label="Add tag to all filtered tracks"
+          title="Tag all filtered tracks"
+          {disabled}
+          class={isOpen
+            ? "bg-accent text-primary"
+            : "text-muted-foreground hover:text-secondary-foreground"}
+        ></ControlButton>
+      {/snippet}
+    </Popover.Trigger>
+
+    <Popover.Content
+      align="end"
+      side="bottom"
+      sideOffset={8}
+      class="flex flex-row items-center gap-1.5 p-1.5 w-auto rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-xl backdrop-blur-md z-50 select-none"
+    >
+      <TextInput
+        bind:ref={inputEl}
+        bind:value={tagInput}
+        onkeydown={handleKeyDown}
+        placeholder="tag name..."
+        class="h-7 w-36 px-2 text-xs rounded focus:outline-hidden focus-visible:ring-0 focus:ring-primary lowercase"
+      />
+      <ControlButton
+        icon={Check}
+        onClick={handleSubmit}
+        title="Apply Tag"
+        class="size-7"
+        iconClass="size-3.5"
+      />
+      <ControlButton
+        icon={X}
+        onClick={() => {
+          isOpen = false;
+          tagInput = "";
+        }}
+        title="Cancel"
+        class="size-7 hover:text-destructive hover:bg-destructive/10"
+        iconClass="size-3.5"
+      />
+    </Popover.Content>
+  </Popover.Root>
 
   <!-- View Mode Switcher -->
   <div class="flex items-center rounded-lg border bg-muted/40 p-0.5 text-xs">
@@ -107,36 +148,4 @@
       )}
     ></ControlButton>
   </div>
-
-  <!-- Anchored Inline Popover (below and aligned to the right) -->
-  {#if isOpen}
-    <div
-      class="absolute right-0 top-full mt-2 z-50 flex items-center gap-1.5 p-1.5 rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100"
-    >
-      <TextInput
-        bind:ref={inputEl}
-        bind:value={tagInput}
-        onkeydown={handleKeyDown}
-        placeholder="tag name..."
-        class="h-7 w-36 px-2 text-xs rounded focus:outline-hidden focus-visible:ring-0 focus:ring-primary lowercase"
-      />
-      <ControlButton
-        icon={Check}
-        onClick={handleSubmit}
-        title="Apply Tag"
-        class="size-7"
-        iconClass="size-3.5"
-      ></ControlButton>
-      <ControlButton
-        icon={X}
-        onClick={() => {
-          isOpen = false;
-          tagInput = "";
-        }}
-        title="Cancel"
-        class="size-7 hover:text-destructive hover:bg-destructive/10"
-        iconClass="size-3.5"
-      ></ControlButton>
-    </div>
-  {/if}
 </div>

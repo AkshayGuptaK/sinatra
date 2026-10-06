@@ -219,7 +219,6 @@ export class MusicPlayer {
       );
       if (origFromIdx !== -1) {
         const [origTrack] = this.originalQueue.splice(origFromIdx, 1);
-        // Find reference neighbor in originalQueue to insert at the matching location
         const targetNeighbor =
           this.queue[toIndex > 0 ? toIndex - 1 : toIndex + 1];
         const neighborIdx = targetNeighbor
@@ -235,6 +234,7 @@ export class MusicPlayer {
       }
     }
 
+    // Keep currentIndex pointing to the same physical track
     if (this.currentIndex === fromIndex) {
       this.currentIndex = toIndex;
     } else if (fromIndex < this.currentIndex && toIndex >= this.currentIndex) {
@@ -242,6 +242,9 @@ export class MusicPlayer {
     } else if (fromIndex > this.currentIndex && toIndex <= this.currentIndex) {
       this.currentIndex += 1;
     }
+
+    // Check if the move placed the active track at the end of the queue
+    this.checkAndTriggerAutoDj();
   }
 
   async playTrackAtIndex(index: number) {
@@ -298,11 +301,32 @@ export class MusicPlayer {
     }
   }
 
+  setLoopMode(mode: LoopMode) {
+    this.loopMode = mode;
+    this.engine.setLoop(mode === "one");
+
+    if (mode === "all" && this.isAutoDj) {
+      this.isAutoDj = false;
+      this.isFetchingAutoDj = false;
+    }
+  }
+
+  cycleLoopMode() {
+    const modes: LoopMode[] = ["none", "all", "one"];
+    const nextIdx = (modes.indexOf(this.loopMode) + 1) % modes.length;
+    this.setLoopMode(modes[nextIdx]);
+  }
+
   toggleAutoDj() {
     this.isAutoDj = !this.isAutoDj;
 
     if (this.isAutoDj) {
+      if (this.loopMode === "all") {
+        this.setLoopMode("none");
+      }
       this.checkAndTriggerAutoDj();
+    } else {
+      this.isFetchingAutoDj = false;
     }
   }
 
@@ -318,17 +342,6 @@ export class MusicPlayer {
 
     this.queue = activeTrack ? [activeTrack, ...remaining] : remaining;
     this.currentIndex = 0;
-  }
-
-  setLoopMode(mode: LoopMode) {
-    this.loopMode = mode;
-    this.engine.setLoop(mode === "one");
-  }
-
-  cycleLoopMode() {
-    const modes: LoopMode[] = ["none", "all", "one"];
-    const nextIdx = (modes.indexOf(this.loopMode) + 1) % modes.length;
-    this.setLoopMode(modes[nextIdx]);
   }
 }
 

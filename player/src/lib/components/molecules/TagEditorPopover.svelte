@@ -92,6 +92,7 @@
   side="bottom"
   align="end"
   sideOffset={6}
+  onOpenAutoFocus={(e) => { e.preventDefault(); inputEl?.focus(); }}
   class="w-72 p-3 rounded-lg border border-border/90 bg-popover text-popover-foreground shadow-2xl backdrop-blur-md flex flex-col gap-2.5 z-50 select-none"
 >
   <!-- Header -->

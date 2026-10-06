@@ -220,6 +220,21 @@ class PostgresStore:
             print(f"Error finding track: {e}")
             return None
 
+    def get_track_by_id(self, track_id):
+        query = """
+        SELECT id::text, tags, musical_embedding
+        FROM nodes
+        WHERE id::text = %s
+          AND musical_embedding IS NOT NULL;
+        """
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(query, ([track_id]))
+                return cur.fetchone()
+        except Exception as e:
+            print(f"Error finding track: {e}")
+            return None
+
     def get_similar_track(self, current_filepath):
         query = """
         SELECT filepath 

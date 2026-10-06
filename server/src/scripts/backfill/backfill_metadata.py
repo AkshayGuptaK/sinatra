@@ -1,13 +1,13 @@
 import os
 from src.pg import get_pg
-from src.audio_metadata import AudioMetadataExtractor
+from src.services import get_metadata_extractor
 
 BATCH_SIZE = 100
 
 
 def sync_metadata(force_all: bool = False):
     db = get_pg()
-    extractor = AudioMetadataExtractor()
+    extractor = get_metadata_extractor()
 
     print("Fetching track records from PostgreSQL...")
     with db.conn.cursor() as cur:

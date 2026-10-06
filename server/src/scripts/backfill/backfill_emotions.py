@@ -2,7 +2,7 @@ import argparse
 import json
 import numpy as np
 from src.pg import get_pg
-from src.emotion_scorer import get_emotion_scorer
+from src.services import get_emotion_scorer
 
 BATCH_SIZE = 100
 

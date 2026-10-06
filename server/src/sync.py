@@ -4,9 +4,8 @@ from concurrent.futures import ThreadPoolExecutor
 from src.pg import get_pg
 from src.sources import *
 from src.models.mert import get_mert_embedder
-from src.emotion_scorer import get_emotion_scorer
 from src.models.projector.mood_projector import get_mood_projector
-from src.audio_metadata import AudioMetadataExtractor
+from src.services import get_emotion_scorer, get_metadata_extractor
 
 ai_executor = ThreadPoolExecutor(max_workers=1)
 
@@ -24,7 +23,8 @@ def _process_single_file(path):
         projector = get_mood_projector()
         coord_x, coord_y = projector.project_track(emotions, emotions_norm)
 
-        meta = AudioMetadataExtractor.extract(path)
+        extractor = get_metadata_extractor()
+        meta = extractor.extract(path)
 
         db = get_pg()
         db.upsert_track(

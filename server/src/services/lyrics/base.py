@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 
 @dataclass
@@ -21,4 +21,18 @@ class LyricsProvider(ABC):
     @abstractmethod
     def fetch(self, title: str, artist: str = "") -> Optional[LyricsResult]:
         """Fetches plain text lyrics for a song. Returns None if not found."""
+        pass
+
+
+class LyricsEmbedder(ABC):
+    """Interface for all embedding models."""
+
+    @abstractmethod
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """Embed a list of strings."""
+        pass
+
+    @abstractmethod
+    def embed_document(self, text: str) -> List[float]:
+        """Embed a single text."""
         pass

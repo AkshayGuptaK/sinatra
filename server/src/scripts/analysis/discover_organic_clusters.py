@@ -15,41 +15,57 @@ def parse_vector(raw_vec) -> np.ndarray:
     return np.asarray(raw_vec, dtype=np.float32)
 
 
-def get_components(dist_matrix: np.ndarray, threshold: float) -> list[list[int]]:
-    """Builds an adjacency graph for distances <= threshold and returns connected components."""
-    # Build upper triangular sparse adjacency (undirected graph)
+def get_components(
+    dist_matrix: np.ndarray, threshold: float, min_degree: int = 1
+) -> list[list[int]]:
+    """Builds an adjacency graph for distances <= threshold and returns connected components.
+
+    When min_degree=1, it behaves identically to pure connected components.
+    When min_degree > 1, nodes must have at least `min_degree` neighbors within
+    the threshold to participate, eliminating weak single-edge bridging filaments.
+    """
     mask = dist_matrix <= threshold
     np.fill_diagonal(mask, False)
+
+    if min_degree > 1:
+        degrees = mask.sum(axis=1)
+        dense_mask = degrees >= min_degree
+        mask[~dense_mask, :] = False
+        mask[:, ~dense_mask] = False
+    else:
+        dense_mask = np.ones(dist_matrix.shape[0], dtype=bool)
 
     graph = csr_matrix(mask)
     n_components, labels = connected_components(
         csgraph=graph, directed=False, return_labels=True
     )
 
-    # Group indices by component label
     components = [[] for _ in range(n_components)]
     for idx, label in enumerate(labels):
-        components[label].append(idx)
+        if dense_mask[idx]:
+            components[label].append(idx)
 
-    return components
+    # Exclude any empty components or singletons from degree pruning
+    return [c for c in components if len(c) > 0]
 
 
 def find_largest_safe_threshold(
     dist_matrix: np.ndarray,
     max_cluster_size: int,
+    min_degree: int = 1,
     low: float = 0.01,
     high: float = 0.50,
-    iterations: int = 12,
+    iterations: int = 15,
 ) -> float:
     """Binary searches for the maximum max_dist such that no component exceeds max_cluster_size."""
     print(
-        f"🔎 Binary searching optimal max_dist in [{low:.3f}, {high:.3f}] ({iterations} steps)..."
+        f"🔎 Binary searching optimal max_dist in [{low:.3f}, {high:.3f}] ({iterations} steps, min_degree={min_degree})..."
     )
 
     best_dist = low
     for step in range(1, iterations + 1):
         mid = (low + high) / 2.0
-        components = get_components(dist_matrix, mid)
+        components = get_components(dist_matrix, mid, min_degree=min_degree)
 
         max_size_seen = max((len(c) for c in components), default=0)
 
@@ -73,6 +89,7 @@ def discover_clusters(
     min_cluster_size: int = 6,
     max_cluster_size: int = 15,
     vector_column: str = "musical_embedding",
+    min_degree: int = 1,
     search_iterations: int = 15,
 ):
     db = get_pg()
@@ -117,17 +134,20 @@ def discover_clusters(
     print("Computing pairwise distance matrix...")
     dist_matrix = cosine_distances(X)
 
-    # 2. Determine target distance
+    # 2. Determine target distance via binary search
     effective_max_dist = find_largest_safe_threshold(
         dist_matrix=dist_matrix,
         max_cluster_size=max_cluster_size,
+        min_degree=min_degree,
         low=0,
         high=1,
         iterations=search_iterations,
     )
 
     # 3. Find Connected Components at target distance
-    all_components = get_components(dist_matrix, effective_max_dist)
+    all_components = get_components(
+        dist_matrix, effective_max_dist, min_degree=min_degree
+    )
 
     # Filter components matching the desired size window
     clusters = []
@@ -153,7 +173,7 @@ def discover_clusters(
     print("=" * 95)
     print(
         f"🌱 DISCOVERED ORGANIC CLIQUES (Distance: {effective_max_dist:.4f} | "
-        f"Size window: {min_cluster_size}-{max_cluster_size})"
+        f"Size window: {min_cluster_size}-{max_cluster_size} | min_degree: {min_degree})"
     )
     print(f"Total qualifying clusters found: {len(clusters)}")
     print("=" * 95)
@@ -196,13 +216,13 @@ def discover_clusters(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Discover organic musical clusters with optional auto-tuning"
+        description="Discover organic clusters from embeddings"
     )
     parser.add_argument(
-        "--iterations",
-        type=int,
-        default=15,
-        help="Number of binary search bisection steps.",
+        "--vector-col",
+        type=str,
+        default="musical_embedding",
+        help="Column to pull embeddings from.",
     )
     parser.add_argument(
         "--min-size",
@@ -214,19 +234,26 @@ if __name__ == "__main__":
         "--max-size",
         type=int,
         default=250,
-        help="Maximum cluster size before it is considered a generic blob.",
+        help="Maximum cluster size before percolation.",
     )
     parser.add_argument(
-        "--vector-col",
-        type=str,
-        default="musical_embedding",
-        help="Nodes column name to use as source of vectors.",
+        "--min-degree",
+        type=int,
+        default=1,
+        help="Minimum neighbors within threshold (1 = standard connected components).",
+    )
+    parser.add_argument(
+        "--iterations",
+        type=int,
+        default=15,
+        help="Number of binary search bisection steps.",
     )
     args = parser.parse_args()
 
     discover_clusters(
-        search_iterations=args.iterations,
+        vector_column=args.vector_col,
         min_cluster_size=args.min_size,
         max_cluster_size=args.max_size,
-        vector_column=args.vector_col,
+        min_degree=args.min_degree,
+        search_iterations=args.iterations,
     )

@@ -43,6 +43,11 @@
       desc: "Set AutoDJ hard boundary (:tag, :mood, :d)",
     },
     {
+      prefix: "/dj :mode emotion",
+      label: "/dj :mode acoustics",
+      desc: "AutoDJ match by acoustics / emotion",
+    },
+    {
       prefix: ":artist",
       label: ":artist <name>",
       desc: "Filter library strictly by artist",

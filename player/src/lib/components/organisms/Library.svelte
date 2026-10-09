@@ -33,7 +33,8 @@
     if (
       intent.type === "agent_action" ||
       intent.type === "filter_action" ||
-      intent.type === "autodj_constraint"
+      intent.type === "autodj_constraint" ||
+      intent.type === "autodj_mode"
     ) {
       // potentially clear library filter?
       return;
@@ -49,7 +50,9 @@
         intent.prompt
       );
       // TODO: Trigger local LLM / MCP action hook here
-    } else if (intent.type === "filter_action") {
+      return;
+    }
+    if (intent.type === "filter_action") {
       const matchingTracks = library.getFilteredTracks(intent.filter);
       if (intent.action === "play") {
         player.setQueue(matchingTracks, 0, true);
@@ -58,14 +61,21 @@
           player.enqueue(track);
         }
       }
-    } else if (intent.type === "autodj_constraint") {
+      return;
+    }
+    if (intent.type === "autodj_constraint") {
       player.setAutoDjConstraint(intent.filter);
       return;
-    } else if (library.displayedTracks.length == 0) {
-      player.setQueue(library.displayedTracks, 0, true);
-    } else {
-      handleEnqueueAll();
     }
+    if (intent.type === "autodj_mode") {
+      player.setAutoDjMode(intent.mode);
+      return;
+    }
+    if (library.displayedTracks.length == 0) {
+      player.setQueue(library.displayedTracks, 0, true);
+      return;
+    }
+    handleEnqueueAll();
   }
 
   async function handleTagAll(tag: string) {

@@ -1,5 +1,5 @@
 import { AudioEngine } from "./engine.svelte";
-import { sinatraApi } from "$lib/api/sinatra";
+import { sinatraApi, type SimilarityMode } from "$lib/api/sinatra";
 import { type Track } from "$lib/types/track";
 import type { FilterIntent } from "$lib/utils/commandParser";
 
@@ -14,6 +14,7 @@ export class MusicPlayer {
   isAutoDj = $state(false);
   isFetchingAutoDj = $state(false);
   autoDjConstraint = $state<FilterIntent | null>(null);
+  autoDjMode = $state<SimilarityMode>("acoustics");
   isShuffle = $state(false);
   loopMode = $state<LoopMode>("none");
 
@@ -96,7 +97,6 @@ export class MusicPlayer {
   async checkAndTriggerAutoDj() {
     if (!this.isAutoDj || this.isFetchingAutoDj) return;
 
-    // Trigger only if we have an active track and it's the last one in the queue
     const isLastTrack =
       this.currentIndex >= 0 && this.currentIndex === this.queue.length - 1;
 
@@ -105,14 +105,14 @@ export class MusicPlayer {
     try {
       this.isFetchingAutoDj = true;
 
-      // Collect all track IDs currently in the queue to avoid repeats
       const currentQueueIds = this.queue.map((t) => t.id);
 
       const similarTracks = await sinatraApi.getSimilarTracks(
         this.currentTrackId,
         currentQueueIds,
         3,
-        this.autoDjConstraint
+        this.autoDjConstraint,
+        this.autoDjMode
       );
 
       if (similarTracks && similarTracks.length > 0) {
@@ -120,7 +120,6 @@ export class MusicPlayer {
           this.enqueue(track);
         }
       } else if (this.autoDjConstraint) {
-        this.isAutoDj = false;
         console.warn(
           "AutoDJ: No more unplayed tracks matching the current constraint."
         );
@@ -328,6 +327,11 @@ export class MusicPlayer {
     } else {
       this.isFetchingAutoDj = false;
     }
+  }
+
+  setAutoDjMode(mode: SimilarityMode) {
+    if (this.autoDjMode === mode) return;
+    this.autoDjMode = mode;
   }
 
   private applyShuffleOrder(preserveIndex: number) {

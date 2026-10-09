@@ -1,5 +1,6 @@
+<!-- src/lib/components/atoms/ToggleButton.svelte -->
 <script lang="ts">
-  import type { Component } from "svelte";
+  import type { Component, Snippet } from "svelte";
   import type { ButtonProps } from "$lib/components/ui/button";
   import { Button } from "$lib/components/ui/button";
   import { cn } from "$lib/utils";
@@ -8,9 +9,9 @@
     /** The current binary or toggle state */
     active?: boolean;
     /** Icon to show when active is false */
-    inactiveIcon: Component<{ class?: string }>;
+    inactiveIcon?: Component<{ class?: string }>;
     /** Icon to show when active is true */
-    activeIcon: Component<{ class?: string }>;
+    activeIcon?: Component<{ class?: string }>;
     /** Accessible label describing the action when inactive (e.g. "Play") */
     inactiveLabel?: string;
     /** Accessible label describing the action when active (e.g. "Pause") */
@@ -21,6 +22,8 @@
     onDeactivate?: () => void;
     /** Optional general toggle handler passing next boolean */
     onToggle?: (nextState: boolean) => void;
+    /** Click handler if used as a trigger for dropdowns/popovers */
+    onclick?: (event: MouseEvent) => void;
     /** shadcn-svelte Button variant when inactive */
     inactiveVariant?: ButtonProps["variant"];
     /** shadcn-svelte Button variant when active */
@@ -34,6 +37,8 @@
     /** Extra classes for the icon */
     iconClass?: string;
     disabled?: boolean;
+    children?: Snippet<[{ active: boolean }]>;
+    [key: string]: any;
   }
 
   let {
@@ -45,6 +50,7 @@
     onActivate,
     onDeactivate,
     onToggle,
+    onclick,
     inactiveVariant = "ghost",
     activeVariant = "ghost",
     size = "icon",
@@ -52,11 +58,13 @@
     inactiveClass,
     iconClass = "size-5",
     disabled = false,
+    children,
     ...restProps
   }: Props = $props();
 
   function handleClick(event: MouseEvent) {
     event.stopPropagation();
+    onclick?.(event);
     if (active) {
       onDeactivate?.();
       onToggle?.(false);
@@ -83,9 +91,11 @@
   )}
   {...restProps}
 >
-  {#if active}
+  {#if children}
+    {@render children({ active })}
+  {:else if active && ActiveIcon}
     <ActiveIcon class={cn(iconClass, "transition-transform")} />
-  {:else}
+  {:else if !active && InactiveIcon}
     <InactiveIcon class={cn(iconClass, "transition-transform")} />
   {/if}
 </Button>

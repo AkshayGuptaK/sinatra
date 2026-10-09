@@ -1,5 +1,6 @@
 import type { FilterableField } from "$lib/types/metadata";
 import { parseDurationToSeconds } from "./time";
+import type { SimilarityMode } from "$lib/api/sinatra";
 
 export type ComparisonOperator = ">" | "<" | ">=" | "<=";
 
@@ -18,6 +19,7 @@ export type ParsedIntent =
   | { type: "agent_action"; action: "play" | "queue"; prompt: string }
   | { type: "filter_action"; action: "play" | "queue"; filter: FilterIntent }
   | { type: "autodj_constraint"; filter: FilterIntent }
+  | { type: "autodj_mode"; mode: SimilarityMode }
   | FilterIntent;
 
 const nullCommand: FilterIntent = { type: "text_search", query: "" };
@@ -79,7 +81,7 @@ export function parseFilterCommand(input: string): FilterIntent {
             return {
               type: "duration_filter",
               operator,
-              seconds
+              seconds,
             };
           }
         }
@@ -98,6 +100,15 @@ export function parseActionCommand(input: string): ParsedIntent {
   const rest = parts.slice(1).join(" ").trim();
 
   if (cmd === "dj" || cmd === "autodj") {
+    const lowerRest = rest.toLowerCase();
+
+    if (lowerRest === ":mode emotion") {
+      return { type: "autodj_mode", mode: "emotion" };
+    }
+    if (lowerRest === ":mode acoustics") {
+      return { type: "autodj_mode", mode: "acoustics" };
+    }
+
     return {
       type: "autodj_constraint",
       filter: parseFilterCommand(rest),
@@ -126,7 +137,7 @@ export function parseActionCommand(input: string): ParsedIntent {
       type: "agent_action",
       action,
       prompt: rest,
-    }
+    };
   }
 
   return nullCommand;

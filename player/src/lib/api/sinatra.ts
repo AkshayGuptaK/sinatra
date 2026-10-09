@@ -15,6 +15,8 @@ export interface TrackLyricMatch {
   matches: string[];
 }
 
+export type SimilarityMode = "acoustics" | "emotion";
+
 function appendConstraintToParams(
   constraint: FilterIntent,
   params: URLSearchParams
@@ -76,17 +78,17 @@ export const sinatraApi = {
       throw new Error(`Failed to update track metadata: ${res.statusText}`);
     }
   },
-  /**
-   * Fetches similar tracks excluding those already in the queue.
-   */
+
   async getSimilarTracks(
     trackId: string,
     excludeIds: string[] = [],
-    limit: number,
-    constraint: FilterIntent | null = null
+    limit: number = 3,
+    constraint: FilterIntent | null = null,
+    mode: SimilarityMode = "acoustics"
   ): Promise<Track[]> {
     const params = new URLSearchParams({
       limit: limit.toString(),
+      mode: mode,
     });
 
     if (excludeIds.length > 0) {
@@ -134,15 +136,15 @@ export const sinatraApi = {
     const params = new URLSearchParams({
       q: query,
     });
-  
+
     const res = await fetch(
       `${API_BASE_URL}/api/library/lyrics/search?${params.toString()}`
     );
-  
+
     if (!res.ok) {
       throw new Error(`Failed to search lyrics: ${res.statusText}`);
     }
-  
+
     return res.json();
   },
 };

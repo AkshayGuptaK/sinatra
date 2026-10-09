@@ -24,6 +24,11 @@ export class MusicLibrary {
 
   highlightedTrackId = $state<string | null>(null);
 
+  lyricMatches = $state<Map<string, string[]>>(new Map());
+  isSearchingLyrics = $state(false);
+  private lyricSearchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastLyricQuery = "";
+
   toggleSort(column: SortableField) {
     if (this.sortColumn !== column) {
       this.sortColumn = column;
@@ -52,6 +57,33 @@ export class MusicLibrary {
       .filter(Boolean)
       .join(" ")
       .toLowerCase();
+  }
+
+  async performLyricSearch(query: string) {
+    const cleanQuery = query.trim();
+    if (!cleanQuery) {
+      this.lyricMatches = new Map();
+      this.lastLyricQuery = "";
+      return;
+    }
+
+    if (cleanQuery === this.lastLyricQuery) return;
+    this.lastLyricQuery = cleanQuery;
+
+    this.isSearchingLyrics = true;
+    try {
+      const results = await sinatraApi.searchLyrics(cleanQuery);
+      const matchMap = new Map<string, string[]>();
+      for (const item of results) {
+        matchMap.set(item.id, item.matches);
+      }
+      this.lyricMatches = matchMap;
+    } catch (err) {
+      console.error("Failed to search lyrics:", err);
+      this.lyricMatches = new Map();
+    } finally {
+      this.isSearchingLyrics = false;
+    }
   }
 
   /**
@@ -92,6 +124,12 @@ export class MusicLibrary {
           case "<=":
             return duration <= filter.seconds;
         }
+      }
+
+      case "lyrics_filter": {
+        const q = filter.query.trim();
+        if (!q) return true;
+        return this.lyricMatches.has(track.id);
       }
 
       case "text_search": {
@@ -237,27 +275,30 @@ export class MusicLibrary {
     );
   }
 
-  async getNewTagSuggestions(
-    trackId: string,
-  ): Promise<TagRecommendation[]> {
+  async getNewTagSuggestions(trackId: string): Promise<TagRecommendation[]> {
     try {
       const res = await sinatraApi.getTagSuggestions(trackId, 0.5);
       const existing = new Set(
         (res.existing_tags ?? []).map((t) => t.trim().toLowerCase())
       );
-  
+
       // Filter out tags already assigned to the track
-      const newSuggestions: TagRecommendation[] = Object.entries(res.suggestions || {})
+      const newSuggestions: TagRecommendation[] = Object.entries(
+        res.suggestions || {}
+      )
         .filter(([tag]) => !existing.has(tag.trim().toLowerCase()))
         .map(([tag, confidence]) => ({
           tag: tag.trim().toLowerCase(),
           confidence,
         }))
         .sort((a, b) => b.confidence - a.confidence);
-  
+
       return newSuggestions;
     } catch (err) {
-      console.error(`Failed to get tag recommendations for track ${trackId}:`, err);
+      console.error(
+        `Failed to get tag recommendations for track ${trackId}:`,
+        err
+      );
       return [];
     }
   }
@@ -267,10 +308,27 @@ export class MusicLibrary {
       this.clearFilter();
       return;
     }
+    if (filter.type === "lyrics_filter") {
+      if (this.lyricSearchDebounceTimer) {
+        clearTimeout(this.lyricSearchDebounceTimer);
+      }
+      this.lyricSearchDebounceTimer = setTimeout(() => {
+        this.performLyricSearch(filter.query);
+      }, 300);
+    } else if (this.activeFilter?.type === "lyrics_filter") {
+      this.lyricMatches = new Map();
+      this.lastLyricQuery = "";
+    }
     this.activeFilter = filter;
   }
 
   clearFilter() {
+    if (this.lyricSearchDebounceTimer) {
+      clearTimeout(this.lyricSearchDebounceTimer);
+      this.lyricSearchDebounceTimer = null;
+    }
+    this.lyricMatches = new Map();
+    this.lastLyricQuery = "";
     this.activeFilter = null;
   }
 

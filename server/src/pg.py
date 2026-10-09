@@ -381,11 +381,9 @@ class PostgresStore:
 
     def filter_by_lyrics(
         self,
-        terms: List[str],
-        limit: int = 50,
+        terms: List[str]
     ) -> List[Dict[str, Any]]:
         """Finds tracks matching all terms/phrases in lyrics and returns
-
         matching lines.
         """
         # 1. Build dynamic WHERE clauses for GIN trigram acceleration
@@ -396,13 +394,10 @@ class PostgresStore:
             where_clauses.append("lyrics ILIKE %s")
             params.append(f"%{term}%")
 
-        params.append(limit)
-
         sql = f"""
             SELECT id::text, lyrics
             FROM nodes
-            WHERE {' AND '.join(where_clauses)}
-            LIMIT %s;
+            WHERE {' AND '.join(where_clauses)};
         """
 
         results: List[Dict[str, Any]] = []

@@ -10,6 +10,11 @@ export interface SuggestTagsResponse {
   suggestions: Record<string, number>;
 }
 
+export interface TrackLyricMatch {
+  id: string;
+  matches: string[];
+}
+
 function appendConstraintToParams(
   constraint: FilterIntent,
   params: URLSearchParams
@@ -122,6 +127,22 @@ export const sinatraApi = {
       throw new Error(`Failed to fetch tag suggestions: ${res.statusText}`);
     }
 
+    return res.json();
+  },
+
+  async searchLyrics(query: string): Promise<TrackLyricMatch[]> {
+    const params = new URLSearchParams({
+      q: query,
+    });
+  
+    const res = await fetch(
+      `${API_BASE_URL}/api/library/lyrics/search?${params.toString()}`
+    );
+  
+    if (!res.ok) {
+      throw new Error(`Failed to search lyrics: ${res.statusText}`);
+    }
+  
     return res.json();
   },
 };

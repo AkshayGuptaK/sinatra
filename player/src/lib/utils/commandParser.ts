@@ -10,6 +10,7 @@ export type FilterIntent =
       operator: ComparisonOperator;
       seconds: number;
     }
+  | { type: "lyrics_filter"; query: string }
   | { type: "queued_filter"; filter: FilterIntent }
   | { type: "text_search"; query: string };
 
@@ -56,6 +57,13 @@ export function parseFilterCommand(input: string): FilterIntent {
         return {
           type: "column_filter",
           column: "tags",
+          query: rest,
+        };
+      }
+
+      if (prefix === "lyrics" || prefix === "lyric") {
+        return {
+          type: "lyrics_filter",
           query: rest,
         };
       }

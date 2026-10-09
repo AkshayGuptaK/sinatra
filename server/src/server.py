@@ -244,13 +244,9 @@ class TrackLyricMatchResponse(BaseModel):
 async def search_library_lyrics(
     q: str = Query(
         ..., min_length=1, description="Lyric query terms or quoted phrases"
-    ),
-    limit: int = Query(
-        default=50, ge=1, le=200, description="Max candidate tracks to inspect"
-    ),
+    )
 ):
     """Searches lyrics for words and exact quoted phrases, returning track IDs
-
     and matching lines for list view presentation.
     """
     try:
@@ -263,7 +259,7 @@ async def search_library_lyrics(
             return JSONResponse(content=[])
 
         db = get_pg()
-        results = db.filter_by_lyrics(terms=terms, limit=limit)
+        results = db.filter_by_lyrics(terms=terms)
         return JSONResponse(content=results)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

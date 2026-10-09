@@ -1,12 +1,11 @@
-#
-
-from datetime import timezone, datetime
-from dataclasses import dataclass
-from pathlib import Path
 import psycopg
-from psycopg.rows import dict_row
-from typing import Dict, List, Optional, Any
 import json
+import re
+from psycopg.rows import dict_row
+from pathlib import Path
+from dataclasses import dataclass
+from datetime import timezone, datetime
+from typing import Dict, List, Optional, Any
 from src.config import config
 
 
@@ -379,6 +378,75 @@ class PostgresStore:
                 {"val": metadata_value},
             )
             return [row["filepath"] for row in cur.fetchall()]
+
+    def filter_by_lyrics(
+        self,
+        terms: List[str],
+        limit: int = 50,
+    ) -> List[Dict[str, Any]]:
+        """Finds tracks matching all terms/phrases in lyrics and returns
+
+        matching lines.
+        """
+        # 1. Build dynamic WHERE clauses for GIN trigram acceleration
+        where_clauses = ["lyrics IS NOT NULL"]
+        params: List[Any] = []
+
+        for term in terms:
+            where_clauses.append("lyrics ILIKE %s")
+            params.append(f"%{term}%")
+
+        params.append(limit)
+
+        sql = f"""
+            SELECT id::text, lyrics
+            FROM nodes
+            WHERE {' AND '.join(where_clauses)}
+            LIMIT %s;
+        """
+
+        results: List[Dict[str, Any]] = []
+
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(sql, tuple(params))
+                rows = cur.fetchall()
+
+            # Compile case-insensitive search patterns for line matching
+            patterns = [re.compile(re.escape(t), re.IGNORECASE) for t in terms]
+
+            for track_id, lyrics_text in rows:
+                if not lyrics_text:
+                    continue
+
+                matching_lines: List[str] = []
+                seen_lines = set()
+
+                for raw_line in lyrics_text.splitlines():
+                    line = raw_line.strip()
+                    if not line:
+                        continue
+
+                    # Check if line contains any or all search terms
+                    # Matching any term highlights relevant lines where terms may span verses
+                    if any(p.search(line) for p in patterns):
+                        normalized = line.lower()
+                        if normalized not in seen_lines:
+                            seen_lines.add(normalized)
+                            matching_lines.append(line)
+
+                if matching_lines:
+                    results.append(
+                        {
+                            "id": track_id,
+                            "matches": matching_lines,
+                        }
+                    )
+
+            return results
+        except Exception as e:
+            print(f"Error searching lyrics: {e}")
+            return []
 
     def update_track_metadata(self, track_id: str, fields: Dict[str, Any]) -> bool:
         """Updates editable metadata fields (title, artist, album, mood, tags) for a track."""

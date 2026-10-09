@@ -1,3 +1,4 @@
+import shlex
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Query
@@ -212,3 +213,57 @@ async def stream_track(track_id: str):
         media_type=media_type,
         filename=file_path.name,
     )
+
+
+def extract_query_terms(query_str: str) -> List[str]:
+    """Extracts quoted phrases and standalone words using shlex.
+
+    Falls back to whitespace splitting on unbalanced quotes.
+    """
+    clean = query_str.strip()
+    if not clean:
+        return []
+    try:
+        tokens = shlex.split(clean, posix=True)
+    except ValueError:
+        # Fallback if quotes are unclosed/malformed (e.g. `monologue "night`)
+        tokens = clean.replace('"', "").replace("'", "").split()
+    return [t.strip() for t in tokens if t.strip()]
+
+
+class TrackLyricMatchResponse(BaseModel):
+    id: str
+    matches: List[str]
+
+
+@app.get(
+    "/api/library/lyrics/search",
+    response_model=List[TrackLyricMatchResponse],
+    summary="Search tracks by lyrics",
+)
+async def search_library_lyrics(
+    q: str = Query(
+        ..., min_length=1, description="Lyric query terms or quoted phrases"
+    ),
+    limit: int = Query(
+        default=50, ge=1, le=200, description="Max candidate tracks to inspect"
+    ),
+):
+    """Searches lyrics for words and exact quoted phrases, returning track IDs
+
+    and matching lines for list view presentation.
+    """
+    try:
+        clean_query = q.strip()
+        if not clean_query:
+            return JSONResponse(content=[])
+
+        terms = extract_query_terms(clean_query)
+        if not terms:
+            return JSONResponse(content=[])
+
+        db = get_pg()
+        results = db.filter_by_lyrics(terms=terms, limit=limit)
+        return JSONResponse(content=results)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -142,6 +142,7 @@
         {#snippet children(track, index)}
           <LibraryTrackItem
             {track}
+            matchedLyrics={library.lyricMatches.get(track.id) ?? []}
             isActive={player.currentTrackId === track.id}
             isPlaying={player.currentTrackId === track.id &&
               player.engine.isPlaying}

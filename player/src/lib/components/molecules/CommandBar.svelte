@@ -64,12 +64,17 @@
     },
     {
       prefix: ":d",
-      label: ":d > 3m",
+      label: ":duration > 3m",
       desc: "Filter by duration (>, <, >=, <=)",
     },
     {
+      prefix: ":lyric",
+      label: ':lyrics "phrase" or word',
+      desc: "Filter library strictly by lyrics",
+    },
+    {
       prefix: ":q",
-      label: ":q <filter>",
+      label: ":queued <filter>",
       desc: "Filter within currently queued tracks",
     },
   ];

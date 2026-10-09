@@ -6,11 +6,11 @@
   import { Button } from "$lib/components/ui/button";
   import InlineEditableCell from "$lib/components/atoms/InlineEditableCell.svelte";
   import EditableTagList from "$lib/components/molecules/EditableTagList.svelte";
-  import type { TagRecommendation } from "$lib/audio/library.svelte";
   import { cn } from "$lib/utils";
 
   interface Props {
     track: Track;
+    matchedLyrics?: string[];
     isActive?: boolean;
     isPlaying?: boolean;
     isQueued?: boolean;
@@ -25,6 +25,7 @@
 
   let {
     track,
+    matchedLyrics = [],
     isActive = false,
     isPlaying = false,
     isQueued = false,
@@ -36,6 +37,9 @@
     onOpenTagEditor,
   }: Props = $props();
 
+  const primaryLyric = $derived(matchedLyrics[0] ?? "");
+  const remainingCount = $derived(Math.max(0, matchedLyrics.length - 1));
+
   function handleEnqueue(e: MouseEvent) {
     e.stopPropagation();
     onEnqueue?.(track);
@@ -46,108 +50,142 @@
 <div
   ondblclick={() => onEnqueue?.(track)}
   class={cn(
-    "group grid grid-cols-[1.5rem_minmax(160px,2fr)_minmax(120px,1.5fr)_minmax(120px,1.5fr)_minmax(80px,0.6fr)_minmax(120px,1.5fr)_5rem_3.5rem] items-center px-4 py-2 text-sm rounded-md transition-colors cursor-pointer select-none",
+    "group flex flex-col rounded-md transition-colors cursor-pointer select-none",
     isActive
       ? "bg-accent/70 text-accent-foreground font-medium"
       : "hover:bg-muted/50 text-foreground",
     className
   )}
 >
-  <!-- # / Playing Indicator -->
-  <div class="flex items-center text-xs text-muted-foreground font-mono">
-    {#if isActive && isPlaying}
-      <Volume2 class="size-4 text-primary animate-pulse" />
-    {:else if isQueued}
-      <button
-        type="button"
-        onclick={(e) => {
-          e.stopPropagation();
-          onDequeue?.(track);
-        }}
-        class="group/dequeue flex items-center justify-center size-5 p-0 rounded-full hover:bg-destructive/10 transition-colors cursor-pointer"
-        title="Remove from queue"
-        aria-label="Remove from queue"
-      >
-        <span
-          class="size-1.5 rounded-full bg-primary/60 group-hover:bg-primary group-hover/dequeue:bg-destructive transition-colors"
-        ></span>
-      </button>
-    {/if}
-  </div>
-
-  <!-- Title -->
-  <div class="truncate pr-4 font-medium" title={track.title}>
-    <InlineEditableCell
-      value={track.title}
-      class={cn("font-medium", isActive && "text-primary")}
-      onSave={(val) => onUpdate?.({ title: val })}
-    />
-  </div>
-
-  <!-- Artist -->
   <div
-    class="truncate pr-4 text-muted-foreground text-xs sm:text-sm"
-    title={track.artist}
+    class={cn(
+      "grid grid-cols-[1.5rem_minmax(160px,2fr)_minmax(120px,1.5fr)_minmax(120px,1.5fr)_minmax(80px,0.6fr)_minmax(120px,1.5fr)_5rem_3.5rem] items-center px-4 py-2 text-sm rounded-md transition-colors cursor-pointer select-none",
+      isActive
+        ? "bg-accent/70 text-accent-foreground font-medium"
+        : "hover:bg-muted/50 text-foreground",
+      className
+    )}
   >
-    <InlineEditableCell
-      value={track.artist}
-      class="text-xs sm:text-sm text-muted-foreground"
-      onSave={(val) => onUpdate?.({ artist: val })}
-    />
-  </div>
+    <!-- # / Playing Indicator -->
+    <div class="flex items-center text-xs text-muted-foreground font-mono">
+      {#if isActive && isPlaying}
+        <Volume2 class="size-4 text-primary animate-pulse" />
+      {:else if isQueued}
+        <button
+          type="button"
+          onclick={(e) => {
+            e.stopPropagation();
+            onDequeue?.(track);
+          }}
+          class="group/dequeue flex items-center justify-center size-5 p-0 rounded-full hover:bg-destructive/10 transition-colors cursor-pointer"
+          title="Remove from queue"
+          aria-label="Remove from queue"
+        >
+          <span
+            class="size-1.5 rounded-full bg-primary/60 group-hover:bg-primary group-hover/dequeue:bg-destructive transition-colors"
+          ></span>
+        </button>
+      {/if}
+    </div>
 
-  <!-- Album -->
-  <div
-    class="truncate pr-4 text-muted-foreground text-xs sm:text-sm"
-    title={track.album}
-  >
-    <InlineEditableCell
-      value={track.album || ""}
-      class="text-xs sm:text-sm text-muted-foreground"
-      onSave={(val) => onUpdate?.({ album: val })}
-    />
-  </div>
+    <!-- Title -->
+    <div class="truncate pr-4 font-medium" title={track.title}>
+      <InlineEditableCell
+        value={track.title}
+        class={cn("font-medium", isActive && "text-primary")}
+        onSave={(val) => onUpdate?.({ title: val })}
+      />
+    </div>
 
-  <!-- Mood -->
-  <div class="truncate pr-4 text-xs" title={track.mood}>
-    <InlineEditableCell
-      value={track.mood || ""}
-      class={track.mood
-        ? "text-xs font-medium text-muted-foreground"
-        : "text-muted-foreground/60"}
-      onSave={(val) => onUpdate?.({ mood: val })}
-    />
-  </div>
-
-  <!-- Tags -->
-  <div class="group/tagcell relative flex items-center min-w-0 pr-2">
-    <EditableTagList
-      tags={track.tags ?? []}
-      maxVisible={2}
-      isEditorOpen={activeTaggingTrackId === track.id}
-      onChange={(nextTags) => onUpdate?.({ tags: nextTags })}
-      onOpenTagEditor={(triggerEl) => onOpenTagEditor?.(track, triggerEl)}
-    />
-  </div>
-
-  <!-- Duration -->
-  <div
-    class="font-mono text-xs text-muted-foreground tabular-nums text-right pr-2"
-  >
-    {formatTime(track.duration ?? 0)}
-  </div>
-
-  <!-- Hover Action: Add to Queue -->
-  <div class="flex justify-end">
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label="Add track to queue"
-      title="Add to queue"
-      onclick={handleEnqueue}
-      class="size-7 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+    <!-- Artist -->
+    <div
+      class="truncate pr-4 text-muted-foreground text-xs sm:text-sm"
+      title={track.artist}
     >
-      <Plus class="size-4" />
-    </Button>
+      <InlineEditableCell
+        value={track.artist}
+        class="text-xs sm:text-sm text-muted-foreground"
+        onSave={(val) => onUpdate?.({ artist: val })}
+      />
+    </div>
+
+    <!-- Album -->
+    <div
+      class="truncate pr-4 text-muted-foreground text-xs sm:text-sm"
+      title={track.album}
+    >
+      <InlineEditableCell
+        value={track.album || ""}
+        class="text-xs sm:text-sm text-muted-foreground"
+        onSave={(val) => onUpdate?.({ album: val })}
+      />
+    </div>
+
+    <!-- Mood -->
+    <div class="truncate pr-4 text-xs" title={track.mood}>
+      <InlineEditableCell
+        value={track.mood || ""}
+        class={track.mood
+          ? "text-xs font-medium text-muted-foreground"
+          : "text-muted-foreground/60"}
+        onSave={(val) => onUpdate?.({ mood: val })}
+      />
+    </div>
+
+    <!-- Tags -->
+    <div class="group/tagcell relative flex items-center min-w-0 pr-2">
+      <EditableTagList
+        tags={track.tags ?? []}
+        maxVisible={2}
+        isEditorOpen={activeTaggingTrackId === track.id}
+        onChange={(nextTags) => onUpdate?.({ tags: nextTags })}
+        onOpenTagEditor={(triggerEl) => onOpenTagEditor?.(track, triggerEl)}
+      />
+    </div>
+
+    <!-- Duration -->
+    <div
+      class="font-mono text-xs text-muted-foreground tabular-nums text-right pr-2"
+    >
+      {formatTime(track.duration ?? 0)}
+    </div>
+
+    <!-- Hover Action: Add to Queue -->
+    <div class="flex justify-end">
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Add track to queue"
+        title="Add to queue"
+        onclick={handleEnqueue}
+        class="size-7 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <Plus class="size-4" />
+      </Button>
+    </div>
   </div>
+  {#if primaryLyric}
+    <div
+      class="flex items-center gap-2 px-4 py-1.5 border-t border-border/40 bg-muted/20 text-xs select-text overflow-hidden"
+    >
+      <span
+        class="text-[10px] uppercase font-mono font-semibold tracking-wider text-secondary-foreground/80 shrink-0"
+      >
+        Lyric
+      </span>
+
+      <span class="truncate italic text-foreground/80">
+        “{primaryLyric}”
+      </span>
+
+      {#if remainingCount > 0}
+        <span
+          class="shrink-0 px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-muted/80 text-muted-foreground border border-border/50 select-none"
+          title={matchedLyrics.slice(1).join("\n")}
+        >
+          +{remainingCount} more
+        </span>
+      {/if}
+    </div>
+  {/if}
 </div>

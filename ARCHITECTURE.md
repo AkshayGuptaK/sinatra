@@ -159,14 +159,24 @@ emotion_vector [24-D] ───(L2 Norm)───► emotion_vector_normalized [
 
 ---
 
-## 6. Frontend Architecture & State Management
+#### 6. Frontend Architecture & Design System
 
 - **UI Framework:** SvelteKit utilizing Svelte 5 runes (`$state`, `$derived`, `$props`).
+
+- **Design System & Styling:** Styled with Tailwind CSS and the `shadcn-svelte` component library (built over bits-ui/Radix primitives).
+
+- **Component Architecture (Atomic Design):**
+
+  - **Atoms:** Primitives and wrapped base components (`TextInput.svelte`, `ControlButton.svelte`, inline cells, badges).
+  - **Molecules:** Composed UI units (`CommandBar.svelte`, `LibraryControls.svelte`, `TagEditorPopover.svelte`, `LibraryTrackItem.svelte`, `MapTooltip.svelte`).
+  - **Organisms:** Major interactive standalone sections (`LibraryListView.svelte`, `LibraryMapView.svelte`, `Library.svelte`, `ActiveQueue.svelte`, `NowPlaying.svelte`).
+  - **Templates:** Structural scaffolding layouts (`PlayerTemplate.svelte`) wireframing grid/flex placement.
+  - **Pages:** Concrete routes (`src/routes/+page.svelte`) instantiating templates and binding page-level metadata.
 
 - **Catalog State (`library.svelte.ts`):** Maintains the full library catalog in-memory (`Track[]`). Client-side evaluation handles instantaneous sorting and filtering over artist, album, tags, and duration.
 
 - **Audio Player (`player.svelte.ts`):** Controls queue lifecycle, HTML5 playback, Auto DJ trigger events, and volume/seek state.
 
-- **Command Bar AST:** A parser evaluates Omnibar commands (e.g., `:artist`, `:tag`, `:duration > 3m`, `:lyrics`, `/dj`, `/play`).
+- **Command Bar AST:** A recursive parser evaluates Omnibar commands (e.g., `:artist`, `:tag`, `:d > 3m`, `:lyrics`, `/dj`, `/q`, `/p`).
 
 - **Interactive Map (`LibraryMapView.svelte`):** An HTML5 2D `<canvas>` controlled with `d3-zoom` renders library tracks based on `coord_x` and `coord_y`, color-coded by primary emotion cluster.

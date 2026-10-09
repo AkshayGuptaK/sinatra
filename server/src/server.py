@@ -109,6 +109,10 @@ async def update_track(track_id: str, payload: TrackMetadataUpdate):
 @app.get("/api/library/tracks/similar/{track_id}")
 async def get_similar_library_tracks(
     track_id: str,
+    mode: str = Query(
+        default="acoustics",
+        description="Similarity space: 'acoustics' (timbre/sound) or 'emotion' (affective mood)",
+    ),
     stoplist: Optional[str] = Query(
         default=None,
         description="Comma-separated track IDs to exclude from recommendations",
@@ -140,6 +144,7 @@ async def get_similar_library_tracks(
         db = get_pg()
         tracks = db.get_similar_tracks_except_excluded(
             track_id=track_id,
+            similarity_mode=mode,
             excluded_ids=excluded_ids,
             limit=limit,
             filter_type=filter_type,
@@ -150,6 +155,8 @@ async def get_similar_library_tracks(
         )
 
         return JSONResponse(content=tracks)
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -242,9 +249,7 @@ class TrackLyricMatchResponse(BaseModel):
     summary="Search tracks by lyrics",
 )
 async def search_library_lyrics(
-    q: str = Query(
-        ..., min_length=1, description="Lyric query terms or quoted phrases"
-    )
+    q: str = Query(..., min_length=1, description="Lyric query terms or quoted phrases")
 ):
     """Searches lyrics for words and exact quoted phrases, returning track IDs
     and matching lines for list view presentation.

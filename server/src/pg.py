@@ -15,6 +15,12 @@ class FileStat:
     last_indexed_at: datetime
 
 
+SIMILARITY_COLUMN_MAP = {
+    "acoustics": "musical_embedding",
+    "emotion": "emotion_vector",
+}
+
+
 class PostgresStore:
     def __init__(self):
         self.conn = psycopg.connect(config["postgres_dsn"])
@@ -256,6 +262,7 @@ class PostgresStore:
     def get_similar_tracks_except_excluded(
         self,
         track_id: str,
+        similarity_mode: str = "acoustics",
         excluded_ids: Optional[List[str]] = None,
         limit: int = 5,
         filter_type: Optional[str] = None,
@@ -264,18 +271,26 @@ class PostgresStore:
         filter_operator: Optional[str] = None,
         filter_seconds: Optional[float] = None,
     ) -> List[Dict[str, Any]]:
-        """Returns top similar tracks by cosine distance on musical_embedding,
-        excluding tracks in excluded_ids and the target track itself,
+        """Returns top similar tracks by cosine distance on the chosen similarity mode
+        ('acoustics' or 'emotion'), excluding tracks in excluded_ids and the target track itself,
         optionally bounded by an AutoDJ filter constraint.
         """
+        clean_mode = (similarity_mode or "acoustics").strip().lower()
+        embedding_col = SIMILARITY_COLUMN_MAP.get(clean_mode)
+        if not embedding_col:
+            valid_modes = ", ".join(sorted(set(SIMILARITY_COLUMN_MAP.keys())))
+            raise ValueError(
+                f"Unsupported similarity mode '{similarity_mode}'. Valid options: {valid_modes}"
+            )
+
         excluded_list = list(excluded_ids or [])
         if track_id not in excluded_list:
             excluded_list.append(track_id)
 
-        # Base WHERE clauses and parameters
+        # Base WHERE clauses ensuring both target and candidates have valid embeddings
         where_clauses = [
-            "n.musical_embedding IS NOT NULL",
-            "t.musical_embedding IS NOT NULL",
+            f"n.{embedding_col} IS NOT NULL",
+            f"t.{embedding_col} IS NOT NULL",
             "NOT (n.id = ANY(%s::uuid[]))",
         ]
         params: List[Any] = [track_id, excluded_list]
@@ -289,7 +304,6 @@ class PostgresStore:
                 field = filter_field.strip().lower()
 
                 if field in ("tags", "tag"):
-                    # Matches if the tag exists in the TEXT[] array (or partial match inside the array)
                     where_clauses.append(
                         "EXISTS (SELECT 1 FROM unnest(n.tags) AS tag WHERE tag ILIKE %s)"
                     )
@@ -328,7 +342,7 @@ class PostgresStore:
 
         query = f"""
         WITH target AS (
-            SELECT musical_embedding
+            SELECT {embedding_col}
             FROM nodes
             WHERE id = %s::uuid
         )
@@ -339,10 +353,10 @@ class PostgresStore:
                COALESCE(n.mood, '') AS mood,
                COALESCE(n.tags, ARRAY[]::text[]) AS tags,
                COALESCE(n.duration, 0.0) AS duration,
-               ROUND((n.musical_embedding <=> t.musical_embedding)::numeric, 4) AS distance
+               ROUND((n.{embedding_col} <=> t.{embedding_col})::numeric, 4) AS distance
         FROM nodes n, target t
         WHERE {' AND '.join(where_clauses)}
-        ORDER BY n.musical_embedding <=> t.musical_embedding ASC
+        ORDER BY n.{embedding_col} <=> t.{embedding_col} ASC
         LIMIT %s;
         """
 
@@ -379,10 +393,7 @@ class PostgresStore:
             )
             return [row["filepath"] for row in cur.fetchall()]
 
-    def filter_by_lyrics(
-        self,
-        terms: List[str]
-    ) -> List[Dict[str, Any]]:
+    def filter_by_lyrics(self, terms: List[str]) -> List[Dict[str, Any]]:
         """Finds tracks matching all terms/phrases in lyrics and returns
         matching lines.
         """

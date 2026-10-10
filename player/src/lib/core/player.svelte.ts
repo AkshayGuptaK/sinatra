@@ -1,5 +1,6 @@
 import { AudioEngine } from "./engine.svelte";
 import { sinatraApi, type SimilarityMode } from "$lib/api/sinatra";
+import { settings } from '$lib/stores/settings.svelte';
 import { type Track } from "$lib/types/track";
 import type { FilterIntent } from "$lib/utils/commandParser";
 
@@ -8,13 +9,19 @@ export type LoopMode = "none" | "one" | "all";
 export class MusicPlayer {
   readonly engine: AudioEngine;
 
+  autoDjMode = $derived(
+    (settings.get('autodj.mode') ?? 'acoustics') as SimilarityMode
+  );
+  autoDjBatchSize = $derived(
+    Number(settings.get('autodj.batchSize') ?? 3)
+  );
+
   // Reactive Queue State
   queue = $state<Track[]>([]);
   currentIndex = $state<number>(-1);
   isAutoDj = $state(false);
   isFetchingAutoDj = $state(false);
   autoDjConstraint = $state<FilterIntent | null>(null);
-  autoDjMode = $state<SimilarityMode>("acoustics");
   isShuffle = $state(false);
   loopMode = $state<LoopMode>("none");
 
@@ -110,7 +117,7 @@ export class MusicPlayer {
       const similarTracks = await sinatraApi.getSimilarTracks(
         this.currentTrackId,
         currentQueueIds,
-        3,
+        this.autoDjBatchSize,
         this.autoDjConstraint,
         this.autoDjMode
       );

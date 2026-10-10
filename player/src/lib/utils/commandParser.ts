@@ -19,7 +19,7 @@ export type ParsedIntent =
   | { type: "agent_action"; action: "play" | "queue"; prompt: string }
   | { type: "filter_action"; action: "play" | "queue"; filter: FilterIntent }
   | { type: "autodj_constraint"; filter: FilterIntent }
-  | { type: "autodj_mode"; mode: SimilarityMode }
+  | { type: "setting_assignment"; key: string; value: string }
   | FilterIntent;
 
 const nullCommand: FilterIntent = { type: "text_search", query: "" };
@@ -99,16 +99,16 @@ export function parseActionCommand(input: string): ParsedIntent {
   const cmd = parts[0]?.toLowerCase();
   const rest = parts.slice(1).join(" ").trim();
 
+  if (cmd === "set") {
+    const [settingKey, ...valTokens] = rest.split(/\s+/);
+    return {
+      type: "setting_assignment",
+      key: settingKey ?? "",
+      value: valTokens.join(" ").trim(),
+    };
+  }
+
   if (cmd === "dj" || cmd === "autodj") {
-    const lowerRest = rest.toLowerCase();
-
-    if (lowerRest === ":mode emotion") {
-      return { type: "autodj_mode", mode: "emotion" };
-    }
-    if (lowerRest === ":mode acoustics") {
-      return { type: "autodj_mode", mode: "acoustics" };
-    }
-
     return {
       type: "autodj_constraint",
       filter: parseFilterCommand(rest),

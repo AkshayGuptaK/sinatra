@@ -8,6 +8,7 @@
     type ParsedIntent,
   } from "$lib/utils/commandParser";
   import { cn } from "$lib/utils";
+  import { getSettingSuggestions } from "$lib/utils/settingsSuggestions";
 
   interface Props {
     class?: string;
@@ -41,11 +42,6 @@
       prefix: "/dj",
       label: "/dj <filter>",
       desc: "Set AutoDJ hard boundary (:tag, :mood, :d)",
-    },
-    {
-      prefix: "/dj :mode emotion",
-      label: "/dj :mode acoustics",
-      desc: "AutoDJ match by acoustics / emotion",
     },
     {
       prefix: ":artist",
@@ -87,6 +83,9 @@
   // Only suggest when typing a command or filter prefix and before parameters are fully entered
   let matchingSuggestions = $derived.by(() => {
     const trimmed = rawInput.trimStart();
+    if (trimmed.startsWith("/set")) {
+      return getSettingSuggestions(trimmed);
+    }
     if (!trimmed.startsWith("/") && !trimmed.startsWith(":")) {
       return [];
     }

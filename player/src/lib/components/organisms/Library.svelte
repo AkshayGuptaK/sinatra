@@ -13,6 +13,7 @@
   import { player } from "$lib/core/player.svelte";
   import type { ParsedIntent } from "$lib/utils/commandParser";
   import { cn } from "$lib/utils";
+  import { settings } from "$lib/stores/settings.svelte";
 
   interface Props {
     class?: string;
@@ -34,7 +35,7 @@
       intent.type === "agent_action" ||
       intent.type === "filter_action" ||
       intent.type === "autodj_constraint" ||
-      intent.type === "autodj_mode"
+      intent.type === "setting_assignment"
     ) {
       // potentially clear library filter?
       return;
@@ -52,6 +53,14 @@
       // TODO: Trigger local LLM / MCP action hook here
       return;
     }
+    if (intent.type === "setting_assignment") {
+      let val = intent.value;
+      if (val === "on") val = "true";
+      if (val === "off") val = "false";
+
+      settings.set(intent.key, val);
+      return;
+    }
     if (intent.type === "filter_action") {
       const matchingTracks = library.getFilteredTracks(intent.filter);
       if (intent.action === "play") {
@@ -65,10 +74,6 @@
     }
     if (intent.type === "autodj_constraint") {
       player.setAutoDjConstraint(intent.filter);
-      return;
-    }
-    if (intent.type === "autodj_mode") {
-      player.setAutoDjMode(intent.mode);
       return;
     }
     if (library.displayedTracks.length == 0) {

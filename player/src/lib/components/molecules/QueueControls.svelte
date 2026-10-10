@@ -164,19 +164,19 @@
               {...props}
               type="button"
               class={cn(
-                "flex items-center gap-1 px-1.5 h-full rounded-r-lg border-l transition-colors cursor-pointer",
+                "flex items-center gap-1 px-1.5 h-full rounded-r-lg border-l transition-colors cursor-pointer hover:text-secondary-foreground",
                 isAutoDj
-                  ? "border-primary/20 hover:bg-primary/10"
-                  : "border-border/60 hover:bg-muted/80"
+                  ? "border-primary/20"
+                  : "border-border/60 hover:bg-muted/50"
               )}
               title={`Similarity mode: ${autoDjMode}`}
               aria-label="Change AutoDJ similarity mode"
               {disabled}
             >
               {#if autoDjMode === "emotion"}
-                <HeartHandshake class="size-3.5 text-primary" />
+                <HeartHandshake class="size-3.5" />
               {:else}
-                <AudioWaveform class="size-3.5 text-primary" />
+                <AudioWaveform class="size-3.5" />
               {/if}
               <ChevronDown class="size-2.5 opacity-60" />
             </button>
@@ -200,10 +200,10 @@
             type="button"
             onclick={() => handleSelectMode("acoustics")}
             class={cn(
-              "w-full flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors text-left",
+              "w-full flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors text-left hover:text-secondary-foreground",
               autoDjMode === "acoustics"
-                ? "bg-accent text-accent-foreground font-medium"
-                : "hover:bg-muted/50 text-foreground"
+                ? "bg-muted/50 text-primary font-medium"
+                : "text-foreground"
             )}
           >
             <div class="flex items-center gap-2">
@@ -219,10 +219,10 @@
             type="button"
             onclick={() => handleSelectMode("emotion")}
             class={cn(
-              "w-full flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors text-left",
+              "w-full flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors text-left hover:text-secondary-foreground",
               autoDjMode === "emotion"
-                ? "bg-accent text-accent-foreground font-medium"
-                : "hover:bg-muted/50 text-foreground"
+                ? "bg-muted/50 text-primary font-medium"
+                : "text-foreground"
             )}
           >
             <div class="flex items-center gap-2">

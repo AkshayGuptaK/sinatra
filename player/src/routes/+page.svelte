@@ -1,7 +1,7 @@
 <script lang="ts">
   import "../app.css";
   import Player from "$lib/components/templates/Player.svelte";
-  import { player } from "$lib/audio/player.svelte";
+  import { player } from "$lib/core/player.svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import {
     getTrackDisplayAttribution,

@@ -9,8 +9,8 @@
   import LibraryListView from "$lib/components/organisms/LibraryListView.svelte";
   import LibraryMapView from "$lib/components/organisms/LibraryMapView.svelte";
   import { Library } from "@lucide/svelte";
-  import { library } from "$lib/audio/library.svelte";
-  import { player } from "$lib/audio/player.svelte";
+  import { library } from "$lib/core/library.svelte";
+  import { player } from "$lib/core/player.svelte";
   import type { ParsedIntent } from "$lib/utils/commandParser";
   import { cn } from "$lib/utils";
 

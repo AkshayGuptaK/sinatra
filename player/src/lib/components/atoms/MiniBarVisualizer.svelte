@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { player } from "$lib/audio/player.svelte";
+  import { player } from "$lib/core/player.svelte";
   import { cn } from "$lib/utils";
 
   interface Props {

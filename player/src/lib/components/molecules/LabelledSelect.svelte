@@ -1,13 +1,8 @@
 <script lang="ts">
   import * as Select from "$lib/components/ui/select";
   import { Label } from "$lib/components/ui/label";
-
-  export interface SelectOption {
-    value: string;
-    label: string;
-    description?: string;
-  }
-
+  import type { SelectOption } from "$lib/types/settings";
+  
   interface Props {
     id: string;
     label: string;

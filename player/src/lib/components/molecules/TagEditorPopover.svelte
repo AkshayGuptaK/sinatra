@@ -4,7 +4,7 @@
   import { Button } from "$lib/components/ui/button";
   import TextInput from "$lib/components/atoms/TextInput.svelte";
   import { Plus, X, Sparkles } from "@lucide/svelte";
-  import type { TagRecommendation } from "$lib/audio/library.svelte";
+  import type { TagRecommendation } from "$lib/core/library.svelte";
 
   interface Props {
     open: boolean;

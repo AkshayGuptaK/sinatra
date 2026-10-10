@@ -4,8 +4,8 @@
   import QueueTrackItem from "$lib/components/molecules/QueueTrackItem.svelte";
   import QueueDurationSummary from "$lib/components/molecules/QueueDurationSummary.svelte";
   import QueueControls from "$lib/components/molecules/QueueControls.svelte";
-  import { player } from "$lib/audio/player.svelte";
-  import { library } from "$lib/audio/library.svelte";
+  import { player } from "$lib/core/player.svelte";
+  import { library } from "$lib/core/library.svelte";
   import { cn } from "$lib/utils";
   import { ListMusic } from "@lucide/svelte";
 

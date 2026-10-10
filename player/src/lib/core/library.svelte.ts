@@ -5,7 +5,7 @@ import type {
   SortableField,
   SortDirection,
 } from "$lib/types/metadata";
-import { player } from "$lib/audio/player.svelte";
+import { player } from "$lib/core/player.svelte";
 import type { FilterIntent } from "$lib/utils/commandParser";
 
 export interface TagRecommendation {

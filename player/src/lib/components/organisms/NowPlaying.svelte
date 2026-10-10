@@ -3,7 +3,7 @@
   import PlayControls from "$lib/components/molecules/PlayControls.svelte";
   import TrackProgress from "$lib/components/molecules/TrackProgress.svelte";
   import VolumeControl from "$lib/components/molecules/VolumeControl.svelte";
-  import { player } from "$lib/audio/player.svelte";
+  import { player } from "$lib/core/player.svelte";
   import { cn } from "$lib/utils";
   import {
     getTrackDisplayAttribution,

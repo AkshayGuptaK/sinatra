@@ -3,8 +3,8 @@
   import InfiniteScrollList from "$lib/components/molecules/InfiniteScrollList.svelte";
   import * as Popover from "$lib/components/ui/popover";
   import TagEditorPopover from "$lib/components/molecules/TagEditorPopover.svelte";
-  import { library } from "$lib/audio/library.svelte";
-  import { player } from "$lib/audio/player.svelte";
+  import { library } from "$lib/core/library.svelte";
+  import { player } from "$lib/core/player.svelte";
   import type { Track } from "$lib/types/track";
   import { Clock3 } from "@lucide/svelte";
   import { cn } from "$lib/utils";

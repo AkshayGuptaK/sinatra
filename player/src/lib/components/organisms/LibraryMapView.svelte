@@ -2,8 +2,8 @@
   import { onMount } from "svelte";
   import * as d3 from "d3-zoom";
   import { select } from "d3-selection";
-  import { library } from "$lib/audio/library.svelte";
-  import { player } from "$lib/audio/player.svelte";
+  import { library } from "$lib/core/library.svelte";
+  import { player } from "$lib/core/player.svelte";
   import { findNearestPoint } from "$lib/utils/math";
   import MapTooltip from "$lib/components/molecules/MapTooltip.svelte";
   import MapLegend from "$lib/components/molecules/MapLegend.svelte";

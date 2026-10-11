@@ -3,6 +3,7 @@
   import PlayControls from "$lib/components/molecules/PlayControls.svelte";
   import TrackProgress from "$lib/components/molecules/TrackProgress.svelte";
   import VolumeControl from "$lib/components/molecules/VolumeControl.svelte";
+  import MiniBarVisualizer from "$lib/components/atoms/MiniBarVisualizer.svelte";
   import { player } from "$lib/core/player.svelte";
   import { cn } from "$lib/utils";
   import {
@@ -45,31 +46,32 @@
     className
   )}
 >
-  <!-- Track Details -->
   <TrackDetails {currentTitle} {currentArtist} />
 
-  <!-- Center / Right Container: Controls & Scrub Bar -->
   <div class="flex flex-1 flex-col items-center gap-2 w-full">
-    <!-- Transport Controls -->
-    <div class="flex items-center gap-8">
-      <PlayControls
-        isPlaying={player.engine.isPlaying}
-        isLooping={player.loopMode === "one"}
-        onPlayToggle={handlePlayToggle}
-        onSkipBackward={() => player.engine.seekRelative(-5)}
-        onSkipForward={() => player.engine.seekRelative(5)}
-        onLoopToggle={handleLoopToggle}
-        disabled={!player.currentTrackId}
-      />
+    <div class="grid grid-cols-[1fr_auto_1fr] items-center w-full">
+      <div class="col-start-2 flex items-center gap-8">
+        <PlayControls
+          isPlaying={player.engine.isPlaying}
+          isLooping={player.loopMode === "one"}
+          onPlayToggle={handlePlayToggle}
+          onSkipBackward={() => player.engine.seekRelative(-5)}
+          onSkipForward={() => player.engine.seekRelative(5)}
+          onLoopToggle={handleLoopToggle}
+          disabled={!player.currentTrackId}
+        />
 
-      <VolumeControl
-        {volume}
-        setVolume={handleVolumeChange}
-        disabled={!player.currentTrackId}
-      />
+        <VolumeControl
+          {volume}
+          setVolume={handleVolumeChange}
+          disabled={!player.currentTrackId}
+        />
+      </div>
+      <div class="col-start-3 flex justify-end px-4">
+        <MiniBarVisualizer isPlaying={player.engine.isPlaying} bars={8} />
+      </div>
     </div>
 
-    <!-- Scrub / Progress Slider -->
     <TrackProgress
       currentTime={player.engine.currentTime}
       duration={player.engine.duration}

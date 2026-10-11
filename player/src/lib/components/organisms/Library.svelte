@@ -110,10 +110,11 @@
       onClick={openSettings}
       label="Open Settings"
       title="Settings (Cmd+,)"
+      class="size-4"
+      iconClass="size-4"
     />
   </HeaderBanner>
   <div class="flex flex-col w-full gap-3 shrink-0">
-    <!-- Header Bar: Command Search (Center) + Controls & Summary (Right) -->
     <div
       class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-2"
     >

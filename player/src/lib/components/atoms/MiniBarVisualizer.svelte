@@ -132,8 +132,8 @@
   onMount(() => {
     if (canvasEl) {
       const dpr = window.devicePixelRatio || 1;
-      canvasEl.width = 18 * dpr;
-      canvasEl.height = 14 * dpr;
+      canvasEl.width = 27 * dpr;
+      canvasEl.height = 21 * dpr;
       draw();
     }
     return () => {
@@ -144,5 +144,5 @@
 
 <canvas
   bind:this={canvasEl}
-  class={cn("w-[48px] h-[24px] shrink-0 inline-block", className)}
+  class={cn("w-[72px] h-[36px] shrink-0 inline-block", className)}
 ></canvas>

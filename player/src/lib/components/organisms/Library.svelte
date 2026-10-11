@@ -8,18 +8,20 @@
   import LibraryDurationSummary from "$lib/components/molecules/LibraryDurationSummary.svelte";
   import LibraryListView from "$lib/components/organisms/LibraryListView.svelte";
   import LibraryMapView from "$lib/components/organisms/LibraryMapView.svelte";
-  import { Library } from "@lucide/svelte";
+  import { Library, Settings } from "@lucide/svelte";
   import { library } from "$lib/core/library.svelte";
   import { player } from "$lib/core/player.svelte";
+  import { settings } from "$lib/stores/settings.svelte";
   import type { ParsedIntent } from "$lib/utils/commandParser";
   import { cn } from "$lib/utils";
-  import { settings } from "$lib/stores/settings.svelte";
+  import ControlButton from "../atoms/ControlButton.svelte";
 
   interface Props {
     class?: string;
+    openSettings?: () => void;
   }
 
-  let { class: className = "" }: Props = $props();
+  let { class: className = "", openSettings }: Props = $props();
 
   let viewMode = $state<LibraryViewMode>("list");
 
@@ -102,7 +104,14 @@
     className
   )}
 >
-  <HeaderBanner title="Library" icon={Library} />
+  <HeaderBanner title="Library" icon={Library}>
+    <ControlButton
+      icon={Settings}
+      onClick={openSettings}
+      label="Open Settings"
+      title="Settings (Cmd+,)"
+    />
+  </HeaderBanner>
   <div class="flex flex-col w-full gap-3 shrink-0">
     <!-- Header Bar: Command Search (Center) + Controls & Summary (Right) -->
     <div

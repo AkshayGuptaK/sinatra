@@ -2,12 +2,19 @@
   import NowPlaying from "$lib/components/organisms/NowPlaying.svelte";
   import ActiveQueue from "$lib/components/organisms/ActiveQueue.svelte";
   import Library from "$lib/components/organisms/Library.svelte";
+
+  interface Props {
+    openSettings?: () => void;
+  }
+
+  let { openSettings }: Props = $props();
+
 </script>
 
 <div class="flex h-full w-full">
   <div class="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
     <div class="flex-1 min-h-0 w-full">
-      <Library class="h-full w-full" />
+      <Library class="h-full w-full" openSettings={openSettings}/>
     </div>
 
     <div class="w-full shrink-0">

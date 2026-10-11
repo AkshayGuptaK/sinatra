@@ -1,6 +1,7 @@
 <script lang="ts">
   import "../app.css";
   import Player from "$lib/components/templates/Player.svelte";
+  import SettingsDialog from '$lib/components/organisms/SettingsDialog.svelte';
   import { player } from "$lib/core/player.svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import {
@@ -17,6 +18,8 @@
     return title;
   });
 
+  let isSettingsOpen = $state(false);
+
   // Sync to native window title bar
   $effect(() => {
     const titleToSet = pageTitle;
@@ -28,7 +31,8 @@
 <main
   class="h-screen w-screen p-2 bg-background text-foreground overflow-hidden select-none"
 >
-  <Player />
+  <Player openSettings={() => (isSettingsOpen = true)} />
+  <SettingsDialog bind:open={isSettingsOpen} />
 </main>
 
 <style>

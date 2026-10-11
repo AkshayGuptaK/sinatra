@@ -64,15 +64,23 @@
     class="flex flex-col h-[85vh] w-[90vw] max-w-4xl p-0 gap-0 overflow-hidden border border-border/80 shadow-2xl bg-card text-card-foreground sm:max-w-4xl
            [&>button:last-child]:top-3 [&>button:last-child]:right-4 [&>button:last-child]:size-7 [&>button:last-child]:flex [&>button:last-child]:items-center [&>button:last-child]:justify-center [&>button:last-child]:rounded-md"
   >
-    <div class="h-12 px-6 pr-14 border-b border-border/60 flex items-center justify-between bg-muted/20 shrink-0 select-none">
+    <div
+      class="h-12 px-6 pr-14 border-b border-border/60 flex items-center justify-between bg-muted/20 shrink-0 select-none"
+    >
       <div class="flex items-center gap-2.5">
         <SlidersHorizontal class="size-4 text-secondary-foreground" />
-        <Dialog.Title class="text-sm text-secondary-foreground font-semibold tracking-tight">Preferences</Dialog.Title>
+        <Dialog.Title
+          class="text-sm text-secondary-foreground font-semibold tracking-tight"
+          >Preferences</Dialog.Title
+        >
       </div>
     </div>
 
     <!-- Tabs Container: fills all remaining vertical space -->
-    <Tabs.Root defaultValue="Appearance" class="flex-1 min-h-0 flex flex-col w-full">
+    <Tabs.Root
+      defaultValue="Appearance"
+      class="flex-1 min-h-0 flex flex-col w-full"
+    >
       <!-- Tabs Strip (fixed height: shrink-0) -->
       <div class="px-6 pt-3 border-b border-border/40 bg-muted/10 shrink-0">
         <Tabs.List class="bg-transparent p-0 gap-4 h-10">
@@ -102,7 +110,9 @@
                     id={def.id}
                     label={def.label}
                     description={def.description}
-                    options={def.type === 'boolean' ? booleanOptions : def.options}
+                    options={def.type === "boolean"
+                      ? booleanOptions
+                      : def.options}
                     value={getSettingCurrentValue(def)}
                     onValueChange={(val) => handleSettingChange(def, val)}
                   />

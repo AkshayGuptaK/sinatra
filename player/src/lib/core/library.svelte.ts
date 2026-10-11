@@ -29,6 +29,26 @@ export class MusicLibrary {
   private lyricSearchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private lastLyricQuery = "";
 
+  constructor() {
+    if (typeof window !== "undefined") {
+      this.fetchTracks();
+    }
+  }
+
+  async fetchTracks() {
+    this.isLoading = true;
+    this.error = null;
+    try {
+      const data = await sinatraApi.getLibraryTracks();
+      if (data) this.tracks = data;
+    } catch (e: any) {
+      console.error("Failed to load library tracks:", e);
+      this.error = e?.message || "Failed to fetch tracks";
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
   toggleSort(column: SortableField) {
     if (this.sortColumn !== column) {
       this.sortColumn = column;
@@ -200,26 +220,6 @@ export class MusicLibrary {
     const filteredTracks = this.filterTracks();
     return this.sortTracks(filteredTracks);
   });
-
-  constructor() {
-    if (typeof window !== "undefined") {
-      this.fetchTracks();
-    }
-  }
-
-  async fetchTracks() {
-    this.isLoading = true;
-    this.error = null;
-    try {
-      const data = await sinatraApi.getLibraryTracks();
-      if (data) this.tracks = data;
-    } catch (e: any) {
-      console.error("Failed to load library tracks:", e);
-      this.error = e?.message || "Failed to fetch tracks";
-    } finally {
-      this.isLoading = false;
-    }
-  }
 
   private cleanAndSortTags(tags: string[]) {
     return Array.from(

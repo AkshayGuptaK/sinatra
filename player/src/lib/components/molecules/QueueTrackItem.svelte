@@ -62,7 +62,7 @@
   ondragend={onDragEnd}
   onclick={() => onSelect?.(index)}
   class={cn(
-    "group flex items-center justify-between gap-3 px-2 py-2 rounded-lg cursor-pointer select-none transition-colors text-sm",
+    "group flex items-center justify-between gap-3 px-1 py-2 rounded-lg cursor-pointer select-none transition-colors text-sm",
     isActive
       ? "bg-accent/70 text-accent-foreground font-medium"
       : "hover:bg-muted/50 text-foreground",

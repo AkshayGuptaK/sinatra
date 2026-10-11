@@ -11,7 +11,7 @@
   import { Library, Settings } from "@lucide/svelte";
   import { library } from "$lib/core/library.svelte";
   import { player } from "$lib/core/player.svelte";
-  import { settings } from "$lib/stores/settings.svelte";
+  import { settings } from "$lib/core/settings.svelte";
   import type { ParsedIntent } from "$lib/utils/commandParser";
   import { cn } from "$lib/utils";
   import ControlButton from "../atoms/ControlButton.svelte";

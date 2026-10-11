@@ -132,7 +132,7 @@
   onMount(() => {
     if (canvasEl) {
       const dpr = window.devicePixelRatio || 1;
-      canvasEl.width = 27 * dpr;
+      canvasEl.width = 30 * dpr;
       canvasEl.height = 21 * dpr;
       draw();
     }

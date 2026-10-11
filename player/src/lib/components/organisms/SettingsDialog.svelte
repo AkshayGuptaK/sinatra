@@ -2,7 +2,7 @@
   import * as Dialog from "$lib/components/ui/dialog";
   import * as Tabs from "$lib/components/ui/tabs";
   import LabelledSelect from "$lib/components/molecules/LabelledSelect.svelte";
-  import { settings } from "$lib/stores/settings.svelte";
+  import { settings } from "$lib/core/settings.svelte";
   import { SETTINGS_DEFINITIONS } from "$lib/config/settingsRegistry";
   import type { SettingCategory, SettingDefinition } from "$lib/types/settings";
   import { SlidersHorizontal, Palette, Disc3 } from "@lucide/svelte";

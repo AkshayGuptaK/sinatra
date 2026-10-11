@@ -1,6 +1,6 @@
 import { AudioEngine } from "./engine.svelte";
 import { sinatraApi, type SimilarityMode } from "$lib/api/sinatra";
-import { settings } from '$lib/stores/settings.svelte';
+import { settings } from "$lib/core/settings.svelte";
 import { type Track } from "$lib/types/track";
 import type { FilterIntent } from "$lib/utils/commandParser";
 
@@ -10,16 +10,15 @@ export class MusicPlayer {
   readonly engine: AudioEngine;
 
   autoDjMode = $derived(
-    (settings.get('autodj.mode') ?? 'acoustics') as SimilarityMode
+    (settings.get("autodj.mode") ?? "acoustics") as SimilarityMode
   );
   referenceTrackSetting = $derived(
-    settings.get<'last' | 'first'>('autodj.referenceTrack') ?? 'last'
+    settings.get<"last" | "first">("autodj.referenceTrack") ?? "last"
   );
-  autoDjBatchSize = $derived(
-    Number(settings.get('autodj.batchSize') ?? 3)
-  );
+  autoDjBatchSize = $derived(Number(settings.get("autodj.batchSize") ?? 3));
 
   // Reactive Queue State
+  originalQueue: Track[] = [];
   queue = $state<Track[]>([]);
   currentIndex = $state<number>(-1);
   isAutoDj = $state(false);
@@ -27,9 +26,6 @@ export class MusicPlayer {
   autoDjConstraint = $state<FilterIntent | null>(null);
   isShuffle = $state(false);
   loopMode = $state<LoopMode>("none");
-
-  // Internal record to restore queue order when un-shuffling
-  private originalQueue: Track[] = [];
 
   currentTrack = $derived(
     this.currentIndex >= 0 && this.currentIndex < this.queue.length
@@ -117,7 +113,10 @@ export class MusicPlayer {
 
       const currentQueueIds = this.queue.map((t) => t.id);
 
-      const referenceTrackId = this.referenceTrackSetting === 'last' ? this.currentTrackId : this.queue[0].id
+      const referenceTrackId =
+        this.referenceTrackSetting === "last"
+          ? this.currentTrackId
+          : this.queue[0].id;
 
       const similarTracks = await sinatraApi.getSimilarTracks(
         referenceTrackId,

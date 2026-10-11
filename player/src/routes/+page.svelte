@@ -1,13 +1,29 @@
 <script lang="ts">
   import "../app.css";
+  import { onMount, onDestroy } from 'svelte';
+  import { getCurrentWindow } from "@tauri-apps/api/window";
   import Player from "$lib/components/templates/Player.svelte";
   import SettingsDialog from '$lib/components/organisms/SettingsDialog.svelte';
+  import { library } from "$lib/core/library.svelte";
   import { player } from "$lib/core/player.svelte";
-  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { playerSession } from '$lib/core/playerSession.svelte';
   import {
     getTrackDisplayAttribution,
     getTrackDisplayTitle,
   } from "$lib/utils/display";
+
+  onMount(async () => {
+    await playerSession.setupCloseListener(player);
+
+    const savedSession = await playerSession.loadSession();
+    if (savedSession) {
+      playerSession.rehydrate(player, library.tracks, savedSession);
+    }
+  });
+
+  onDestroy(() => {
+    playerSession.cleanup();
+  });
 
   let pageTitle = $derived.by(() => {
     const track = player.currentTrack;
@@ -20,7 +36,6 @@
 
   let isSettingsOpen = $state(false);
 
-  // Sync to native window title bar
   $effect(() => {
     const titleToSet = pageTitle;
     document.title = titleToSet;

@@ -177,6 +177,8 @@ emotion_vector [24-D] ───(L2 Norm)───► emotion_vector_normalized [
 
 - **Audio Player (`player.svelte.ts`):** Controls queue lifecycle, HTML5 playback, Auto DJ trigger events, and volume/seek state.
 
-- **Command Bar AST:** A recursive parser evaluates Omnibar commands (e.g., `:artist`, `:tag`, `:d > 3m`, `:lyrics`, `/dj`, `/q`, `/p`).
+- **Settings Architecture (`settings.svelte.ts`, `settingsRegistry.ts`):** Declarative manifest defining typed options across categories (`Appearance`, `AutoDJ`, etc.) synced to persistent storage (`localStorage`). Domain subsystems pull reactive values on demand via `$derived` rather than executing imperative mutations inside the store.
+
+- **Command Bar AST:** A recursive parser evaluates Omnibar commands (e.g., `:artist`, `:tag`, `:d > 3m`, `:lyrics`, `/dj`, `/q`, `/p`, and `/set <key> <val>`). Autocomplete hints and setting assignments derive dynamically from the centralized settings registry.
 
 - **Interactive Map (`LibraryMapView.svelte`):** An HTML5 2D `<canvas>` controlled with `d3-zoom` renders library tracks based on `coord_x` and `coord_y`, color-coded by primary emotion cluster.

@@ -142,16 +142,37 @@
     // 2. Intent Submission
     if (e.key === "Enter") {
       e.preventDefault();
-      // If the user typed an exact prefix and hit Enter with suggestions open, autocomplete it
+
+      // Check if we are selecting an intermediate prefix (e.g., "/set appearance.theme" or "/p")
+      // that still needs arguments. If it's already a complete /set command (has 3 tokens), we submit.
+      const isTerminalCommand = (text: string) => {
+        const parts = text.trim().split(/\s+/);
+        // A /set command with key and value is terminal: /set <key> <val>
+        if (parts[0] === "/set") return parts.length >= 3;
+        // For other commands (/p, /q, /dj), having just the prefix is not terminal
+        return false;
+      };
+
+      const selectedPrefix = matchingSuggestions[selectedIndex]?.prefix;
+
+      // Autocomplete only if it's an intermediate prefix that needs further typing
       if (
         matchingSuggestions.length > 0 &&
-        rawInput.trim() === matchingSuggestions[selectedIndex]?.prefix
+        rawInput.trim() === selectedPrefix &&
+        !isTerminalCommand(rawInput)
       ) {
-        applySuggestion(matchingSuggestions[selectedIndex].prefix);
+        applySuggestion(selectedPrefix);
         return;
       }
 
-      const parsed = parseCommandInput(rawInput);
+      // If suggestions are visible and user highlighted one that is different from rawInput,
+      // apply it first if it's terminal and submit, or just take the selected prefix
+      const commandToSubmit =
+        matchingSuggestions.length > 0 && selectedPrefix
+          ? selectedPrefix
+          : rawInput;
+
+      const parsed = parseCommandInput(commandToSubmit);
       onCommandSubmit?.(parsed);
       rawInput = "";
       inputEl?.blur();

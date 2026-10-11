@@ -68,7 +68,7 @@
         />
       </div>
       <div class="col-start-3 flex justify-end px-4">
-        <MiniBarVisualizer isPlaying={player.engine.isPlaying} bars={8} />
+        <MiniBarVisualizer isPlaying={player.engine.isPlaying} bars={10} />
       </div>
     </div>
 

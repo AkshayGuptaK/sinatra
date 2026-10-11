@@ -144,5 +144,5 @@
 
 <canvas
   bind:this={canvasEl}
-  class={cn("w-[72px] h-[36px] shrink-0 inline-block", className)}
+  class={cn("w-[120px] h-[36px] shrink-0 inline-block", className)}
 ></canvas>

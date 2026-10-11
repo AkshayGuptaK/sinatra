@@ -14,7 +14,6 @@
 
   let { open = $bindable(false), onOpenChange }: Props = $props();
 
-  // Extract distinct categories present in registry
   const categories: SettingCategory[] = ["Appearance", "AutoDJ"];
 
   const categoryIcons = {
@@ -47,7 +46,6 @@
     }
   }
 
-  // Global hotkey opens the settings dialog
   function handleWindowKeydown(e: KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === ",") {
       e.preventDefault();

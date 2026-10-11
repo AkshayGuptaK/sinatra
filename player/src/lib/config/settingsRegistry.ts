@@ -28,14 +28,6 @@ export const SETTINGS_DEFINITIONS: SettingDefinition[] = [
     ],
     defaultValue: "resonance",
   },
-  {
-    id: "appearance.tooltips",
-    category: "Appearance",
-    label: "Show Tooltips",
-    description: "Display descriptive tooltips on control hover",
-    type: "boolean",
-    defaultValue: true,
-  },
 
   // --- AutoDJ ---
   {
@@ -57,6 +49,26 @@ export const SETTINGS_DEFINITIONS: SettingDefinition[] = [
       },
     ],
     defaultValue: "acoustics",
+  },
+  {
+    id: 'autodj.referenceTrack',
+    category: 'AutoDJ',
+    label: 'Recommendation Anchor',
+    description: 'Whether recommendations evolve from the end of the queue or anchor to the start',
+    type: 'select',
+    options: [
+      {
+        value: 'last',
+        label: 'Last Track',
+        description: 'Evolving journey'
+      },
+      {
+        value: 'first',
+        label: 'First Track',
+        description: 'Station anchor'
+      }
+    ],
+    defaultValue: 'last'
   },
   {
     id: "autodj.batchSize",

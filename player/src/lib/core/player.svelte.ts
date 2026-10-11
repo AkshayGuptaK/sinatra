@@ -12,6 +12,9 @@ export class MusicPlayer {
   autoDjMode = $derived(
     (settings.get('autodj.mode') ?? 'acoustics') as SimilarityMode
   );
+  referenceTrackSetting = $derived(
+    settings.get<'last' | 'first'>('autodj.referenceTrack') ?? 'last'
+  );
   autoDjBatchSize = $derived(
     Number(settings.get('autodj.batchSize') ?? 3)
   );
@@ -114,8 +117,10 @@ export class MusicPlayer {
 
       const currentQueueIds = this.queue.map((t) => t.id);
 
+      const referenceTrackId = this.referenceTrackSetting === 'last' ? this.currentTrackId : this.queue[0].id
+
       const similarTracks = await sinatraApi.getSimilarTracks(
-        this.currentTrackId,
+        referenceTrackId,
         currentQueueIds,
         this.autoDjBatchSize,
         this.autoDjConstraint,

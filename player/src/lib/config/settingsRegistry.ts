@@ -31,17 +31,6 @@ export const SETTINGS_DEFINITIONS: SettingDefinition[] = [
 
   // --- Playback ---
   {
-    id: 'playback.outputDevice',
-    category: 'Playback',
-    label: 'Audio Output Device',
-    description: 'Hardware audio output destination',
-    type: 'select',
-    options: [
-      { value: 'default', label: 'System Default' }
-    ],
-    defaultValue: 'default'
-  },
-  {
     id: 'playback.fade',
     category: 'Playback',
     label: 'Fade',
@@ -60,11 +49,6 @@ export const SETTINGS_DEFINITIONS: SettingDefinition[] = [
         value: 'off',
         label: 'Off',
         description: 'Standard playback'
-      },
-      {
-        value: 'gapless',
-        label: 'Gapless',
-        description: 'No silence between tracks'
       },
       {
         value: 'crossfade_3s',

@@ -201,7 +201,6 @@ export class AudioEngine {
 
     const remaining = total - current;
 
-    // Trigger crossfade early enough to execute smooth blend
     if (crossfadeDuration > 0 && remaining <= crossfadeDuration) {
       const nextId = this.getNextTrackId?.();
       if (nextId) {
@@ -210,8 +209,7 @@ export class AudioEngine {
       return;
     }
 
-    // Gapless preloading: pre-buffering next track 2 seconds before boundary
-    if (this.transitionMode === "gapless" && remaining <= 2) {
+    if (remaining <= 2) {
       const nextId = this.getNextTrackId?.();
       const standby = this.standbyDeck;
       if (nextId && standby.trackId !== nextId) {
@@ -288,7 +286,7 @@ export class AudioEngine {
     const deck = this.activeDeck;
     if (!deck.audio) return;
 
-    const rampTime = this.fadeEnabled ? 0.8 : 0.03;
+    const rampTime = this.fadeEnabled ? 1 : 0.03;
 
     if (deck.gainNode && this.ctx) {
       deck.gainNode.gain.setValueAtTime(0, this.ctx.currentTime);
@@ -308,7 +306,7 @@ export class AudioEngine {
     const deck = this.activeDeck;
     if (!deck.audio) return;
 
-    const rampTime = this.fadeEnabled ? 0.8 : 0.03;
+    const rampTime = this.fadeEnabled ? 1 : 0.03;
 
     if (deck.gainNode && this.ctx) {
       const now = this.ctx.currentTime;

@@ -29,6 +29,65 @@ export const SETTINGS_DEFINITIONS: SettingDefinition[] = [
     defaultValue: "resonance",
   },
 
+  // --- Playback ---
+  {
+    id: 'playback.outputDevice',
+    category: 'Playback',
+    label: 'Audio Output Device',
+    description: 'Hardware audio output destination',
+    type: 'select',
+    options: [
+      { value: 'default', label: 'System Default' }
+    ],
+    defaultValue: 'default'
+  },
+  {
+    id: 'playback.fade',
+    category: 'Playback',
+    label: 'Fade',
+    description: 'Gently ramp volume when starting, pausing, or seeking',
+    type: 'boolean',
+    defaultValue: true
+  },
+  {
+    id: 'playback.transition',
+    category: 'Playback',
+    label: 'Transition',
+    description: 'Transition behavior between consecutive tracks in the queue',
+    type: 'select',
+    options: [
+      {
+        value: 'off',
+        label: 'Off',
+        description: 'Standard playback'
+      },
+      {
+        value: 'gapless',
+        label: 'Gapless',
+        description: 'No silence between tracks'
+      },
+      {
+        value: 'crossfade_3s',
+        label: 'Crossfade (3s)',
+        description: '3-second overlap blend'
+      },
+      {
+        value: 'crossfade_5s',
+        label: 'Crossfade (5s)',
+        description: '5-second overlap blend'
+      }
+    ],
+    defaultValue: 'off'
+  },
+  {
+    id: 'playback.normalization',
+    category: 'Playback',
+    label: 'Volume Normalization',
+    description: 'Real-time dynamic leveling to smooth extreme volume spikes and dips',
+    type: 'boolean',
+    defaultValue: false
+  },
+
   // --- AutoDJ ---
   {
     id: "autodj.mode",

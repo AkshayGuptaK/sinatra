@@ -5,7 +5,7 @@
   import { settings } from "$lib/core/settings.svelte";
   import { SETTINGS_DEFINITIONS } from "$lib/config/settingsRegistry";
   import type { SettingCategory, SettingDefinition } from "$lib/types/settings";
-  import { SlidersHorizontal, Palette, Disc3 } from "@lucide/svelte";
+  import { SlidersHorizontal, Palette, Disc3, Volume2 } from "@lucide/svelte";
 
   interface Props {
     open?: boolean;
@@ -14,11 +14,12 @@
 
   let { open = $bindable(false), onOpenChange }: Props = $props();
 
-  const categories: SettingCategory[] = ["Appearance", "AutoDJ"];
+  const categories: SettingCategory[] = ["Appearance", "Playback", "AutoDJ"];
 
   const categoryIcons = {
     Appearance: Palette,
     AutoDJ: Disc3,
+    Playback: Volume2
   };
 
   const booleanOptions = [

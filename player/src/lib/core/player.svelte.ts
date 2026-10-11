@@ -47,6 +47,26 @@ export class MusicPlayer {
   constructor() {
     this.engine = new AudioEngine();
     this.engine.onTrackEnded = () => this.handleTrackEnded();
+    this.engine.getNextTrackId = () => {
+      if (this.loopMode === "one") return this.currentTrackId;
+      if (this.currentIndex >= 0 && this.currentIndex + 1 < this.queue.length) {
+        return this.queue[this.currentIndex + 1].id;
+      }
+      if (this.loopMode === "all" && this.queue.length > 0) {
+        return this.queue[0].id;
+      }
+      return null;
+    };  
+    this.engine.onTrackAdvanced = () => {
+      if (this.hasNext) {
+        if (this.loopMode === "all" && this.currentIndex + 1 === this.queue.length) {
+          this.currentIndex = 0;
+        } else {
+          this.currentIndex += 1;
+        }
+        this.checkAndTriggerAutoDj();
+      }
+    };
   }
 
   private handleTrackEnded() {

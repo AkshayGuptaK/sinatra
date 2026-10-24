@@ -286,7 +286,7 @@ export class AudioEngine {
     const deck = this.activeDeck;
     if (!deck.audio) return;
 
-    const rampTime = this.fadeEnabled ? 1 : 0.03;
+    const rampTime = this.fadeEnabled ? 0.7 : 0.03;
 
     if (deck.gainNode && this.ctx) {
       deck.gainNode.gain.setValueAtTime(0, this.ctx.currentTime);
@@ -306,7 +306,7 @@ export class AudioEngine {
     const deck = this.activeDeck;
     if (!deck.audio) return;
 
-    const rampTime = this.fadeEnabled ? 1 : 0.03;
+    const rampTime = this.fadeEnabled ? 0.7 : 0.03;
 
     if (deck.gainNode && this.ctx) {
       const now = this.ctx.currentTime;

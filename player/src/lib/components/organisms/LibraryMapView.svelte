@@ -7,71 +7,149 @@
   import { findNearestPoint } from "$lib/utils/math";
   import MapTooltip from "$lib/components/molecules/MapTooltip.svelte";
   import MapLegend from "$lib/components/molecules/MapLegend.svelte";
+  import type { Track } from "$lib/types/track";
   import {
-    isTrackWithCoordinates,
-    type ProjectableTrack,
-    type Track,
-  } from "$lib/types/track";
-  import { EMOTION_COLORS } from "$lib/constants/emotions";
+    COWEN_EMOTION_COLORS,
+    LYRIC_EMOTION_COLORS,
+  } from "$lib/constants/emotions";
   import { cn } from "$lib/utils";
+
+  // =========================================================================
+  // 1. Types & View Strategies (Extraction Layer)
+  // =========================================================================
+
+  export type MapViewMode = "audio_emotion" | "lyrics_emotion";
+
+  export interface MapCoordinates {
+    x: number;
+    y: number;
+  }
+
+  export interface MapViewDefinition {
+    id: MapViewMode;
+    label: string;
+    description: string;
+    getEmotions: (track: Track) => Record<string, number> | null;
+    getCoordinates: (track: Track) => MapCoordinates | null;
+    getColor: (emotion: string) => string;
+  }
+
+  /** Extract acoustic emotion coordinates (coord_x, coord_y) */
+  function getAudioEmotionCoords(track: Track): MapCoordinates | null {
+    if (
+      track.coord_x != null &&
+      track.coord_y != null &&
+      !Number.isNaN(track.coord_x) &&
+      !Number.isNaN(track.coord_y)
+    ) {
+      return { x: track.coord_x, y: track.coord_y };
+    }
+    return null;
+  }
+
+  /** Extract lyrical emotion coordinates from [x, y] tuple */
+  function getLyricsEmotionCoords(track: Track): MapCoordinates | null {
+    const raw = track.lyrics_emotions_coords;
+    if (
+      Array.isArray(raw) &&
+      raw.length >= 2 &&
+      raw[0] != null &&
+      raw[1] != null &&
+      !Number.isNaN(raw[0]) &&
+      !Number.isNaN(raw[1])
+    ) {
+      return { x: Number(raw[0]), y: Number(raw[1]) };
+    }
+    return null;
+  }
+
+  /** Registry of available 2D map projections */
+  export const MAP_VIEWS: Record<MapViewMode, MapViewDefinition> = {
+    audio_emotion: {
+      id: "audio_emotion",
+      label: "Audio Mood",
+      description: "Acoustic emotion manifold projected via MERT and UMAP",
+      getEmotions: (track) => track.emotions,
+      getCoordinates: getAudioEmotionCoords,
+      getColor: (emotion) => COWEN_EMOTION_COLORS[emotion],
+    },
+    lyrics_emotion: {
+      id: "lyrics_emotion",
+      label: "Lyrics Mood",
+      description: "Affective text manifold derived from lyrical content",
+      getEmotions: (track) => track.lyrics_emotions,
+      getCoordinates: getLyricsEmotionCoords,
+      getColor: (emotion) => LYRIC_EMOTION_COLORS[emotion],
+    },
+  };
+
+  // =========================================================================
+  // 2. Component Props & Normalized Internal State
+  // =========================================================================
 
   interface Props {
     queuedTrackIds: Set<string>;
+    activeViewMode?: MapViewMode;
     class?: string;
   }
 
-  let { queuedTrackIds, class: className = "" }: Props = $props();
+  let {
+    queuedTrackIds,
+    activeViewMode = $bindable("audio_emotion"),
+    class: className = "",
+  }: Props = $props();
+
+  export interface RenderPoint {
+    id: string;
+    track: Track;
+    x: number;
+    y: number;
+    color: string | null;
+  }
+
+  interface CanvasThemeTokens {
+    accentRing: string;
+    haloGlow: string;
+    haloBorder: string;
+    activeCore: string;
+    defaultDot: string;
+  }
 
   let canvasEl = $state<HTMLCanvasElement | null>(null);
   let containerEl = $state<HTMLDivElement | null>(null);
   let transform = $state(d3.zoomIdentity);
   let zoomBehavior: d3.ZoomBehavior<HTMLCanvasElement, unknown> | null = null;
-  let hasAutoZoomed = $state(false);
+  let hoveredPoint = $state<RenderPoint | null>(null);
+  let lastFittedViewMode = $state<MapViewMode | null>(null);
 
-  let hoveredTrack = $state<ProjectableTrack | null>(null);
-
-  const tracksToRender = $derived(
-    library.displayedTracks.filter(isTrackWithCoordinates)
+  const activeViewConfig = $derived(
+    MAP_VIEWS[activeViewMode] ?? MAP_VIEWS.audio_emotion
   );
 
-  const highlightedTrack = $derived(
-    library.highlightedTrackId
-      ? (tracksToRender.find((t) => t.id === library.highlightedTrackId) ??
-          null)
-      : null
-  );
-
-  const activeTooltipTrack = $derived(hoveredTrack ?? highlightedTrack);
-
-  interface CanvasThemeTokens {
-    accentRing: string; // Ring around queued items
-    haloGlow: string; // Active track outer halo
-    haloBorder: string; // Active track outline
-    activeCore: string; // Active track inner dot
-    defaultDot: string; // Fallback dot color
-  }
+  // =========================================================================
+  // 3. Color & Token Resolvers
+  // =========================================================================
 
   function getDominantEmotion(emotions: Record<string, number>): string | null {
     const [dominant] = Object.entries(emotions).reduce<[string, number]>(
-      (best, [emotion, score]) =>
-        EMOTION_COLORS[emotion] && score > best[1] ? [emotion, score] : best,
+      (best, [emotion, score]) => (activeViewConfig["getColor"](emotion) && score > best[1] ? [emotion, score] : best),
       ["", -1]
     );
-
     return dominant || null;
   }
 
   function getTrackColor(track: Track): string | null {
-    if (!track.emotions) return null;
-    const dominant = getDominantEmotion(track.emotions);
-    return dominant ? EMOTION_COLORS[dominant] : null;
+    const emotions = activeViewConfig["getEmotions"](track);
+    if (!emotions) return null;
+    const dominant = getDominantEmotion(emotions);
+    console.log("dom", dominant);
+    const color = dominant ? activeViewConfig["getColor"](dominant) : null;
+    console.log("col", color);
+    return color;
   }
 
   function resolveThemeTokens(element: HTMLElement): CanvasThemeTokens {
     const style = getComputedStyle(element);
-    const isDark = element.closest(".dark") !== null;
-
-    // Read CSS variables dynamically from the active skin / light-dark variant
     const primary = style.getPropertyValue("--primary").trim() || "#000000";
     const foreground = style.getPropertyValue("--foreground").trim() || primary;
     const accentForeground =
@@ -88,31 +166,61 @@
     };
   }
 
+  // =========================================================================
+  // 4. Reactive Projections (Normalizing Track to RenderPoint)
+  // =========================================================================
+
   /**
-   * Calculates bounds and sets D3 Zoom to fit all points snugly within the view.
+   * Projects raw library tracks through the active view's coordinate extractor.
+   * Tracks missing coordinates for this view are safely filtered out.
    */
+  const renderPoints = $derived.by<RenderPoint[]>(() => {
+    const extractor = activeViewConfig.getCoordinates;
+    const points: RenderPoint[] = [];
+
+    for (const track of library.displayedTracks) {
+      const coords = extractor(track);
+      if (coords) {
+        points.push({
+          id: track.id,
+          track,
+          x: coords.x,
+          y: coords.y,
+          color: getTrackColor(track),
+        });
+      }
+    }
+    return points;
+  });
+
+  const highlightedPoint = $derived(
+    library.highlightedTrackId
+      ? (renderPoints.find((p) => p.id === library.highlightedTrackId) ?? null)
+      : null
+  );
+
+  const activeTooltipTrack = $derived(
+    hoveredPoint?.track ?? highlightedPoint?.track ?? null
+  );
+
+  // =========================================================================
+  // 5. Shared Viewport & Bounds Fitting
+  // =========================================================================
+
   function fitToBounds(animate = true) {
-    if (!canvasEl || !containerEl || !zoomBehavior) return;
+    if (!canvasEl || !containerEl || !zoomBehavior || renderPoints.length === 0)
+      return;
 
-    const tracks = library.displayedTracks.filter(
-      (t) => t.coord_x != null && t.coord_y != null
-    );
-
-    if (tracks.length === 0) return;
-
-    // 1. Calculate bounding box: min/max across both axes
     let minX = Infinity,
       maxX = -Infinity;
     let minY = Infinity,
       maxY = -Infinity;
 
-    for (const t of tracks) {
-      const x = t.coord_x!;
-      const y = t.coord_y!;
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
+    for (const p of renderPoints) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
     }
 
     const dataWidth = maxX - minX || 1;
@@ -124,18 +232,16 @@
     const viewWidth = rect.width;
     const viewHeight = rect.height;
 
-    // 2. Compute scale factor
     const scaleX = (viewWidth * 0.95) / dataWidth;
     const scaleY = (viewHeight * 0.95) / dataHeight;
     const k = Math.min(scaleX, scaleY);
 
-    // 3. Compute translation to place midpoint at viewport center
     const tx = viewWidth / 2 - midX * k;
     const ty = viewHeight / 2 - midY * k;
 
     const targetTransform = d3.zoomIdentity.translate(tx, ty).scale(k);
-
     const selection = select(canvasEl);
+
     if (animate) {
       selection
         .transition()
@@ -146,28 +252,32 @@
     }
   }
 
+  // =========================================================================
+  // 6. Generic Canvas Rendering Pipeline (Operates strictly on RenderPoint)
+  // =========================================================================
+
   function drawNormalTrack(
     ctx: CanvasRenderingContext2D,
-    track: ProjectableTrack,
+    point: RenderPoint,
     theme: CanvasThemeTokens,
     dotRadius: number
   ) {
     ctx.beginPath();
-    ctx.arc(track.coord_x, track.coord_y, dotRadius, 0, Math.PI * 2);
-    ctx.fillStyle = getTrackColor(track) || theme.defaultDot;
+    ctx.arc(point.x, point.y, dotRadius, 0, Math.PI * 2);
+    ctx.fillStyle = point.color || theme.defaultDot;
     ctx.globalAlpha = 0.85;
     ctx.fill();
   }
 
   function drawQueuedTrack(
     ctx: CanvasRenderingContext2D,
-    track: ProjectableTrack,
+    point: RenderPoint,
     theme: CanvasThemeTokens,
     dotRadius: number
   ) {
     // Outer accent ring
     ctx.beginPath();
-    ctx.arc(track.coord_x, track.coord_y, 1.625 * dotRadius, 0, Math.PI * 2);
+    ctx.arc(point.x, point.y, 1.625 * dotRadius, 0, Math.PI * 2);
     ctx.strokeStyle = theme.accentRing;
     ctx.lineWidth = 1.5 / transform.k;
     ctx.globalAlpha = 0.9;
@@ -175,42 +285,42 @@
 
     // Core point
     ctx.beginPath();
-    ctx.arc(track.coord_x, track.coord_y, dotRadius, 0, Math.PI * 2);
-    ctx.fillStyle = getTrackColor(track) || theme.defaultDot;
+    ctx.arc(point.x, point.y, dotRadius, 0, Math.PI * 2);
+    ctx.fillStyle = point.color || theme.defaultDot;
     ctx.globalAlpha = 1.0;
     ctx.fill();
   }
 
   function drawActiveTrack(
     ctx: CanvasRenderingContext2D,
-    track: ProjectableTrack,
+    point: RenderPoint,
     theme: CanvasThemeTokens,
     dotRadius: number
   ) {
-    const coreColor = getTrackColor(track) || theme.defaultDot;
+    const coreColor = point.color || theme.defaultDot;
     const haloRadius = dotRadius * 2.2;
 
-    // 1. Soft radial glow using the track's actual emotion color
+    // 1. Soft radial glow
     const gradient = ctx.createRadialGradient(
-      track.coord_x,
-      track.coord_y,
+      point.x,
+      point.y,
       dotRadius * 0.8,
-      track.coord_x,
-      track.coord_y,
+      point.x,
+      point.y,
       haloRadius
     );
     gradient.addColorStop(0, coreColor);
     gradient.addColorStop(1, "transparent");
 
     ctx.beginPath();
-    ctx.arc(track.coord_x, track.coord_y, haloRadius, 0, Math.PI * 2);
+    ctx.arc(point.x, point.y, haloRadius, 0, Math.PI * 2);
     ctx.fillStyle = gradient;
     ctx.globalAlpha = 0.55;
     ctx.fill();
 
     // 2. Sharp primary accent perimeter ring
     ctx.beginPath();
-    ctx.arc(track.coord_x, track.coord_y, haloRadius, 0, Math.PI * 2);
+    ctx.arc(point.x, point.y, haloRadius, 0, Math.PI * 2);
     ctx.strokeStyle = theme.accentRing;
     ctx.lineWidth = 1.5 / transform.k;
     ctx.globalAlpha = 0.85;
@@ -218,30 +328,30 @@
 
     // 3. Saturated Core Dot
     ctx.beginPath();
-    ctx.arc(track.coord_x, track.coord_y, dotRadius * 1.1, 0, Math.PI * 2);
+    ctx.arc(point.x, point.y, dotRadius * 1.1, 0, Math.PI * 2);
     ctx.fillStyle = coreColor;
     ctx.globalAlpha = 1.0;
     ctx.fill();
   }
 
-  function drawHightlightHalo(
+  function drawHighlightHalo(
     ctx: CanvasRenderingContext2D,
-    track: ProjectableTrack,
+    point: RenderPoint,
     theme: CanvasThemeTokens,
     dotRadius: number
   ) {
     const outerRadius = dotRadius * 2.5;
 
-    // Soft translucent wash (shows clearly over unqueued and queued dots)
+    // Soft translucent wash
     ctx.beginPath();
-    ctx.arc(track.coord_x, track.coord_y, outerRadius, 0, Math.PI * 2);
+    ctx.arc(point.x, point.y, outerRadius, 0, Math.PI * 2);
     ctx.fillStyle = theme.haloGlow;
     ctx.globalAlpha = 0.45;
     ctx.fill();
 
     // Outer beacon ring
     ctx.beginPath();
-    ctx.arc(track.coord_x, track.coord_y, outerRadius, 0, Math.PI * 2);
+    ctx.arc(point.x, point.y, outerRadius, 0, Math.PI * 2);
     ctx.strokeStyle = theme.haloBorder;
     ctx.lineWidth = 1.75 / transform.k;
     ctx.globalAlpha = 0.95;
@@ -258,11 +368,9 @@
     const dpr = window.devicePixelRatio || 1;
     const theme = resolveThemeTokens(canvasEl);
 
-    // Reset transform & clear frame
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
-    // Apply device pixel ratio and D3 zoom/pan transformations
     ctx.setTransform(
       transform.k * dpr,
       0,
@@ -275,22 +383,26 @@
     const activeTrackId = player.currentTrack?.id;
     const dotRadius = Math.max(0.01, 4 / transform.k);
 
-    for (const track of tracksToRender) {
-      if (track.id === activeTrackId) {
-        drawActiveTrack(ctx, track, theme, dotRadius);
-      } else if (queuedTrackIds.has(track.id)) {
-        drawQueuedTrack(ctx, track, theme, dotRadius);
+    for (const point of renderPoints) {
+      if (point.id === activeTrackId) {
+        drawActiveTrack(ctx, point, theme, dotRadius);
+      } else if (queuedTrackIds.has(point.id)) {
+        drawQueuedTrack(ctx, point, theme, dotRadius);
       } else {
-        drawNormalTrack(ctx, track, theme, dotRadius);
+        drawNormalTrack(ctx, point, theme, dotRadius);
       }
     }
 
-    if (hoveredTrack) drawHightlightHalo(ctx, hoveredTrack, theme, dotRadius);
-    if (highlightedTrack)
-      drawHightlightHalo(ctx, highlightedTrack, theme, dotRadius);
+    if (hoveredPoint) drawHighlightHalo(ctx, hoveredPoint, theme, dotRadius);
+    if (highlightedPoint)
+      drawHighlightHalo(ctx, highlightedPoint, theme, dotRadius);
 
     ctx.globalAlpha = 1.0;
   }
+
+  // =========================================================================
+  // 7. Event Handlers & Canvas Interactions
+  // =========================================================================
 
   function handlePointerMove(event: PointerEvent) {
     if (!canvasEl || !containerEl) return;
@@ -304,22 +416,20 @@
       y: (screenY - transform.y) / transform.k,
     };
 
+    // Operates directly on projected points
     const nearest = findNearestPoint(
-      library.displayedTracks,
+      renderPoints,
       targetWorld,
-      (t) =>
-        t.coord_x != null && t.coord_y != null
-          ? { x: t.coord_x, y: t.coord_y }
-          : null,
+      (p) => ({ x: p.x, y: p.y }),
       12 / transform.k
     );
 
-    hoveredTrack = (nearest as ProjectableTrack) ?? null;
+    hoveredPoint = nearest ?? null;
     draw();
   }
 
   function handlePointerLeave() {
-    hoveredTrack = null;
+    hoveredPoint = null;
     draw();
   }
 
@@ -332,21 +442,19 @@
       y: (event.clientY - rect.top - transform.y) / transform.k,
     };
 
-    const closestTrack = findNearestPoint(
-      library.displayedTracks,
+    const closestPoint = findNearestPoint(
+      renderPoints,
       targetWorld,
-      (t) =>
-        t.coord_x != null && t.coord_y != null
-          ? { x: t.coord_x, y: t.coord_y }
-          : null,
+      (p) => ({ x: p.x, y: p.y }),
       10 / transform.k
     );
 
-    if (closestTrack) {
-      if (queuedTrackIds.has(closestTrack.id)) {
-        player.removeTrackById(closestTrack.id);
+    if (closestPoint) {
+      const track = closestPoint.track;
+      if (queuedTrackIds.has(track.id)) {
+        player.removeTrackById(track.id);
       } else {
-        player.enqueue(closestTrack);
+        player.enqueue(track);
       }
     }
   }
@@ -364,10 +472,19 @@
     draw();
   }
 
+  function handleViewChange(mode: MapViewMode) {
+    if (activeViewMode === mode) return;
+    activeViewMode = mode;
+    hoveredPoint = null;
+  }
+
+  // =========================================================================
+  // 8. Lifecycle & Reactivity
+  // =========================================================================
+
   onMount(() => {
     if (!canvasEl || !containerEl) return;
 
-    // Initialize D3 Zoom Behavior
     zoomBehavior = d3
       .zoom<HTMLCanvasElement, unknown>()
       .scaleExtent([0.1, 40])
@@ -379,7 +496,6 @@
     const canvasSelection = select(canvasEl);
     canvasSelection.call(zoomBehavior);
 
-    // Handle viewport resize
     const resizeObserver = new ResizeObserver(() => {
       resizeCanvas();
     });
@@ -391,17 +507,23 @@
     };
   });
 
-  // Re-draw automatically
   $effect(() => {
-    tracksToRender;
+    renderPoints;
     queuedTrackIds;
     player.currentTrack?.id;
-    highlightedTrack;
+    highlightedPoint;
 
-    if (!hasAutoZoomed && tracksToRender.length > 0 && zoomBehavior) {
-      fitToBounds(false);
-      hasAutoZoomed = true;
+    // Automatically re-center viewport when projection view changes or points first load
+    if (
+      zoomBehavior &&
+      renderPoints.length > 0 &&
+      lastFittedViewMode !== activeViewMode
+    ) {
+      const shouldAnimate = lastFittedViewMode !== null;
+      lastFittedViewMode = activeViewMode;
+      fitToBounds(shouldAnimate);
     }
+
     draw();
   });
 </script>
@@ -412,12 +534,46 @@
     className
   )}
 >
+  <!-- Main Canvas Area -->
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div
     bind:this={containerEl}
-    class="relative flex-1 min-w-0 h-full overflow-hidden cursor-grab active:cursor-grabbing"
+    class="relative flex-1 min-w-0 h-full overflow-hidden cursor-grab active:cursor-grabbing rounded-lg border bg-background"
   >
+    <!-- Floating View Mode Switcher -->
+    <div
+      class="absolute top-3 left-3 z-10 flex items-center p-0.5 rounded-lg bg-card/90 backdrop-blur-md border border-border/80 shadow-xs"
+    >
+      {#each Object.values(MAP_VIEWS) as viewDef}
+        <button
+          type="button"
+          onclick={() => handleViewChange(viewDef.id)}
+          class={cn(
+            "px-2.5 py-1 text-xs font-medium rounded-md transition-all cursor-pointer",
+            activeViewMode === viewDef.id
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          )}
+          title={viewDef.description}
+        >
+          {viewDef.label}
+        </button>
+      {/each}
+    </div>
+
+    <!-- Empty State Fallback -->
+    {#if renderPoints.length === 0}
+      <div
+        class="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground pointer-events-none p-4 text-center"
+      >
+        <p class="text-sm font-medium">No coordinates available</p>
+        <p class="text-xs text-muted-foreground/80 mt-1">
+          {activeViewConfig.label} data has not been calculated for these tracks.
+        </p>
+      </div>
+    {/if}
+
     <canvas
       bind:this={canvasEl}
       onclick={handleCanvasClick}
@@ -427,19 +583,19 @@
     ></canvas>
   </div>
 
+  <!-- Sidebar: Legend & Tooltip Details -->
   <aside class="flex flex-col w-60 shrink-0 h-full overflow-hidden">
-    <!-- Top: Emotion Legend (interactive/scrollable if needed) -->
     <div class="shrink-0">
-      <MapLegend class="w-full" />
+      <MapLegend class="w-full" viewMode={activeViewMode} />
     </div>
 
-    <!-- Bottom: Fixed Slot for Hover Details -->
     <div class="flex-1 min-h-0 overflow-y-auto">
       {#if activeTooltipTrack}
         <MapTooltip
           track={activeTooltipTrack}
           isPlaying={player.currentTrack?.id === activeTooltipTrack.id}
           isQueued={queuedTrackIds.has(activeTooltipTrack.id)}
+          emotions={MAP_VIEWS[activeViewMode]["getEmotions"](activeTooltipTrack)}
           class="w-full"
         />
       {/if}

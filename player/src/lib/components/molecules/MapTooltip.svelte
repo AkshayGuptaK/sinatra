@@ -2,24 +2,34 @@
   import type { Track } from "$lib/types/track";
   import { Check, Play } from "@lucide/svelte";
   import { cn } from "$lib/utils";
-  import { getTrackDisplayAttribution, getTrackDisplayTitle } from "$lib/utils/display";
+  import {
+    getTrackDisplayAttribution,
+    getTrackDisplayTitle,
+  } from "$lib/utils/display";
 
   interface Props {
     track: Track;
     isPlaying: boolean;
     isQueued: boolean;
+    emotions: Record<string, number> | null;
     class?: string;
   }
 
-  let { track, isPlaying, isQueued, class: className = "" }: Props = $props();
+  let {
+    track,
+    isPlaying,
+    isQueued,
+    emotions,
+    class: className = "",
+  }: Props = $props();
 
   let displayTitle = $derived(getTrackDisplayTitle(track));
   let displayArtist = $derived(getTrackDisplayAttribution(track));
 
   // Extract all emotions, sort descending, filter out near-zero values
   const sortedEmotions = $derived.by(() => {
-    if (!track.emotions) return [];
-    return Object.entries(track.emotions)
+    if (!emotions) return [];
+    return Object.entries(emotions)
       .map(([name, score]) => ({
         name,
         pct: Math.round(Number(score) * 100),

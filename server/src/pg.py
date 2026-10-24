@@ -184,7 +184,9 @@ class PostgresStore:
                duration,
                emotions_normalized,
                coord_x,
-               coord_y
+               coord_y,
+               lyrics_emotions,
+               ARRAY[lyrics_emotions_coords[0], lyrics_emotions_coords[1]]::float[]
         FROM nodes
         ORDER BY title ASC
         """
@@ -204,6 +206,8 @@ class PostgresStore:
                         "emotions": r[7] or {},
                         "coord_x": r[8] or 0,
                         "coord_y": r[9] or 0,
+                        "lyrics_emotions": r[10] or {},
+                        "lyrics_emotions_coords": r[11] or [0,0]
                     }
                     for r in result
                 ]

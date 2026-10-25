@@ -6,6 +6,7 @@ import pandas as pd
 from sklearn.linear_model import RidgeCV
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import KFold, cross_val_predict
+from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from src.config import config
 
@@ -31,6 +32,8 @@ def _fit_and_evaluate(
     feature_cols: list[str] | None = None,
     save_weights: bool = True,
     verbose: bool = True,
+    n_splits: int = 10,
+    random_state: int = 42,
 ) -> pd.DataFrame | None:
     if isinstance(csv_path_or_df, Path):
         if not csv_path_or_df.exists():
@@ -46,7 +49,6 @@ def _fit_and_evaluate(
 
     if feature_cols is None:
         if feature_start_col is None:
-            # Auto-detect first feature starting with 'mert_' or fallback to vocal_probability
             mert_cols = [c for c in all_cols if c.startswith("mert_")]
             if mert_cols:
                 feature_start_col = mert_cols[0]
@@ -76,45 +78,56 @@ def _fit_and_evaluate(
         )
 
     df_clean = df.dropna(subset=feature_cols + mood_cols).copy()
-    X = df_clean[feature_cols].values
+    X = df_clean[feature_cols].values.astype(np.float32)
 
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-
-    cv = KFold(n_splits=5, shuffle=True, random_state=42)
-    alphas = np.logspace(-2, 4, 30)
+    cv = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    alphas = np.logspace(-1, 6, 50)
 
     summary_records = []
 
     if verbose:
         print("\n" + "=" * 95)
         print(
-            f"{'Mood Dimension':<26} | {'R²':<7} | {'RMSE':<7} | Top Positive & Negative Drivers"
+            f"{'Mood Dimension':<26} | {'R²':<7} | {'RMSE':<7} | Top Positive & Negative Drivers (Std)"
         )
         print("=" * 95)
 
     for mood in mood_cols:
-        y = df_clean[mood].values
+        y = df_clean[mood].values.astype(np.float32)
 
-        model = RidgeCV(alphas=alphas)
-        y_pred = cross_val_predict(model, X_scaled, y, cv=cv)
+        # 1. Leak-free cross-validation via Pipeline
+        pipe = make_pipeline(StandardScaler(), RidgeCV(alphas=alphas))
+        y_pred = cross_val_predict(pipe, X, y, cv=cv, n_jobs=-1)
 
         r2 = r2_score(y, y_pred)
         rmse = np.sqrt(mean_squared_error(y, y_pred))
 
+        # 2. Fit on 100% of data to extract parameters
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+        model = RidgeCV(alphas=alphas)
         model.fit(X_scaled, y)
-        coefs = model.coef_
+
+        scaled_coefs = model.coef_
+        scaled_intercept = model.intercept_
+
+        # 3. Fold StandardScaler into raw weights and intercept
+        # y_hat = (x - mu) / sigma @ w_scaled + b_scaled
+        #       = x @ (w_scaled / sigma) + (b_scaled - (mu / sigma) @ w_scaled)
+        raw_coefs = scaled_coefs / scaler.scale_
+        raw_intercept = float(scaled_intercept - np.dot(raw_coefs, scaler.mean_))
 
         if verbose:
-            sorted_indices = np.argsort(coefs)
+            sorted_indices = np.argsort(scaled_coefs)
             top_neg_idx = sorted_indices[:2]
             top_pos_idx = sorted_indices[-2:][::-1]
 
             pos_str = ", ".join(
-                [f"+{feature_cols[i]} ({coefs[i]:+.2f})" for i in top_pos_idx]
+                [f"+{feature_cols[i]} ({scaled_coefs[i]:+.2f})" for i in top_pos_idx]
             )
             neg_str = ", ".join(
-                [f"{feature_cols[i]} ({coefs[i]:+.2f})" for i in top_neg_idx]
+                [f"{feature_cols[i]} ({scaled_coefs[i]:+.2f})" for i in top_neg_idx]
             )
             drivers_str = f"{pos_str} | {neg_str}"
             print(f"{mood:<26} | {r2:+.4f} | {rmse:.4f} | {drivers_str}")
@@ -123,10 +136,12 @@ def _fit_and_evaluate(
             "mood": mood,
             "r2": r2,
             "rmse": rmse,
-            "intercept": model.intercept_,
+            "intercept": raw_intercept,
         }
         if save_weights and output_path is not None:
-            record.update({f"w_{col}": coef for col, coef in zip(feature_cols, coefs)})
+            record.update(
+                {f"w_{col}": float(coef) for col, coef in zip(feature_cols, raw_coefs)}
+            )
 
         summary_records.append(record)
 
@@ -138,33 +153,28 @@ def _fit_and_evaluate(
         if verbose:
             print("=" * 95)
             print(
-                f"✅ Saved trained weights ({len(results_df)} emotions) to {output_path}"
+                f"✅ Saved unscaled-ready weights ({len(results_df)} emotions | Mean R²: {results_df['r2'].mean():.4f}) to {output_path}"
             )
 
     return results_df
 
 
-def run_dsp_regression():
+def run_dsp_regression(n_splits: int = 10):
     return _fit_and_evaluate(
         csv_path_or_df=Path(FEATURES_CSV),
         output_path=Path(OUTPUT_FEATURES_WEIGHTS_CSV),
         feature_start_col="vocal_probability",
         feature_label="18 Handcrafted DSP Features",
+        n_splits=n_splits,
     )
 
 
 def run_mert_regression(
-    csv_name: str = "cowen_mert_embeddings",
+    csv_name: str = "cowen_MERT-v2-30s_L24_final_embeddings",
     output_name: str | None = None,
     verbose: bool = True,
+    n_splits: int = 10,
 ):
-    """Runs Ridge regression over a specified MERT CSV file located in datasets/.
-
-    Args:
-        csv_name: Filename stem without directory path or '.csv' extension.
-        output_name: Optional custom output weights name.
-        verbose: Whether to log feature drivers and individual dimension progress.
-    """
     input_path = DATASETS_DIR / f"{csv_name}.csv"
     out_stem = output_name or f"{csv_name}_regression_weights"
     output_path = DATASETS_DIR / f"{out_stem}.csv"
@@ -172,13 +182,14 @@ def run_mert_regression(
     return _fit_and_evaluate(
         csv_path_or_df=input_path,
         output_path=output_path,
-        feature_start_col=None,  # Auto-detects mert_0 / mert_*
+        feature_start_col=None,
         feature_label=f"MERT [{csv_name}]",
         verbose=verbose,
+        n_splits=n_splits,
     )
 
 
-def run_dsp_mert_hybrid_regression():
+def run_dsp_mert_hybrid_regression(n_splits: int = 10):
     dsp_path = Path(FEATURES_CSV)
     mert_path = Path(MERT_EMBEDDINGS_CSV)
 
@@ -227,15 +238,13 @@ def run_dsp_mert_hybrid_regression():
         feature_start_col=None,
         feature_cols=combined_features,
         feature_label=f"Hybrid ({len(dsp_feature_cols)} DSP + {len(mert_feature_cols)} MERT)",
+        n_splits=n_splits,
     )
 
 
-def compare_mert_embeddings(embedding_csv_names: list[str]) -> pd.DataFrame | None:
-    """Evaluates multiple MERT embedding files and prints a side-by-side R² comparison table.
-
-    Args:
-        embedding_csv_names: List of filenames (without '.csv' or 'datasets/').
-    """
+def compare_mert_embeddings(
+    embedding_csv_names: list[str], n_splits: int = 10
+) -> pd.DataFrame | None:
     if not embedding_csv_names:
         print("❌ No embedding names provided to compare.")
         return None
@@ -247,9 +256,8 @@ def compare_mert_embeddings(embedding_csv_names: list[str]) -> pd.DataFrame | No
     results = {}
     for name in embedding_csv_names:
         print(f"\nFitting RidgeCV on: {name}...")
-        res = run_mert_regression(csv_name=name, verbose=False)
+        res = run_mert_regression(csv_name=name, verbose=False, n_splits=n_splits)
         if res is not None:
-            # Clean display label: remove leading 'cowen_' and trailing '_embeddings'
             display_label = name.replace("cowen_", "").replace("_embeddings", "")
             results[display_label] = res.set_index("mood")["r2"]
 
@@ -258,13 +266,10 @@ def compare_mert_embeddings(embedding_csv_names: list[str]) -> pd.DataFrame | No
         return None
 
     comp_df = pd.DataFrame(results)
-
-    # Add Mean R² row
     mean_row = comp_df.mean(axis=0)
     mean_row.name = "== MEAN R² =="
     display_df = pd.concat([comp_df, pd.DataFrame([mean_row])])
 
-    # Formatted terminal output
     col_width = max(14, max(len(c) for c in display_df.columns) + 2)
     header = f"{'Mood Dimension':<26} | " + " | ".join(
         f"{c:>{col_width}}" for c in display_df.columns
@@ -290,10 +295,10 @@ def compare_mert_embeddings(embedding_csv_names: list[str]) -> pd.DataFrame | No
     return comp_df
 
 
-def run_comparison():
-    dsp_res = run_dsp_regression()
-    mert_res = run_mert_regression()
-    hybrid_res = run_dsp_mert_hybrid_regression()
+def run_comparison(n_splits: int = 10):
+    dsp_res = run_dsp_regression(n_splits=n_splits)
+    mert_res = run_mert_regression(n_splits=n_splits)
+    hybrid_res = run_dsp_mert_hybrid_regression(n_splits=n_splits)
 
     if dsp_res is None or mert_res is None or hybrid_res is None:
         return
@@ -333,19 +338,31 @@ if __name__ == "__main__":
     parser.add_argument(
         "mode",
         nargs="?",
-        default="dsp",
-        help="Mode: dsp, mert, hybrid, all, or compare-mert",
+        default="mert",
+        help="Mode: mert, dsp, hybrid, all, or compare-mert",
     )
     parser.add_argument(
         "--file",
         type=str,
-        default="cowen_mert_embeddings",
+        default="cowen_MERT-v2-30s_L24_final_embeddings",
         help="Filename stem to use for single 'mert' run (without path or .csv)",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default=None,
+        help="Optional custom output filename stem (without path or .csv)",
     )
     parser.add_argument(
         "--files",
         nargs="+",
         help="List of embedding filename stems to compare (without path or .csv)",
+    )
+    parser.add_argument(
+        "--splits",
+        type=int,
+        default=10,
+        help="Number of cross-validation folds (default: 10)",
     )
 
     args = parser.parse_args()
@@ -360,12 +377,14 @@ if __name__ == "__main__":
             "cowen_MERT-v2-30s_L23_embeddings",
             "cowen_MERT-v2-30s_L24_final_embeddings",
         ]
-        compare_mert_embeddings(files)
+        compare_mert_embeddings(files, n_splits=args.splits)
     elif mode == "mert":
-        run_mert_regression(csv_name=args.file)
+        run_mert_regression(
+            csv_name=args.file, output_name=args.output, n_splits=args.splits
+        )
     elif mode == "hybrid":
-        run_dsp_mert_hybrid_regression()
+        run_dsp_mert_hybrid_regression(n_splits=args.splits)
     elif mode == "all":
-        run_comparison()
+        run_comparison(n_splits=args.splits)
     else:
-        run_dsp_regression()
+        run_dsp_regression(n_splits=args.splits)

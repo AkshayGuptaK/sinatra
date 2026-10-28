@@ -14,7 +14,8 @@ export interface NextTrack {
   end: number;
 }
 
-const FADE_PLAY_PAUSE_SEC = 0.7;
+const FADE_PLAY_SEC = 0.7;
+const FADE_PAUSE_SEC = 0.5;
 const FADE_ANTI_POP_SEC = 0.02;
 const FADE_SEEK_SEC = 0.03;
 const PRELOAD_LOOKAHEAD_SEC = 2.5;
@@ -501,7 +502,7 @@ export class AudioEngine {
     const deck = this.activeDeck;
     if (!deck.audio) return;
 
-    const rampTime = this.fadeEnabled ? FADE_PLAY_PAUSE_SEC : FADE_ANTI_POP_SEC;
+    const rampTime = this.fadeEnabled ? FADE_PLAY_SEC : FADE_ANTI_POP_SEC;
 
     if (deck.gainNode && this.ctx) {
       this.setDeckGainImmediate(deck, 0);
@@ -527,7 +528,7 @@ export class AudioEngine {
     const deck = this.activeDeck;
     if (!deck.audio) return;
 
-    const rampTime = this.fadeEnabled ? FADE_PLAY_PAUSE_SEC : FADE_ANTI_POP_SEC;
+    const rampTime = this.fadeEnabled ? FADE_PAUSE_SEC : FADE_ANTI_POP_SEC;
 
     if (deck.gainNode && this.ctx) {
       this.rampDeckGain(deck, 1, 0, rampTime);

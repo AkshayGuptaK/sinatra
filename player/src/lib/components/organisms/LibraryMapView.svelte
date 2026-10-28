@@ -142,9 +142,7 @@
     const emotions = activeViewConfig["getEmotions"](track);
     if (!emotions) return null;
     const dominant = getDominantEmotion(emotions);
-    console.log("dom", dominant);
     const color = dominant ? activeViewConfig["getColor"](dominant) : null;
-    console.log("col", color);
     return color;
   }
 

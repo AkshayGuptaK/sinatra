@@ -11,11 +11,11 @@ class MoodProjector:
     """Projects 24-dimensional Cowen emotional scores into 2D manifold coordinates.
 
     Supports Kernel Ridge Regression ('kr') and KNN manifold interpolation ('knn').
-    Applies empirical threshold masking on normalized scores (>= 0.35) while preserving
+    Applies empirical threshold masking on normalized scores while preserving
     unnormalized amplitude dynamics.
     """
 
-    THRESHOLD = 0.4
+    THRESHOLD = 0.3
 
     def __init__(self, method: str = "kr", k: int = 5):
         self.method = method.lower()

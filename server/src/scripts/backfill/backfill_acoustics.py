@@ -11,16 +11,13 @@ from src.models.projector.mood_projector import get_mood_projector
 from src.services.emotion_scorer import get_emotion_scorer
 from src.pg import get_pg
 from src.services.audio_chunker import get_audio_chunker
+import warnings
 
-
-def _format_vector_str(vec: Optional[Union[List[float], np.ndarray]]) -> Optional[str]:
-    """Serializes list or numpy array into pgvector literal format: '[v1,v2,...]'."""
-    if vec is None:
-        return None
-    if hasattr(vec, "tolist"):
-        vec = vec.tolist()
-    return f"[{','.join(f'{x:.6f}' for x in vec)}]"
-
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message=r".*An output with one or more elements was resized.*",
+)
 
 def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
     db = get_pg()
@@ -152,11 +149,11 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
             )
 
             # 7. Serialize Types for PostgreSQL
-            musical_emb_str = _format_vector_str(global_musical_embedding)
+            musical_emb_str = db._format_vector_str(global_musical_embedding)
             emotions_json = json.dumps(global_emotions)
-            emotion_vec_str = _format_vector_str(global_raw_vec)
+            emotion_vec_str = db._format_vector_str(global_raw_vec)
             emotions_norm_json = json.dumps(global_emotions_norm)
-            emotion_norm_vec_str = _format_vector_str(global_norm_vec)
+            emotion_norm_vec_str = db._format_vector_str(global_norm_vec)
 
             # 8. Update 'nodes' and atomically replace 'track_chunks'
             with db.conn.transaction():

@@ -56,7 +56,7 @@ class PostgresStore:
                 )
                 self.conn.commit()
 
-    def _format_vector_str(vec) -> Optional[str]:
+    def _format_vector_str(self, vec) -> Optional[str]:
         if vec is None:
             return None
         if hasattr(vec, "tolist"):
@@ -79,7 +79,6 @@ class PostgresStore:
                     "DELETE FROM track_chunks WHERE track_id = %s::uuid;",
                     (track_id,),
                 )
-            self.conn.commit()
             return
 
         batch_params = []
@@ -94,9 +93,9 @@ class PostgresStore:
             )
 
             musical_emb = c.get("musical_embedding", c.get("acoustic_embedding"))
-            musical_vec_str = _format_vector_str(musical_emb)
-            emotion_vec_str = _format_vector_str(c.get("emotion_vector"))
-            emotion_norm_vec_str = _format_vector_str(
+            musical_vec_str = self._format_vector_str(musical_emb)
+            emotion_vec_str = self._format_vector_str(c.get("emotion_vector"))
+            emotion_norm_vec_str = self._format_vector_str(
                 c.get("emotion_vector_normalized")
             )
 
@@ -148,8 +147,6 @@ class PostgresStore:
                 batch_params,
             )
 
-        self.conn.commit()
-
     def upsert_track(
         self,
         filepath: str,
@@ -165,7 +162,7 @@ class PostgresStore:
         coord_x: Optional[float] = 0,
         coord_y: Optional[float] = 0,
         music_start: Optional[float] = 0.0,
-        music_end: Optional[float] = duration,
+        music_end: Optional[float] = None,
     ) -> None:
         # Format JSONB strings
         emotions_json = json.dumps(emotions) if emotions is not None else None
@@ -254,12 +251,11 @@ class PostgresStore:
                     coord_x,
                     coord_y,
                     music_start,
-                    music_end
+                    music_end if music_end is not None else duration
                 ),
             )
             track_id = cur.fetchone()[0]
 
-        self.conn.commit()
         return track_id
 
     def delete_by_filenames(self, filenames):

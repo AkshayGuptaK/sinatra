@@ -34,7 +34,7 @@
         name,
         pct: Math.round(Number(score) * 100),
       }))
-      .filter((e) => e.pct > 40)
+      .filter((e) => e.pct > 30)
       .sort((a, b) => b.pct - a.pct)
       .slice(0, 10);
   });

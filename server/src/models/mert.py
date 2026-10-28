@@ -112,7 +112,6 @@ class MertEmbedder(AudioEmbedder):
         # Compute valid frame counts proportional to unpadded waveform lengths
         max_len = max(len(w) for w in raw_waveforms)
         total_frames = last_hidden.shape[1]
-        embeddings = []
 
         for idx, w in enumerate(raw_waveforms):
             valid_frames = max(1, int(round((len(w) / max_len) * total_frames)))
@@ -123,7 +122,7 @@ class MertEmbedder(AudioEmbedder):
                 .numpy()
                 .astype(np.float32)
             )
-            embeddings.append(emb)
+            standardized_chunks[idx]["acoustic_embedding"] = emb
 
         return standardized_chunks
 

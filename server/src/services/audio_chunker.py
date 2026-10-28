@@ -201,7 +201,7 @@ class AudioChunker:
         for i in range(1, len(cand_sections)):
             sim = float(np.dot(current_vec, section_vectors[i]))
             if sim >= self.similarity_merge_threshold:
-                prev_start, _ = merged_sections[-1]
+                prev_start, prev_end = merged_sections[-1]
                 dur_prev = prev_end - prev_start
                 dur_curr = cand_sections[i][1] - cand_sections[i][0]
                 merged_sections[-1] = (prev_start, cand_sections[i][1])

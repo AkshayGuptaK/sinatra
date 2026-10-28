@@ -164,6 +164,8 @@ class PostgresStore:
         emotion_vector_normalized: Optional[List[float]] = None,
         coord_x: Optional[float] = 0,
         coord_y: Optional[float] = 0,
+        music_start: Optional[float] = 0.0,
+        music_end: Optional[float] = duration,
     ) -> None:
         # Format JSONB strings
         emotions_json = json.dumps(emotions) if emotions is not None else None
@@ -180,6 +182,11 @@ class PostgresStore:
         emotion_norm_vec_str = (
             f"[{','.join(f'{x:.6f}' for x in emotion_vector_normalized)}]"
             if emotion_vector_normalized is not None
+            else None
+        )
+        musical_emb_str = (
+            f"[{','.join(f'{x:.6f}' for x in musical_embedding)}]"
+            if musical_embedding is not None
             else None
         )
 
@@ -199,6 +206,8 @@ class PostgresStore:
                     emotion_vector_normalized,
                     coord_x,
                     coord_y,
+                    music_start,
+                    music_end,
                     updated_at
                 )
                 VALUES (
@@ -214,6 +223,8 @@ class PostgresStore:
                     %s::vector,     -- emotion_vector_normalized
                     %s,             -- coord_x
                     %s,             -- coord_y
+                    %s,             -- music_start
+                    %s,             -- music_end
                     NOW()           -- updated_at
                 )
                 ON CONFLICT (filepath) DO UPDATE SET
@@ -224,6 +235,8 @@ class PostgresStore:
                     emotion_vector_normalized = EXCLUDED.emotion_vector_normalized,
                     coord_x = EXCLUDED.coord_x,
                     coord_y = EXCLUDED.coord_y,
+                    music_start = EXCLUDED.music_start,
+                    music_end = EXCLUDED.music_end,
                     updated_at = NOW()
                 RETURNING id::text;
                 """,
@@ -240,11 +253,14 @@ class PostgresStore:
                     emotion_norm_vec_str,
                     coord_x,
                     coord_y,
+                    music_start,
+                    music_end
                 ),
             )
+            track_id = cur.fetchone()[0]
 
         self.conn.commit()
-        return cur.fetchone()[0]
+        return track_id
 
     def delete_by_filenames(self, filenames):
         with self.conn.cursor() as cur:

@@ -6,41 +6,76 @@ from src.sources import *
 from src.models.mert import get_mert_embedder
 from src.models.projector.mood_projector import get_mood_projector
 from src.services import get_emotion_scorer, get_metadata_extractor
+from src.services.audio_chunker import get_audio_chunker
 
 ai_executor = ThreadPoolExecutor(max_workers=1)
 
 
 def _process_single_file(path):
     try:
-        musical_embedder = get_mert_embedder()
-        musical_embedding = musical_embedder.extract(path)
+        chunker = get_audio_chunker()
+        chunked_track = chunker.chunk(path)
 
-        scorer = get_emotion_scorer()
-        emotions, emotion_vec, emotions_norm, emotion_norm_vec = scorer.score(
-            musical_embedding
-        )
+        if not chunked_track.chunks:
+            print(f"⚠️ No audio chunks generated for {path}", flush=True)
+            return
+
+        music_start = float(chunked_track.chunks[0].start_sec)
+        music_end = float(chunked_track.chunks[-1].end_sec)
+
+        embedder = get_mert_embedder()
+        embedded_chunks = embedder.extract(chunked_track.chunks)
+
+        scorer = get_mood_scorer()
+        chunk_raw_vecs = []
+        chunk_norm_vecs = []
+
+        for c in embedded_chunks:
+            raw_dict, raw_vec, norm_dict, norm_vec = scorer.score(c["acoustic_embedding"])
+            c["emotions"] = raw_dict
+            c["emotion_vector"] = raw_vec
+            c["emotions_normalized"] = norm_dict
+            c["emotion_vector_normalized"] = norm_vec
+
+            chunk_raw_vecs.append(raw_vec)
+            chunk_norm_vecs.append(norm_vec)
+
+        durations = np.array([float(c["duration"]) for c in embedded_chunks], dtype=np.float32)
+        total_dur = durations.sum()
+        weights = (durations / total_dur) if total_dur > 0 else (np.ones_like(durations) / len(durations))
+
+        chunk_embs = np.array([c["acoustic_embedding"] for c in embedded_chunks], dtype=np.float32)
+        global_musical_embedding = np.sum(chunk_embs * weights[:, np.newaxis], axis=0)
+        (global_emotions, global_raw_vec, global_emotions_norm, global_norm_vec) = scorer.score(global_musical_embedding)
 
         projector = get_mood_projector()
-        coord_x, coord_y = projector.project_track(emotions, emotions_norm)
+        coord_x, coord_y = projector.project_track(global_emotions, global_emotions_norm)
 
         extractor = get_metadata_extractor()
         meta = extractor.extract(path)
+        track_duration = meta.duration if meta and meta.duration > 0 else chunked_track.total_duration
 
         db = get_pg()
-        db.upsert_track(
+        track_id = db.upsert_track(
             filepath=path,
-            title=meta.title,
-            artist=meta.artist,
-            album=meta.album,
-            duration=meta.duration,
-            musical_embedding=musical_embedding.tolist(),
-            emotions=emotions,
-            emotion_vector=emotion_vec,
-            emotions_normalized=emotions_norm,
-            emotion_vector_normalized=emotion_norm_vec,
+            title=meta.title if meta else "",
+            artist=meta.artist if meta else "",
+            album=meta.album if meta else "",
+            duration=track_duration,
+            musical_embedding=global_musical_embedding.tolist(),
+            emotions=global_emotions,
+            emotion_vector=global_raw_vec.tolist(),
+            emotions_normalized=global_emotions_norm,
+            emotion_vector_normalized=global_norm_vec,
             coord_x=coord_x,
             coord_y=coord_y,
+            music_start=music_start,
+            music_end=music_end,
         )
+
+        db.save_track_chunks(track_id=track_id, chunks=embedded_chunks)
+
+        print(f"✅ Ingested {meta.title if meta else path} ({len(embedded_chunks)} chunks ", flush=True)
 
     except Exception as e:
         print(f"Failed to ingest {path}: {e}", flush=True)

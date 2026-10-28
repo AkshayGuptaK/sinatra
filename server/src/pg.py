@@ -23,7 +23,7 @@ SIMILARITY_COLUMN_MAP = {
 
 class PostgresStore:
     def __init__(self):
-        self.conn = psycopg.connect(config["postgres_dsn"])
+        self.conn = psycopg.connect(config["postgres_dsn"], autocommit=True)
         self._migrate()
 
     def _migrate(self):

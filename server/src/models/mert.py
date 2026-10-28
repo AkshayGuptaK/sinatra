@@ -2,11 +2,10 @@ from typing import Any, Optional, Union
 import numpy as np
 import torch
 from transformers import AutoModel, Wav2Vec2FeatureExtractor
+from src.models.audio_embedder import AudioEmbedder
 
-from src.models.base import BaseAudioEmbedder
 
-
-class MertEmbedder(BaseAudioEmbedder):
+class MertEmbedder(AudioEmbedder):
     MODEL_ID = "m-a-p/MERT-v2-30s"
     EMBEDDING_DIM = 1024
     TARGET_SAMPLING_RATE = 24000

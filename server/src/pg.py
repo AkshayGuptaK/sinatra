@@ -56,6 +56,100 @@ class PostgresStore:
                 )
                 self.conn.commit()
 
+    def _format_vector_str(vec) -> Optional[str]:
+        if vec is None:
+            return None
+        if hasattr(vec, "tolist"):
+            vec = vec.tolist()
+        return f"[{','.join(f'{x:.6f}' for x in vec)}]"
+
+    def save_track_chunks(
+        self,
+        track_id: str,
+        chunks: List[Dict[str, Any]],
+    ) -> None:
+        """Atomically replaces all structural chunks for a track.
+
+        Deletes any existing chunks for this track and inserts the new set
+        within a single transaction.
+        """
+        if not chunks:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM track_chunks WHERE track_id = %s::uuid;",
+                    (track_id,),
+                )
+            self.conn.commit()
+            return
+
+        batch_params = []
+        for c in chunks:
+            idx = int(c.get("chunk_index", c.get("index", 0)))
+
+            emotions = c.get("emotions")
+            emotions_norm = c.get("emotions_normalized")
+            emotions_json = json.dumps(emotions) if emotions is not None else None
+            emotions_norm_json = (
+                json.dumps(emotions_norm) if emotions_norm is not None else None
+            )
+
+            musical_emb = c.get("musical_embedding", c.get("acoustic_embedding"))
+            musical_vec_str = _format_vector_str(musical_emb)
+            emotion_vec_str = _format_vector_str(c.get("emotion_vector"))
+            emotion_norm_vec_str = _format_vector_str(
+                c.get("emotion_vector_normalized")
+            )
+
+            batch_params.append(
+                (
+                    track_id,
+                    idx,
+                    float(c["start_sec"]),
+                    float(c["end_sec"]),
+                    musical_vec_str,
+                    emotions_json,
+                    emotion_vec_str,
+                    emotions_norm_json,
+                    emotion_norm_vec_str,
+                )
+            )
+
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM track_chunks WHERE track_id = %s::uuid;",
+                (track_id,),
+            )
+
+            cur.executemany(
+                """
+                INSERT INTO track_chunks (
+                    track_id,
+                    chunk_index,
+                    start_sec,
+                    end_sec,
+                    musical_embedding,
+                    emotions,
+                    emotion_vector,
+                    emotions_normalized,
+                    emotion_vector_normalized
+                )
+                VALUES (
+                    %s::uuid,
+                    %s,
+                    %s,
+                    %s,
+                    %s::vector,
+                    %s::jsonb,
+                    %s::vector,
+                    %s::jsonb,
+                    %s::vector
+                );
+                """,
+                batch_params,
+            )
+
+        self.conn.commit()
+
     def upsert_track(
         self,
         filepath: str,
@@ -510,6 +604,7 @@ class PostgresStore:
             cur.execute(query, params)
             rows = cur.fetchall()
             return rows
+
 
 _pg_instance = None
 

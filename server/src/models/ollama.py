@@ -1,6 +1,6 @@
 from ollama import Client
 from langchain_ollama import ChatOllama
-from src.models.base import AIProvider
+from src.models.ai_provider import AIProvider
 from src.config import config
 
 

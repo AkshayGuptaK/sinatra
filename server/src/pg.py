@@ -207,7 +207,7 @@ class PostgresStore:
                         "coord_x": r[8] or 0,
                         "coord_y": r[9] or 0,
                         "lyrics_emotions": r[10] or {},
-                        "lyrics_emotions_coords": r[11] or [0,0]
+                        "lyrics_emotions_coords": r[11] or [0, 0],
                     }
                     for r in result
                 ]
@@ -503,6 +503,11 @@ class PostgresStore:
             self.conn.rollback()
             return False
 
+    def fetch_all(self, query, params=None):
+        with self.conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(query, params)
+            rows = cur.fetchall()
+            return rows
 
 _pg_instance = None
 

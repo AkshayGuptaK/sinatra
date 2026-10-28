@@ -59,7 +59,13 @@ export const SETTINGS_DEFINITIONS: SettingDefinition[] = [
         value: 'crossfade_5s',
         label: 'Crossfade (5s)',
         description: '5-second overlap blend'
-      }
+      },
+      {
+        value: 'gapless',
+        label: 'Gapless',
+        description: 'Skip all silence'
+      },
+
     ],
     defaultValue: 'off'
   },

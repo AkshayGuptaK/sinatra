@@ -8,6 +8,19 @@ interface AudioDeck {
   trackId: string | null;
 }
 
+export interface NextTrack {
+  id: string;
+  start: number;
+  end: number;
+}
+
+const FADE_PLAY_PAUSE_SEC = 0.7;
+const FADE_ANTI_POP_SEC = 0.02;
+const FADE_SEEK_SEC = 0.03;
+const PRELOAD_LOOKAHEAD_SEC = 2.5;
+const GAPLESS_SCHEDULE_WINDOW_SEC = 1.0;
+const GAPLESS_IMMEDIATE_THRESHOLD_SEC = 0.05;
+
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private decks: AudioDeck[] = [];
@@ -22,16 +35,22 @@ export class AudioEngine {
   private analyserNode: AnalyserNode | null = null;
   private freqDataArray: Uint8Array | null = null;
 
-  // Transition tracking
+  // Timers & transition state
   private isTransitioning = false;
+  private gaplessTimer: ReturnType<typeof setTimeout> | null = null;
   private transitionTimer: ReturnType<typeof setTimeout> | null = null;
+  private pauseTimer: ReturnType<typeof setTimeout> | null = null;
+  private seekTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Reactive playback state (for the currently active deck)
   isPlaying = $state(false);
   currentTime = $state(0);
   duration = $state(0);
   isLooping = $state(false);
+
   currentTrackId = $state<string | null>(null);
+  currentMusicStart = $state<number>(0);
+  currentMusicEnd = $state<number | null>(null);
 
   // Reactive settings subscriptions pulled from store
   fadeEnabled = $derived(Boolean(settings.get("playback.fade") ?? true));
@@ -45,8 +64,8 @@ export class AudioEngine {
     settings.get<string>("playback.outputDevice") ?? "default"
   );
 
-  /** Invoked when approaching end to fetch next track ID for seamless handoff */
-  getNextTrackId: (() => string | null) | null = null;
+  /** Invoked when approaching end to fetch next track info for seamless handoff */
+  getNextTrack: (() => NextTrack | null) | null = null;
 
   /** Invoked when crossfade or gapless transition starts playing the next track */
   onTrackAdvanced: (() => void) | null = null;
@@ -57,6 +76,21 @@ export class AudioEngine {
   constructor() {
     if (typeof window !== "undefined") {
       this.initDecks();
+
+      // Reactively apply live settings changes without waiting for next track load
+      $effect.root(() => {
+        $effect(() => {
+          const _ = this.normalizationEnabled;
+          this.syncNormalizationRouting();
+        });
+
+        $effect(() => {
+          const deviceId = this.outputDeviceId;
+          if (deviceId) {
+            this.setOutputDevice(deviceId);
+          }
+        });
+      });
     }
   }
 
@@ -64,6 +98,7 @@ export class AudioEngine {
     for (let i = 0; i < 2; i++) {
       const audio = new Audio();
       audio.crossOrigin = "anonymous";
+      audio.preload = "auto";
       this.decks.push({
         audio,
         sourceNode: null,
@@ -96,11 +131,12 @@ export class AudioEngine {
 
       // Normalizer (DynamicsCompressor) Chain
       this.compressorNode = this.ctx.createDynamicsCompressor();
-      this.compressorNode.threshold.setValueAtTime(-24, this.ctx.currentTime);
-      this.compressorNode.knee.setValueAtTime(30, this.ctx.currentTime);
-      this.compressorNode.ratio.setValueAtTime(3, this.ctx.currentTime);
-      this.compressorNode.attack.setValueAtTime(0.003, this.ctx.currentTime);
-      this.compressorNode.release.setValueAtTime(0.25, this.ctx.currentTime);
+      const now = this.ctx.currentTime;
+      this.compressorNode.threshold.setValueAtTime(-24, now);
+      this.compressorNode.knee.setValueAtTime(30, now);
+      this.compressorNode.ratio.setValueAtTime(3, now);
+      this.compressorNode.attack.setValueAtTime(0.003, now);
+      this.compressorNode.release.setValueAtTime(0.25, now);
 
       this.normalizerGain = this.ctx.createGain();
       this.bypassGain = this.ctx.createGain();
@@ -141,6 +177,9 @@ export class AudioEngine {
   private syncNormalizationRouting() {
     if (!this.ctx || !this.normalizerGain || !this.bypassGain) return;
     const now = this.ctx.currentTime;
+    this.normalizerGain.gain.cancelScheduledValues(now);
+    this.bypassGain.gain.cancelScheduledValues(now);
+
     if (this.normalizationEnabled) {
       this.normalizerGain.gain.setValueAtTime(1, now);
       this.bypassGain.gain.setValueAtTime(0, now);
@@ -159,14 +198,18 @@ export class AudioEngine {
     });
 
     audio.addEventListener("pause", () => {
-      if (index === this.activeDeckIdx && !this.isTransitioning) {
+      if (
+        index === this.activeDeckIdx &&
+        !this.isTransitioning &&
+        !this.pauseTimer
+      ) {
         this.isPlaying = false;
       }
     });
 
     audio.addEventListener("loadedmetadata", () => {
       if (index === this.activeDeckIdx) {
-        this.duration = audio.duration;
+        this.duration = Number.isFinite(audio.duration) ? audio.duration : 0;
       }
     });
 
@@ -189,52 +232,210 @@ export class AudioEngine {
     });
   }
 
-  /**
-   * Evaluates whether to start preloading or crossfading into the next track.
-   */
-  private checkTransitionTrigger(current: number, total: number) {
-    if (!total || total <= 0 || this.isTransitioning || this.isLooping) return;
+  // --- Deck & Gain Helpers ---
 
-    let crossfadeDuration = 0;
-    if (this.transitionMode === "crossfade_3s") crossfadeDuration = 3;
-    if (this.transitionMode === "crossfade_5s") crossfadeDuration = 5;
+  private setDeckGainImmediate(deck: AudioDeck, value: number) {
+    if (!this.ctx || !deck.gainNode) return;
+    const now = this.ctx.currentTime;
+    deck.gainNode.gain.cancelScheduledValues(now);
+    deck.gainNode.gain.setValueAtTime(value, now);
+  }
 
-    const remaining = total - current;
+  private rampDeckGain(
+    deck: AudioDeck,
+    from: number,
+    to: number,
+    durationSec: number
+  ) {
+    if (!this.ctx || !deck.gainNode) return;
+    const now = this.ctx.currentTime;
+    deck.gainNode.gain.cancelScheduledValues(now);
+    deck.gainNode.gain.setValueAtTime(from, now);
+    deck.gainNode.gain.linearRampToValueAtTime(to, now + durationSec);
+  }
 
-    if (crossfadeDuration > 0 && remaining <= crossfadeDuration) {
-      const nextId = this.getNextTrackId?.();
-      if (nextId) {
-        this.executeCrossfade(nextId, crossfadeDuration);
+  private safeSeekDeck(deck: AudioDeck, targetSeconds: number) {
+    if (targetSeconds <= 0) return;
+
+    const applySeek = () => {
+      try {
+        deck.audio.currentTime = targetSeconds;
+      } catch (e) {
+        console.warn("Could not cue deck to target time:", e);
       }
+    };
+
+    if (deck.audio.readyState >= 1) {
+      applySeek();
+    } else {
+      deck.audio.addEventListener("loadedmetadata", applySeek, { once: true });
+    }
+  }
+
+  private preloadDeck(deck: AudioDeck, track: NextTrack, cueStart = false) {
+    if (deck.trackId !== track.id) {
+      deck.trackId = track.id;
+      deck.audio.src = sinatraApi.getStreamUrl(track.id);
+      deck.audio.load();
+    }
+    if (cueStart && track.start > 0) {
+      this.safeSeekDeck(deck, track.start);
+    }
+  }
+
+  private promoteStandbyDeck(next: NextTrack) {
+    this.activeDeckIdx = 1 - this.activeDeckIdx;
+    const active = this.activeDeck;
+
+    this.currentTrackId = next.id;
+    this.currentMusicStart = next.start;
+    this.currentMusicEnd = next.end;
+    this.currentTime = active.audio.currentTime;
+    this.duration = Number.isFinite(active.audio.duration)
+      ? active.audio.duration
+      : 0;
+    this.isPlaying = !active.audio.paused;
+
+    this.onTrackAdvanced?.();
+  }
+
+  private clearAllTimers() {
+    if (this.gaplessTimer) {
+      clearTimeout(this.gaplessTimer);
+      this.gaplessTimer = null;
+    }
+    if (this.transitionTimer) {
+      clearTimeout(this.transitionTimer);
+      this.transitionTimer = null;
+    }
+    if (this.pauseTimer) {
+      clearTimeout(this.pauseTimer);
+      this.pauseTimer = null;
+    }
+    if (this.seekTimer) {
+      clearTimeout(this.seekTimer);
+      this.seekTimer = null;
+    }
+  }
+
+  private cancelActiveTransitions() {
+    this.clearAllTimers();
+    if (this.isTransitioning) {
+      const standby = this.standbyDeck;
+      standby.audio.pause();
+      standby.audio.currentTime = 0;
+      this.setDeckGainImmediate(standby, 1);
+      this.isTransitioning = false;
+    }
+  }
+
+  // --- Transition Evaluation & Execution ---
+
+  private get crossfadeDuration(): number {
+    if (this.transitionMode === "crossfade_3s") return 3;
+    if (this.transitionMode === "crossfade_5s") return 5;
+    return 0;
+  }
+
+  private checkTransitionTrigger(current: number, total: number) {
+    if (
+      !Number.isFinite(total) ||
+      total <= 0 ||
+      this.isTransitioning ||
+      this.isLooping
+    ) {
       return;
     }
 
-    if (remaining <= 2) {
-      const nextId = this.getNextTrackId?.();
-      const standby = this.standbyDeck;
-      if (nextId && standby.trackId !== nextId) {
-        standby.trackId = nextId;
-        standby.audio.src = sinatraApi.getStreamUrl(nextId);
-        standby.audio.load();
+    const isGapless = this.transitionMode === "gapless";
+    const effectiveEnd =
+      isGapless && this.currentMusicEnd && this.currentMusicEnd > 0
+        ? Math.min(this.currentMusicEnd, total)
+        : total;
+
+    const remaining = effectiveEnd - current;
+    const xfadeSec = this.crossfadeDuration;
+
+    // 1. Preload upcoming track ahead of any transition window
+    const preloadWindow = Math.max(xfadeSec + 2, PRELOAD_LOOKAHEAD_SEC);
+    if (remaining <= preloadWindow) {
+      const next = this.getNextTrack?.();
+      if (!next) return;
+
+      const shouldCueStart = isGapless || xfadeSec > 0;
+      this.preloadDeck(this.standbyDeck, next, shouldCueStart);
+
+      // 2. Crossfade Trigger
+      if (xfadeSec > 0 && remaining <= xfadeSec) {
+        this.executeCrossfade(next, xfadeSec);
+        return;
+      }
+
+      // 3. Gapless Trigger
+      if (isGapless) {
+        if (remaining <= GAPLESS_IMMEDIATE_THRESHOLD_SEC) {
+          this.executeGaplessHandoff(next);
+        } else if (
+          remaining <= GAPLESS_SCHEDULE_WINDOW_SEC &&
+          !this.gaplessTimer
+        ) {
+          const delayMs = Math.max(0, remaining * 1000);
+          this.gaplessTimer = setTimeout(() => {
+            this.gaplessTimer = null;
+            if (this.isPlaying && !this.isTransitioning) {
+              const target = this.getNextTrack?.();
+              if (target) this.executeGaplessHandoff(target);
+            }
+          }, delayMs);
+        }
       }
     }
   }
 
-  private async executeCrossfade(nextTrackId: string, durationSec: number) {
-    if (!this.ctx || this.isTransitioning) return;
+  private async executeGaplessHandoff(next: NextTrack) {
+    if (this.isTransitioning) return;
     this.isTransitioning = true;
+
+    if (this.gaplessTimer) {
+      clearTimeout(this.gaplessTimer);
+      this.gaplessTimer = null;
+    }
 
     const outgoing = this.activeDeck;
     const incoming = this.standbyDeck;
 
-    // Prepare incoming deck
-    incoming.trackId = nextTrackId;
-    incoming.audio.src = sinatraApi.getStreamUrl(nextTrackId);
-    incoming.audio.load();
+    this.preloadDeck(incoming, next, true);
+    this.setDeckGainImmediate(incoming, 1);
 
-    const now = this.ctx.currentTime;
-    incoming.gainNode?.gain.setValueAtTime(0, now);
-    outgoing.gainNode?.gain.setValueAtTime(1, now);
+    try {
+      await incoming.audio.play();
+    } catch (e) {
+      console.error("Gapless playback handoff failed:", e);
+      this.isTransitioning = false;
+      return;
+    }
+
+    outgoing.audio.pause();
+    outgoing.audio.currentTime = 0;
+
+    this.promoteStandbyDeck(next);
+    this.isTransitioning = false;
+  }
+
+  private async executeCrossfade(next: NextTrack, durationSec: number) {
+    if (!this.ctx || this.isTransitioning) return;
+    this.isTransitioning = true;
+
+    if (this.gaplessTimer) {
+      clearTimeout(this.gaplessTimer);
+      this.gaplessTimer = null;
+    }
+
+    const outgoing = this.activeDeck;
+    const incoming = this.standbyDeck;
+
+    this.preloadDeck(incoming, next, true);
+    this.setDeckGainImmediate(incoming, 0);
 
     try {
       await incoming.audio.play();
@@ -244,37 +445,46 @@ export class AudioEngine {
       return;
     }
 
-    // Equal-power linear gain curves
-    incoming.gainNode?.gain.linearRampToValueAtTime(1, now + durationSec);
-    outgoing.gainNode?.gain.linearRampToValueAtTime(0, now + durationSec);
+    // Linear crossfade gain ramps
+    this.rampDeckGain(incoming, 0, 1, durationSec);
+    this.rampDeckGain(outgoing, 1, 0, durationSec);
 
-    // Switch active deck pointer
-    this.activeDeckIdx = 1 - this.activeDeckIdx;
-    this.currentTrackId = nextTrackId;
-    this.onTrackAdvanced?.();
+    this.promoteStandbyDeck(next);
 
     if (this.transitionTimer) clearTimeout(this.transitionTimer);
     this.transitionTimer = setTimeout(() => {
+      this.transitionTimer = null;
       outgoing.audio.pause();
       outgoing.audio.currentTime = 0;
-      outgoing.gainNode?.gain.setValueAtTime(1, this.ctx?.currentTime ?? 0);
+      this.setDeckGainImmediate(outgoing, 1);
       this.isTransitioning = false;
     }, durationSec * 1000);
   }
 
-  async loadTrack(trackId: string, autoPlay = true) {
+  // --- Transport Controls ---
+
+  async loadTrack(track: NextTrack, autoPlay = true) {
     this.initContext();
     this.syncNormalizationRouting();
+    this.cancelActiveTransitions();
+
+    // If standby deck already preloaded this exact track, swap to it instead of re-fetching
+    if (
+      this.standbyDeck.trackId === track.id &&
+      this.standbyDeck.audio.readyState >= 2
+    ) {
+      this.activeDeck.audio.pause();
+      this.activeDeck.audio.currentTime = 0;
+      this.activeDeckIdx = 1 - this.activeDeckIdx;
+    }
 
     const deck = this.activeDeck;
-    this.currentTrackId = trackId;
-    deck.trackId = trackId;
-    deck.audio.src = sinatraApi.getStreamUrl(trackId);
-    deck.audio.load();
+    this.currentTrackId = track.id;
+    this.currentMusicStart = track.start;
+    this.currentMusicEnd = track.end;
 
-    if (deck.gainNode && this.ctx) {
-      deck.gainNode.gain.setValueAtTime(1, this.ctx.currentTime);
-    }
+    this.preloadDeck(deck, track, this.transitionMode === "gapless");
+    this.setDeckGainImmediate(deck, 1);
 
     if (autoPlay) {
       await this.play();
@@ -283,18 +493,20 @@ export class AudioEngine {
 
   async play() {
     this.initContext();
+    if (this.pauseTimer) {
+      clearTimeout(this.pauseTimer);
+      this.pauseTimer = null;
+    }
+
     const deck = this.activeDeck;
     if (!deck.audio) return;
 
-    const rampTime = this.fadeEnabled ? 0.7 : 0.03;
+    const rampTime = this.fadeEnabled ? FADE_PLAY_PAUSE_SEC : FADE_ANTI_POP_SEC;
 
     if (deck.gainNode && this.ctx) {
-      deck.gainNode.gain.setValueAtTime(0, this.ctx.currentTime);
+      this.setDeckGainImmediate(deck, 0);
       await deck.audio.play();
-
-      const now = this.ctx.currentTime;
-      deck.gainNode.gain.setValueAtTime(0, now);
-      deck.gainNode.gain.linearRampToValueAtTime(1, now + rampTime);
+      this.rampDeckGain(deck, 0, 1, rampTime);
     } else {
       await deck.audio.play();
     }
@@ -303,19 +515,27 @@ export class AudioEngine {
   }
 
   pause() {
+    if (this.gaplessTimer) {
+      clearTimeout(this.gaplessTimer);
+      this.gaplessTimer = null;
+    }
+    if (this.pauseTimer) {
+      clearTimeout(this.pauseTimer);
+      this.pauseTimer = null;
+    }
+
     const deck = this.activeDeck;
     if (!deck.audio) return;
 
-    const rampTime = this.fadeEnabled ? 0.7 : 0.03;
+    const rampTime = this.fadeEnabled ? FADE_PLAY_PAUSE_SEC : FADE_ANTI_POP_SEC;
 
     if (deck.gainNode && this.ctx) {
-      const now = this.ctx.currentTime;
-      deck.gainNode.gain.setValueAtTime(1, now);
-      deck.gainNode.gain.linearRampToValueAtTime(0, now + rampTime);
+      this.rampDeckGain(deck, 1, 0, rampTime);
 
-      setTimeout(() => {
+      this.pauseTimer = setTimeout(() => {
+        this.pauseTimer = null;
         deck.audio.pause();
-        deck.gainNode?.gain.setValueAtTime(1, this.ctx?.currentTime ?? 0);
+        this.setDeckGainImmediate(deck, 1);
         this.isPlaying = false;
       }, rampTime * 1000);
     } else {
@@ -333,6 +553,15 @@ export class AudioEngine {
   }
 
   seekTo(timeInSeconds: number) {
+    if (this.gaplessTimer) {
+      clearTimeout(this.gaplessTimer);
+      this.gaplessTimer = null;
+    }
+    if (this.seekTimer) {
+      clearTimeout(this.seekTimer);
+      this.seekTimer = null;
+    }
+
     const deck = this.activeDeck;
     if (!deck.audio) return;
 
@@ -341,19 +570,14 @@ export class AudioEngine {
       this.duration || Infinity
     );
 
-    // Micro-fade down/up to avoid pop noise
     if (this.fadeEnabled && deck.gainNode && this.ctx && this.isPlaying) {
-      const now = this.ctx.currentTime;
-      deck.gainNode.gain.setValueAtTime(1, now);
-      deck.gainNode.gain.linearRampToValueAtTime(0, now + 0.03);
-      setTimeout(() => {
+      this.rampDeckGain(deck, 1, 0, FADE_SEEK_SEC);
+      this.seekTimer = setTimeout(() => {
+        this.seekTimer = null;
         deck.audio.currentTime = target;
         this.currentTime = target;
-        deck.gainNode?.gain.linearRampToValueAtTime(
-          1,
-          (this.ctx?.currentTime ?? 0) + 0.03
-        );
-      }, 30);
+        this.rampDeckGain(deck, 0, 1, FADE_SEEK_SEC);
+      }, FADE_SEEK_SEC * 1000);
     } else {
       deck.audio.currentTime = target;
       this.currentTime = target;
@@ -373,7 +597,9 @@ export class AudioEngine {
 
   setVolume(val: number) {
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setValueAtTime(val, this.ctx.currentTime);
+      const now = this.ctx.currentTime;
+      this.masterGain.gain.cancelScheduledValues(now);
+      this.masterGain.gain.setValueAtTime(val, now);
     } else {
       for (const deck of this.decks) {
         deck.audio.volume = val;
@@ -381,14 +607,15 @@ export class AudioEngine {
     }
   }
 
-  /**
-   * Switches output device sink ID across all decks and Web Audio destination
-   */
   async setOutputDevice(deviceId: string) {
     for (const deck of this.decks) {
       if ("setSinkId" in deck.audio) {
         try {
-          await (deck.audio as any).setSinkId(deviceId);
+          await (
+            deck.audio as HTMLAudioElement & {
+              setSinkId: (id: string) => Promise<void>;
+            }
+          ).setSinkId(deviceId);
         } catch (e) {
           console.warn("Failed to set sinkId on audio element:", e);
         }
@@ -423,7 +650,7 @@ export class AudioEngine {
         count++;
       }
 
-      let avg = count > 0 ? sum / count / 255 : 0;
+      const avg = count > 0 ? sum / count / 255 : 0;
       const highBoost = 1 + (i / barCount) * 0.6;
       bands.push(Math.min(1.0, avg * highBoost));
     }

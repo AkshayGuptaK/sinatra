@@ -47,15 +47,20 @@ export class MusicPlayer {
   constructor() {
     this.engine = new AudioEngine();
     this.engine.onTrackEnded = () => this.handleTrackEnded();
-    this.engine.getNextTrackId = () => {
-      if (this.loopMode === "one") return this.currentTrackId;
-      if (this.currentIndex >= 0 && this.currentIndex + 1 < this.queue.length) {
-        return this.queue[this.currentIndex + 1].id;
+    this.engine.getNextTrack = () => {
+      let nextIndex;
+
+      if (this.loopMode === "one") {
+        nextIndex = this.currentIndex
+      } else if (this.currentIndex >= 0 && this.currentIndex + 1 < this.queue.length) {
+        nextIndex = this.currentIndex + 1;
+      } else if (this.loopMode === "all" && this.queue.length > 0) {
+        nextIndex = 0;
+      } else {
+        return null;
       }
-      if (this.loopMode === "all" && this.queue.length > 0) {
-        return this.queue[0].id;
-      }
-      return null;
+      let track = this.queue[nextIndex]
+      return { id: track.id, start: track.start, end: track.end }
     };  
     this.engine.onTrackAdvanced = () => {
       if (this.hasNext) {
@@ -88,7 +93,7 @@ export class MusicPlayer {
 
     const currentId = this.currentTrackId;
     if (currentId) {
-      this.engine.loadTrack(currentId, autoPlay);
+      this.engine.loadTrack(this.queue[this.currentIndex], autoPlay);
     }
   }
 
@@ -169,7 +174,7 @@ export class MusicPlayer {
     // If nothing is playing, kick off playback with the new track
     if (this.currentIndex === -1) {
       this.currentIndex = 0;
-      this.engine.loadTrack(track.id, true);
+      this.engine.loadTrack(track, true);
       this.checkAndTriggerAutoDj();
     }
   }
@@ -281,7 +286,7 @@ export class MusicPlayer {
     if (index < 0 || index >= this.queue.length) return;
     this.currentIndex = index;
     const track = this.queue[index];
-    await this.engine.loadTrack(track.id, true);
+    await this.engine.loadTrack(track, true);
     this.checkAndTriggerAutoDj();
   }
 

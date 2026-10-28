@@ -7,6 +7,8 @@ export interface Track {
   album: string;
   mood: string;
   tags: string[];
+  start: number;
+  end: number;
   duration: number;
   emotions: Record<string, number> | null;
   coord_x: number | null;

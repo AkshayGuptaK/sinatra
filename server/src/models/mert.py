@@ -95,23 +95,36 @@ class MertEmbedder(BaseAudioEmbedder):
             sampling_rate=self.target_sampling_rate,
             return_tensors="pt",
             padding=True,
+            return_attention_mask=True,
         )
         input_values = inputs.input_values.to(self.device)
+        attention_mask = inputs.attention_mask.to(self.device)
 
         # 3. Batched Model Inference
         with torch.no_grad():
-            outputs = self.model(input_values=input_values, output_hidden_states=True)
+            outputs = self.model(
+                input_values=input_values,
+                attention_mask=attention_mask,
+                output_hidden_states=True,
+            )
 
-        # outputs.hidden_states[-1] shape: (Batch_Size, Time_Frames, 1024)
-        last_hidden = outputs.hidden_states[-1]
+        last_hidden = outputs.hidden_states[-1]  # (B, T_frames, 1024)
 
-        # 4. Temporal Mean Pooling per Chunk
-        # (Batch_Size, Time_Frames, 1024) -> (Batch_Size, 1024)
-        embeddings = last_hidden.mean(dim=1).cpu().numpy().astype(np.float32)
+        # Compute valid frame counts proportional to unpadded waveform lengths
+        max_len = max(len(w) for w in raw_waveforms)
+        total_frames = last_hidden.shape[1]
+        embeddings = []
 
-        # 5. Attach embedding to each chunk dictionary
-        for idx, chunk_dict in enumerate(standardized_chunks):
-            chunk_dict["acoustic_embedding"] = embeddings[idx]
+        for idx, w in enumerate(raw_waveforms):
+            valid_frames = max(1, int(round((len(w) / max_len) * total_frames)))
+            emb = (
+                last_hidden[idx, :valid_frames, :]
+                .mean(dim=0)
+                .cpu()
+                .numpy()
+                .astype(np.float32)
+            )
+            embeddings.append(emb)
 
         return standardized_chunks
 

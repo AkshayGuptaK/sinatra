@@ -130,7 +130,8 @@ class PostgresStore:
                     emotion_vector_normalized = EXCLUDED.emotion_vector_normalized,
                     coord_x = EXCLUDED.coord_x,
                     coord_y = EXCLUDED.coord_y,
-                    updated_at = NOW();
+                    updated_at = NOW()
+                RETURNING id::text;
                 """,
                 (
                     filepath,
@@ -149,6 +150,7 @@ class PostgresStore:
             )
 
         self.conn.commit()
+        return cur.fetchone()[0]
 
     def delete_by_filenames(self, filenames):
         with self.conn.cursor() as cur:

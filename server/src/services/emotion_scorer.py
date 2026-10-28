@@ -48,7 +48,7 @@ class EmotionScorer:
         self._load_weights()
 
         # Calibration arrays for 0.0 - 1.0 normalization
-        self.p_min: np.ndarray  # Shape: (24,)
+        self.p_median: np.ndarray  # Shape: (24,)
         self.p_range: np.ndarray  # Shape: (24,)
         self._load_calibration_stats()
 
@@ -68,7 +68,7 @@ class EmotionScorer:
         self.biases = df["intercept"].values.astype(np.float32)
 
     def _load_calibration_stats(self) -> None:
-        """Derives empirical 1st and 99th percentile bounds from the model's own
+        """Derives empirical 50th and 99th percentile bounds from the model's own
         predictions on the reference training embeddings.
 
         Because L2-regularized Ridge regression shrinks prediction variance
@@ -77,34 +77,37 @@ class EmotionScorer:
         predicted scores cleanly across [0.0, 1.0] without compression.
         """
         if not self.ref_path.exists():
-            self.p_min = np.zeros(len(self.mood_names), dtype=np.float32)
+            self.p_median = np.zeros(len(self.mood_names), dtype=np.float32)
             self.p_range = np.ones(len(self.mood_names), dtype=np.float32)
             return
 
         ref_df = pd.read_csv(self.ref_path)
         feature_cols = [f"mert_{i}" for i in range(1024)]
 
-        # Get raw training embeddings: shape (N, 1024)
+        # Get reference embeddings: shape (N, 1024)
         X_train = ref_df[feature_cols].values.astype(np.float32)
 
-        # Generate the model's actual predictions on the training data: shape (N, 24)
+        # Generate model predictions on reference corpus: shape (N, 24)
         y_train_pred = np.dot(X_train, self.weights) + self.biases
 
-        # Calculate percentiles on the MODEL's output distribution
-        p1 = np.percentile(y_train_pred, 1, axis=0)
+        # Calculate percentiles: p50 (noise floor) and p99 (archetype ceiling)
+        p50 = np.percentile(y_train_pred, 50, axis=0)
         p99 = np.percentile(y_train_pred, 99, axis=0)
 
-        self.p_min = p1.astype(np.float32)
-        diff = p99 - p1
+        self.p_median = p50.astype(np.float32)
+        diff = p99 - p50
         self.p_range = np.where(diff > 1e-6, diff, 1.0).astype(np.float32)
 
     def score(
         self, embedding: np.ndarray | List[float]
-    ) -> Tuple[Dict[str, float], List[float], Dict[str, float], List[float]]:
+        ) -> Tuple[Dict[str, float], List[float], Dict[str, float], List[float]]:
         """Projects a 1024-dimensional MERT embedding into mood space.
 
         Computes both raw continuous regression scores (y = x @ W + b) and
-        calibrated scores normalized against the empirical distribution into [0.0, 1.0].
+        calibrated scores normalized into [0.0, 1.0] using Median-Anchored
+        Positive Scaling:
+            - 0.0: Background noise floor (at or below the 50th percentile / median)
+            - 1.0: Peak archetype expression (at or above the 99th percentile)
 
         Args:
             embedding: 1024-element vector (list or numpy array).
@@ -127,8 +130,9 @@ class EmotionScorer:
         }
         raw_mood_vector = [float(v) for v in raw_scores]
 
-        # 2. Normalized prediction: [0.0, 1.0]
-        norm_scores = np.clip((raw_scores - self.p_min) / self.p_range, 0.0, 1.0)
+        # 2. Median-Anchored Normalized prediction: [0.0, 1.0]
+        # Any score at or below median (p50) clips to 0.0; scales linearly to p99 (1.0)
+        norm_scores = np.clip((raw_scores - self.p_median) / self.p_range, 0.0, 1.0)
         norm_moods_dict: Dict[str, float] = {
             mood: round(float(val), 4)
             for mood, val in zip(self.mood_names, norm_scores)
@@ -136,7 +140,6 @@ class EmotionScorer:
         norm_mood_vector = [round(float(v), 6) for v in norm_scores]
 
         return raw_moods_dict, raw_mood_vector, norm_moods_dict, norm_mood_vector
-
 
 _scorer_instance: EmotionScorer | None = None
 

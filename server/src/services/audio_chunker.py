@@ -54,76 +54,84 @@ class AudioChunker:
         filepath: Union[str, Path],
         waveform: Optional[np.ndarray] = None,
     ) -> ChunkedTrack:
-        """Loads audio (if not pre-loaded), segments into structural chapters,
-
-        and returns the waveforms and timestamps for each chunk.
-        """
         filepath_str = str(filepath)
 
-        # 1. Decode Audio if not provided
+        # 1. Decode Audio
         if waveform is None:
             raw_audio = FileSystemSource.read_file(filepath_str, self.sample_rate, 1)
             if hasattr(raw_audio, "numpy"):
                 raw_audio = raw_audio.numpy()
             waveform = np.asarray(raw_audio, dtype=np.float32).squeeze()
 
-        total_samples = waveform.shape[0]
-        total_sec = total_samples / self.sample_rate
+        original_total_sec = waveform.shape[0] / self.sample_rate
 
-        # 2. Edge Case: Track is shorter than minimum crop threshold
-        if total_sec <= self.crop_sec:
+        # 2. Trim Leading & Trailing Silence (40dB below peak)
+        trimmed_waveform, (start_sample, end_sample) = librosa.effects.trim(
+            waveform, top_db=40.0
+        )
+        trim_offset_sec = start_sample / self.sample_rate
+        trimmed_total_sec = trimmed_waveform.shape[0] / self.sample_rate
+
+        if trimmed_waveform.shape[0] < self.sample_rate:  # Less than 1 second of audio
+            trimmed_waveform = waveform
+            trim_offset_sec = 0.0
+            trimmed_total_sec = original_total_sec
+
+        # If audio is very short, return single chunk
+        if trimmed_total_sec <= self.crop_sec:
             single_chunk = AudioChunk(
                 index=0,
-                start_sec=0.0,
-                end_sec=total_sec,
-                duration=total_sec,
-                waveform=waveform.copy(),
-                crop_start_sec=0.0,
-                crop_end_sec=total_sec,
+                start_sec=round(trim_offset_sec, 2),
+                end_sec=round(trim_offset_sec + trimmed_total_sec, 2),
+                duration=round(trimmed_total_sec, 2),
+                waveform=trimmed_waveform.copy(),
+                crop_start_sec=round(trim_offset_sec, 2),
+                crop_end_sec=round(trim_offset_sec + trimmed_total_sec, 2),
             )
             return ChunkedTrack(
                 filepath=filepath_str,
-                total_duration=total_sec,
+                total_duration=round(original_total_sec, 2),
                 chunks=[single_chunk],
             )
 
-        # 3. Detect Structural Boundaries (DSP)
-        sections = self._detect_sections(waveform, total_sec)
+        # 3. Detect Structural Boundaries on trimmed waveform
+        sections = self._detect_sections(trimmed_waveform, trimmed_total_sec)
 
-        # 4. Extract Representative Waveform Crops
+        # 4. Extract Representative Crops with Original-File Offset Adjusted
         chunks: list[AudioChunk] = []
         for idx, (s_start, s_end) in enumerate(sections):
             sec_dur = s_end - s_start
 
             if sec_dur <= self.crop_sec:
-                # Section is between 10s and 15s: take whole section unpadded
                 crop_start = s_start
                 crop_end = s_end
             else:
-                # Center-crop 15s inside the section
                 mid = (s_start + s_end) / 2.0
                 crop_start = mid - (self.crop_sec / 2.0)
                 crop_end = crop_start + self.crop_sec
 
             c_start_sample = max(0, int(crop_start * self.sample_rate))
-            c_end_sample = min(total_samples, int(crop_end * self.sample_rate))
-            chunk_wave = waveform[c_start_sample:c_end_sample].copy()
+            c_end_sample = min(
+                trimmed_waveform.shape[0], int(crop_end * self.sample_rate)
+            )
+            chunk_wave = trimmed_waveform[c_start_sample:c_end_sample].copy()
 
+            # Align timestamps back to original untrimmed track coordinates
             chunks.append(
                 AudioChunk(
                     index=idx,
-                    start_sec=round(s_start, 2),
-                    end_sec=round(s_end, 2),
+                    start_sec=round(s_start + trim_offset_sec, 2),
+                    end_sec=round(s_end + trim_offset_sec, 2),
                     duration=round(sec_dur, 2),
                     waveform=chunk_wave,
-                    crop_start_sec=round(crop_start, 2),
-                    crop_end_sec=round(crop_end, 2),
+                    crop_start_sec=round(crop_start + trim_offset_sec, 2),
+                    crop_end_sec=round(crop_end + trim_offset_sec, 2),
                 )
             )
 
         return ChunkedTrack(
             filepath=filepath_str,
-            total_duration=round(total_sec, 2),
+            total_duration=round(original_total_sec, 2),
             chunks=chunks,
         )
 
@@ -194,9 +202,9 @@ class AudioChunker:
             sim = float(np.dot(current_vec, section_vectors[i]))
             if sim >= self.similarity_merge_threshold:
                 prev_start, _ = merged_sections[-1]
-                merged_sections[-1] = (prev_start, cand_sections[i][1])
-                dur_prev = merged_sections[-1][1] - prev_start
+                dur_prev = prev_end - prev_start
                 dur_curr = cand_sections[i][1] - cand_sections[i][0]
+                merged_sections[-1] = (prev_start, cand_sections[i][1])
                 current_vec = (
                     current_vec * dur_prev + section_vectors[i] * dur_curr
                 ) / (dur_prev + dur_curr)

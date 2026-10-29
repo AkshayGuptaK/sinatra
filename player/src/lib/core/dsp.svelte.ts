@@ -3,6 +3,13 @@ export interface AttachedMediaSource {
   gainNode: GainNode;
 }
 
+export interface DspVisualizerMetrics {
+  bands: number[]; // 8-band logarithmic spectrum [0..1]
+  bassImpulse: number; // Smoothed positive bass transient [0..1]
+  spectralFlux: number; // Timbre change acceleration [0..1]
+  trebleEnergy: number; // Average energy across high bands [0..1]
+}
+
 export class AudioDspGraph {
   private ctx: AudioContext | null = null;
   private inputBus: GainNode | null = null;
@@ -12,6 +19,8 @@ export class AudioDspGraph {
   private masterGain: GainNode | null = null;
   private analyserNode: AnalyserNode | null = null;
   private freqDataArray: Uint8Array | null = null;
+  private prevFreqData: Uint8Array | null = null;
+  private smoothedBassImpulse = 0;
 
   get isInitialized(): boolean {
     return this.ctx !== null;
@@ -74,6 +83,62 @@ export class AudioDspGraph {
     if (this.ctx && this.ctx.state === "suspended") {
       this.ctx.resume();
     }
+  }
+
+  getVisualizerMetrics(): DspVisualizerMetrics {
+    this.init();
+    if (!this.analyserNode || !this.freqDataArray) {
+      return {
+        bands: new Array(8).fill(0),
+        bassImpulse: 0,
+        spectralFlux: 0,
+        trebleEnergy: 0,
+      };
+    }
+
+    this.analyserNode.getByteFrequencyData(this.freqDataArray);
+    const current = this.freqDataArray;
+    const totalBins = current.length; // 64
+    const activeBins = Math.floor(totalBins * 0.75); // ~16kHz
+
+    // 1. Calculate 8 Logarithmic Bands
+    const bands = this.getFrequencyBands(8);
+
+    // 2. Compute Bass Impulse (Positive delta of bands 0 & 1)
+    const currentBass = (bands[0] + bands[1]) * 0.5;
+    const prevBass = this.prevFreqData
+      ? (this.prevFreqData[1] + this.prevFreqData[2]) / 510
+      : currentBass;
+    const rawBassDelta = Math.max(0, currentBass - prevBass);
+    // Fast attack, smooth decay
+    this.smoothedBassImpulse = Math.max(
+      rawBassDelta,
+      this.smoothedBassImpulse * 0.88
+    );
+
+    // 3. Compute Half-Wave Rectified Spectral Flux
+    let fluxSum = 0;
+    if (this.prevFreqData) {
+      for (let k = 1; k < activeBins; k++) {
+        const diff = (current[k] - this.prevFreqData[k]) / 255.0;
+        if (diff > 0) fluxSum += diff * diff;
+      }
+    }
+    const spectralFlux = Math.min(1.0, (fluxSum / activeBins) * 8.0);
+
+    // 4. Treble Presence (Average of highest 2 bands)
+    const trebleEnergy = (bands[6] + bands[7]) * 0.5;
+
+    // Cache frame buffer
+    if (!this.prevFreqData) this.prevFreqData = new Uint8Array(totalBins);
+    this.prevFreqData.set(current);
+
+    return {
+      bands,
+      bassImpulse: this.smoothedBassImpulse,
+      spectralFlux,
+      trebleEnergy,
+    };
   }
 
   /**

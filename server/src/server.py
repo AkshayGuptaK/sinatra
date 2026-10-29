@@ -105,6 +105,18 @@ async def update_track(track_id: str, payload: TrackMetadataUpdate):
 
     return {"status": "success", "updated": updates}
 
+@app.get("/api/library/tracks/{track_id}/segments")
+async def get_track_segments(track_id: str):
+    """
+    Returns ordered segment slices for a track with start/end timestamps
+    and normalized emotion distributions.
+    """
+    try:
+        db = get_pg()
+        segments = db.get_track_segments(track_id)
+        return JSONResponse(content=segments)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/library/tracks/similar/{track_id}")
 async def get_similar_library_tracks(
@@ -118,6 +130,9 @@ async def get_similar_library_tracks(
         description="Comma-separated track IDs to exclude from recommendations",
     ),
     limit: int = Query(default=5, ge=1, le=50),
+    include_segments: bool = Query(
+        default=False, description="Whether to include track segments in search"
+    ),
     filter_type: Optional[str] = Query(
         default=None,
         description="Type of filter constraint: 'column' or 'text'",
@@ -147,6 +162,7 @@ async def get_similar_library_tracks(
             similarity_mode=mode,
             excluded_ids=excluded_ids,
             limit=limit,
+            include_segments=include_segments,
             filter_type=filter_type,
             filter_field=filter_field,
             filter_query=filter_query,

@@ -1,5 +1,6 @@
 import { sinatraApi } from "$lib/api/sinatra";
 import { settings } from "$lib/core/settings.svelte";
+import type { TrackSegment } from "$lib/types/track";
 
 interface AudioDeck {
   audio: HTMLAudioElement;
@@ -64,6 +65,26 @@ export class AudioEngine {
   outputDeviceId = $derived(
     settings.get<string>("playback.outputDevice") ?? "default"
   );
+
+  // Segment State
+  segments = $state<TrackSegment[]>([]);
+  isLoadingSegments = $state(false);
+
+  currentSegmentIndex = $derived.by(() => {
+    if (this.segments.length === 0) return -1;
+    const time = this.currentTime;
+    return this.segments.findIndex(
+      (seg) => time >= seg.start_sec && time < seg.end_sec
+    );
+  });
+
+  currentSegment = $derived.by(() => {
+    const idx = this.currentSegmentIndex;
+    return idx !== -1 ? this.segments[idx] : null;
+  });
+
+  // Track the ongoing segment request to handle rapid track switching
+  private segmentFetchAbortController: AbortController | null = null;
 
   /** Invoked when approaching end to fetch next track info for seamless handoff */
   getNextTrack: (() => NextTrack | null) | null = null;
@@ -231,6 +252,68 @@ export class AudioEngine {
         this.onTrackEnded?.();
       }
     });
+  }
+
+  // --- Segments Loading ---
+
+  private async loadSegmentsForTrack(trackId: string) {
+    this.segments = [];
+    this.isLoadingSegments = true;
+
+    try {
+      const data = await sinatraApi.getTrackSegments(trackId);
+      // Confirm the user hasn't switched to a different track while loading
+      if (this.currentTrackId === trackId) {
+        this.segments = data;
+      }
+    } catch (err) {
+      console.error(`Failed to load segments for track ${trackId}:`, err);
+      if (this.currentTrackId === trackId) {
+        this.segments = [];
+      }
+    } finally {
+      if (this.currentTrackId === trackId) {
+        this.isLoadingSegments = false;
+      }
+    }
+  }
+
+  // --- Segment Navigation Methods (Callable via CommandBar / Keyboard) ---
+
+  /**
+   * Skips to the beginning of the next segment.
+   */
+  skipToNextSegment() {
+    if (this.segments.length === 0) return;
+    const next = this.segments.find(
+      (s) => s.start_sec > this.currentTime + 0.25
+    );
+    if (next) {
+      this.seekTo(next.start_sec);
+    }
+  }
+
+  /**
+   * Skips to the beginning of current segment, or previous segment if already at the start.
+   */
+  skipToPrevSegment() {
+    if (this.segments.length === 0) return;
+    const cur = this.currentSegment;
+    // If playing more than 2 seconds into current segment, rewind to its beginning
+    if (cur && this.currentTime - cur.start_sec > 2.0) {
+      this.seekTo(cur.start_sec);
+      return;
+    }
+
+    const prev = [...this.segments]
+      .reverse()
+      .find((s) => s.end_sec <= this.currentTime - 0.25);
+
+    if (prev) {
+      this.seekTo(prev.start_sec);
+    } else {
+      this.seekTo(0);
+    }
   }
 
   // --- Deck & Gain Helpers ---
@@ -486,6 +569,8 @@ export class AudioEngine {
 
     this.preloadDeck(deck, track, this.transitionMode === "gapless");
     this.setDeckGainImmediate(deck, 1);
+
+    this.loadSegmentsForTrack(track.id);
 
     if (autoPlay) {
       await this.play();

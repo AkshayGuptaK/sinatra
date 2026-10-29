@@ -1,4 +1,4 @@
-import type { Track } from "$lib/types/track";
+import type { Track, TrackSegment } from "$lib/types/track";
 import type { MetadataFields } from "$lib/types/metadata";
 import type { FilterIntent } from "$lib/utils/commandParser";
 
@@ -58,6 +58,18 @@ export const sinatraApi = {
     if (!res.ok) {
       throw new Error(`Failed to fetch library tracks: ${res.statusText}`);
     }
+    return res.json();
+  },
+
+  async getTrackSegments(trackId: string): Promise<TrackSegment[]> {
+    const res = await fetch(
+      `${API_BASE_URL}/api/library/tracks/${encodeURIComponent(trackId)}/segments`
+    );
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch track segments: ${res.statusText}`);
+    }
+
     return res.json();
   },
 

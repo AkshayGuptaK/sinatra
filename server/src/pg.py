@@ -328,6 +328,38 @@ class PostgresStore:
             print(f"Error loading tracks: {e}")
             return None
 
+    def get_track_segments(self, track_id: str) -> list[dict[str, Any]]:
+        """
+        Fetches chronological segment boundaries and normalized Cowen emotions
+        for a given track from track_chunks.
+        """
+        query = """
+            SELECT 
+                chunk_index,
+                start_sec,
+                end_sec,
+                emotions_normalized
+            FROM track_chunks
+            WHERE track_id = %s::uuid
+            ORDER BY chunk_index ASC;
+        """
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(query, (track_id,))
+                rows = cur.fetchall()
+                return [
+                    {
+                        "chunk_index": int(r[0]),
+                        "start_sec": float(r[1]),
+                        "end_sec": float(r[2]),
+                        "emotions_normalized": r[3] or {},
+                    }
+                    for r in rows
+                ]
+        except Exception as e:
+            print(f"Error fetching segments for track {track_id}: {e}")
+            return []
+
     def get_track_path_by_id(self, track_id):
         query = """
         SELECT filepath FROM nodes WHERE id = %s;
@@ -381,6 +413,7 @@ class PostgresStore:
         similarity_mode: str = "acoustics",
         excluded_ids: Optional[List[str]] = None,
         limit: int = 5,
+        include_segments: Optional[bool] = False,
         filter_type: Optional[str] = None,
         filter_field: Optional[str] = None,
         filter_query: Optional[str] = None,
@@ -468,6 +501,8 @@ class PostgresStore:
                COALESCE(n.album, '') AS album,
                COALESCE(n.mood, '') AS mood,
                COALESCE(n.tags, ARRAY[]::text[]) AS tags,
+               COALESCE(n.music_start, 0.0) AS start,
+               COALESCE(n.music_end, 0.0) AS end,
                COALESCE(n.duration, 0.0) AS duration,
                ROUND((n.{embedding_col} <=> t.{embedding_col})::numeric, 4) AS distance
         FROM nodes n, target t
@@ -489,7 +524,9 @@ class PostgresStore:
                         "album": r[3],
                         "mood": r[4],
                         "tags": list(r[5]) if r[5] is not None else [],
-                        "duration": float(r[6]),
+                        "start": float(r[6]),
+                        "end": float(r[7]),
+                        "duration": float(r[8]),
                     }
                     for r in rows
                 ]
@@ -615,6 +652,7 @@ class PostgresStore:
             self.conn.rollback()
             return False
 
+    # for scripts
     def fetch_all(self, query, params=None):
         with self.conn.cursor(row_factory=dict_row) as cur:
             cur.execute(query, params)

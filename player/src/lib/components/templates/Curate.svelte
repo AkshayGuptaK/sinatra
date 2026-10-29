@@ -5,9 +5,10 @@
 
   interface Props {
     openSettings?: () => void;
+    onToggleVibe?: () => void;
   }
 
-  let { openSettings }: Props = $props();
+  let { openSettings, onToggleVibe }: Props = $props();
 
 </script>
 
@@ -18,7 +19,7 @@
     </div>
 
     <div class="w-full shrink-0">
-      <NowPlaying class="w-full" />
+      <NowPlaying class="w-full" onTrackClick={onToggleVibe}/>
     </div>
   </div>
 

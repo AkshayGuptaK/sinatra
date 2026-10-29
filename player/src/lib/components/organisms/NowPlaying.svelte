@@ -13,9 +13,10 @@
 
   interface Props {
     class?: string;
+    onTrackClick?: () => void;
   }
 
-  let { class: className = "" }: Props = $props();
+  let { class: className = "", onTrackClick }: Props = $props();
 
   let currentTitle = $derived(getTrackDisplayTitle(player.currentTrack));
   let currentArtist = $derived(getTrackDisplayAttribution(player.currentTrack));
@@ -46,7 +47,14 @@
     className
   )}
 >
-  <TrackDetails {currentTitle} {currentArtist} />
+  <button
+    type="button"
+    onclick={onTrackClick}
+    class="group flex items-center text-left bg-transparent border-0 p-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
+    title="Toggle between Curate and Vibe views"
+  >
+    <TrackDetails {currentTitle} {currentArtist} />
+  </button>
 
   <div class="flex flex-1 flex-col items-center gap-2 w-full">
     <div class="grid grid-cols-[1fr_auto_1fr] items-center w-full">

@@ -1,16 +1,35 @@
 <script lang="ts">
   import "../app.css";
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy } from "svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import Player from "$lib/components/templates/Player.svelte";
-  import SettingsDialog from '$lib/components/organisms/SettingsDialog.svelte';
+  import Curate from "$lib/components/templates/Curate.svelte";
+  import Vibe from "$lib/components/templates/Vibe.svelte";
+  import SettingsDialog from "$lib/components/organisms/SettingsDialog.svelte";
   import { library } from "$lib/core/library.svelte";
   import { player } from "$lib/core/player.svelte";
-  import { playerSession } from '$lib/core/playerSession.svelte';
+  import { playerSession } from "$lib/core/playerSession.svelte";
   import {
     getTrackDisplayAttribution,
     getTrackDisplayTitle,
   } from "$lib/utils/display";
+
+  type AppDeck = "curate" | "vibe";
+  let activeDeck = $state<AppDeck>("curate");
+  let isSettingsOpen = $state(false);
+
+  function handleToggleDeck() {
+    activeDeck = activeDeck === "curate" ? "vibe" : "curate";
+  }
+
+  function handleKeyDown(event: KeyboardEvent) {
+    if (
+      event.key === "Escape" &&
+      activeDeck === "vibe" &&
+      !(document.activeElement instanceof HTMLInputElement)
+    ) {
+      activeDeck = "curate";
+    }
+  }
 
   onMount(async () => {
     await playerSession.setupCloseListener(player);
@@ -34,8 +53,6 @@
     return title;
   });
 
-  let isSettingsOpen = $state(false);
-
   $effect(() => {
     const titleToSet = pageTitle;
     document.title = titleToSet;
@@ -43,10 +60,22 @@
   });
 </script>
 
+<svelte:window onkeydown={handleKeyDown} />
+
 <main
   class="h-screen w-screen p-2 bg-background text-foreground overflow-hidden select-none"
 >
-  <Player openSettings={() => (isSettingsOpen = true)} />
+  {#if activeDeck === "curate"}
+    <Curate
+      openSettings={() => (isSettingsOpen = true)}
+      onToggleVibe={handleToggleDeck}
+    />
+  {:else}
+    <Vibe
+      openSettings={() => (isSettingsOpen = true)}
+      onToggleVibe={handleToggleDeck}
+    />
+  {/if}
   <SettingsDialog bind:open={isSettingsOpen} />
 </main>
 

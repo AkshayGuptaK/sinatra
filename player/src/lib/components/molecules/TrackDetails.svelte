@@ -11,13 +11,13 @@
   class="flex flex-col min-w-0 w-full md:w-56 text-center md:text-left select-none"
 >
   <span
-    class="truncate text-base font-semibold tracking-tight text-foreground"
+    class="truncate text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-secondary-foreground"
     title={currentTitle}
   >
     {currentTitle}
   </span>
   <span
-    class="truncate text-xs font-medium text-muted-foreground"
+    class="truncate text-xs font-medium text-muted-foreground transition-colors group-hover:text-secondary-foreground"
     title={currentArtist}
   >
     {currentArtist}

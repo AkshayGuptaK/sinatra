@@ -269,6 +269,141 @@ class PostgresStore:
 
         self.conn.commit()
 
+    def split_chunk(
+        self,
+        track_id: str,
+        chunk_a_id: str,
+        chunk_a_end: float,
+        chunk_a_features: dict[str, Any],
+        chunk_b_start: float,
+        chunk_b_end: float,
+        chunk_b_features: dict[str, Any],
+    ) -> None:
+        """Atomically splits an existing chunk by shortening chunk A and inserting chunk B."""
+        try:
+            with self.conn.cursor() as cur:
+                # Update existing Chunk A (shorten end_sec, update embeddings)
+                update_sql = """
+                    UPDATE track_chunks
+                    SET end_sec = %s,
+                        musical_embedding = %s::vector,
+                        emotions = %s,
+                        emotion_vector = %s::vector,
+                        emotions_normalized = %s,
+                        emotion_vector_normalized = %s::vector,
+                        updated_at = NOW()
+                    WHERE id = %s::uuid;
+                """
+                cur.execute(
+                    update_sql,
+                    (
+                        chunk_a_end,
+                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['musical_embedding'])}]",
+                        json.dumps(chunk_a_features["emotions"]),
+                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['emotion_vector'])}]",
+                        json.dumps(chunk_a_features["emotions_normalized"]),
+                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['emotion_vector_normalized'])}]",
+                        chunk_a_id,
+                    ),
+                )
+
+                # Insert new Chunk B
+                insert_sql = """
+                    INSERT INTO track_chunks (
+                        track_id, start_sec, end_sec,
+                        musical_embedding, emotions, emotion_vector,
+                        emotions_normalized, emotion_vector_normalized,
+                        created_at, updated_at
+                    ) VALUES (
+                        %s::uuid, %s, %s,
+                        %s::vector, %s, %s::vector, %s, %s::vector,
+                        NOW(), NOW()
+                    );
+                """
+                cur.execute(
+                    insert_sql,
+                    (
+                        track_id,
+                        chunk_b_start,
+                        chunk_b_end,
+                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['musical_embedding'])}]",
+                        json.dumps(chunk_b_features["emotions"]),
+                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['emotion_vector'])}]",
+                        json.dumps(chunk_b_features["emotions_normalized"]),
+                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['emotion_vector_normalized'])}]",
+                    ),
+                )
+            self.conn.commit()
+        except Exception:
+            self.conn.rollback()
+            raise
+
+    def update_two_adjacent_chunks(
+        self,
+        chunk_a_id: str,
+        chunk_a_new_end: float,
+        chunk_a_features: dict[str, Any],
+        chunk_b_id: str,
+        chunk_b_new_start: float,
+        chunk_b_features: dict[str, Any],
+    ) -> None:
+        """Atomically shifts the shared boundary between two adjacent chunks."""
+        try:
+            with self.conn.cursor() as cur:
+                # Update Chunk A's end timestamp
+                update_a_sql = """
+                    UPDATE track_chunks
+                    SET end_sec = %s,
+                        musical_embedding = %s::vector,
+                        emotions = %s,
+                        emotion_vector = %s::vector,
+                        emotions_normalized = %s,
+                        emotion_vector_normalized = %s::vector,
+                        updated_at = NOW()
+                    WHERE id = %s::uuid;
+                """
+                cur.execute(
+                    update_a_sql,
+                    (
+                        chunk_a_new_end,
+                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['musical_embedding'])}]",
+                        json.dumps(chunk_a_features["emotions"]),
+                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['emotion_vector'])}]",
+                        json.dumps(chunk_a_features["emotions_normalized"]),
+                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['emotion_vector_normalized'])}]",
+                        chunk_a_id,
+                    ),
+                )
+
+                # Update Chunk B's start timestamp
+                update_b_sql = """
+                    UPDATE track_chunks
+                    SET start_sec = %s,
+                        musical_embedding = %s::vector,
+                        emotions = %s,
+                        emotion_vector = %s::vector,
+                        emotions_normalized = %s,
+                        emotion_vector_normalized = %s::vector,
+                        updated_at = NOW()
+                    WHERE id = %s::uuid;
+                """
+                cur.execute(
+                    update_b_sql,
+                    (
+                        chunk_b_new_start,
+                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['musical_embedding'])}]",
+                        json.dumps(chunk_b_features["emotions"]),
+                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['emotion_vector'])}]",
+                        json.dumps(chunk_b_features["emotions_normalized"]),
+                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['emotion_vector_normalized'])}]",
+                        chunk_b_id,
+                    ),
+                )
+            self.conn.commit()
+        except Exception:
+            self.conn.rollback()
+            raise
+
     def get_file_stats(self):
         with self.conn.cursor() as cur:
             cur.execute(

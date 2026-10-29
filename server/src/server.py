@@ -1,6 +1,6 @@
 import shlex
-from typing import Dict, List, Optional, Any
-from pydantic import BaseModel
+from typing import Dict, List, Optional, Any, Literal
+from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,6 +12,7 @@ from src.sync import sync_store
 from src.watcher import watch_files
 from src.pg import get_pg
 from src.services import get_tag_suggester
+from src.services.segment_editor import edit_track_segments
 
 
 async def _safety_net_poller():
@@ -76,6 +77,15 @@ class TrackMetadataUpdate(BaseModel):
     tags: Optional[List[str]] = None
 
 
+class SegmentEditPayload(BaseModel):
+    action: Literal["split", "push", "pull"]
+    timestamp: float = Field(
+        ...,
+        ge=0.0,
+        description="Audio timestamp in seconds to apply the split boundary modification",
+    )
+
+
 def sanitize_tags(raw_tags: List[str]) -> List[str]:
     """Trims whitespace, lowercases, removes blanks, and deduplicates while preserving order."""
     cleaned = []
@@ -105,6 +115,7 @@ async def update_track(track_id: str, payload: TrackMetadataUpdate):
 
     return {"status": "success", "updated": updates}
 
+
 @app.get("/api/library/tracks/{track_id}/segments")
 async def get_track_segments(track_id: str):
     """
@@ -117,6 +128,7 @@ async def get_track_segments(track_id: str):
         return JSONResponse(content=segments)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/library/tracks/similar/{track_id}")
 async def get_similar_library_tracks(
@@ -282,5 +294,23 @@ async def search_library_lyrics(
         db = get_pg()
         results = db.filter_by_lyrics(terms=terms)
         return JSONResponse(content=results)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.patch("/api/library/tracks/{track_id}/segments")
+async def patch_track_segments(track_id: str, payload: SegmentEditPayload):
+    """Partially updates a track's segment collection via split, push, or pull,
+    recalculates affected embeddings, and returns refreshed segments.
+    """
+    try:
+        updated_segments = edit_track_segments(
+            track_id=track_id,
+            action=payload.action,
+            timestamp=payload.timestamp,
+        )
+        return JSONResponse(content=updated_segments)
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

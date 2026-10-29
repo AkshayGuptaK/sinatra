@@ -1,6 +1,8 @@
 import { sinatraApi } from "$lib/api/sinatra";
 import { settings } from "$lib/core/settings.svelte";
 import type { TrackSegment } from "$lib/types/track";
+import { AudioDspGraph } from "./dsp.svelte";
+import { TrackSegmentManager } from "./segments.svelte";
 
 interface AudioDeck {
   audio: HTMLAudioElement;
@@ -25,27 +27,20 @@ const GAPLESS_SCHEDULE_WINDOW_SEC = 1.0;
 const GAPLESS_IMMEDIATE_THRESHOLD_SEC = 0.05;
 
 export class AudioEngine {
-  private ctx: AudioContext | null = null;
+  readonly dsp = new AudioDspGraph();
+  readonly segmentManager: TrackSegmentManager;
+
   private decks: AudioDeck[] = [];
-  private activeDeckIdx = 0; // 0 or 1
+  private activeDeckIdx = 0;
 
-  // Web Audio Graph nodes
-  private inputBus: GainNode | null = null;
-  private compressorNode: DynamicsCompressorNode | null = null;
-  private normalizerGain: GainNode | null = null;
-  private bypassGain: GainNode | null = null;
-  private masterGain: GainNode | null = null;
-  private analyserNode: AnalyserNode | null = null;
-  private freqDataArray: Uint8Array | null = null;
-
-  // Timers & transition state
+  // Transition & Timer State
   private isTransitioning = false;
   private gaplessTimer: ReturnType<typeof setTimeout> | null = null;
   private transitionTimer: ReturnType<typeof setTimeout> | null = null;
   private pauseTimer: ReturnType<typeof setTimeout> | null = null;
   private seekTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // Reactive playback state (for the currently active deck)
+  // Reactive playback state
   isPlaying = $state(false);
   currentTime = $state(0);
   duration = $state(0);
@@ -56,7 +51,7 @@ export class AudioEngine {
   currentMusicEnd = $state<number | null>(null);
   currentRmsEnv = $state<number[] | null>(null);
 
-  // Reactive settings subscriptions pulled from store
+  // Settings
   fadeEnabled = $derived(Boolean(settings.get("playback.fade") ?? true));
   transitionMode = $derived(
     settings.get<string>("playback.transition") ?? "off"
@@ -68,44 +63,24 @@ export class AudioEngine {
     settings.get<string>("playback.outputDevice") ?? "default"
   );
 
-  // Segment State
-  segments = $state<TrackSegment[]>([]);
-  isLoadingSegments = $state(false);
-
-  currentSegmentIndex = $derived.by(() => {
-    if (this.segments.length === 0) return -1;
-    const time = this.currentTime;
-    return this.segments.findIndex(
-      (seg) => time >= seg.start_sec && time < seg.end_sec
-    );
-  });
-
-  currentSegment = $derived.by(() => {
-    const idx = this.currentSegmentIndex;
-    return idx !== -1 ? this.segments[idx] : null;
-  });
-
-  // Track the ongoing segment request to handle rapid track switching
-  private segmentFetchAbortController: AbortController | null = null;
-
-  /** Invoked when approaching end to fetch next track info for seamless handoff */
+  // Delegate Callbacks
   getNextTrack: (() => NextTrack | null) | null = null;
-
-  /** Invoked when crossfade or gapless transition starts playing the next track */
   onTrackAdvanced: (() => void) | null = null;
-
-  /** Invoked when playback terminates naturally at queue end */
   onTrackEnded: (() => void) | null = null;
 
   constructor() {
+    this.segmentManager = new TrackSegmentManager(
+      () => this.currentTrackId,
+      () => this.currentTime,
+      (sec) => this.seekTo(sec)
+    );
+
     if (typeof window !== "undefined") {
       this.initDecks();
 
-      // Reactively apply live settings changes without waiting for next track load
       $effect.root(() => {
         $effect(() => {
-          const _ = this.normalizationEnabled;
-          this.syncNormalizationRouting();
+          this.dsp.syncNormalization(this.normalizationEnabled);
         });
 
         $effect(() => {
@@ -117,6 +92,56 @@ export class AudioEngine {
       });
     }
   }
+
+  // --- Facade Getters & Methods (Preserves Call-Site Compatibility) ---
+
+  get segments(): TrackSegment[] {
+    return this.segmentManager.items;
+  }
+
+  get currentSegmentIndex(): number {
+    return this.segmentManager.currentIndex;
+  }
+
+  get currentSegment(): TrackSegment | null {
+    return this.segmentManager.current;
+  }
+
+  get isLoadingSegments(): boolean {
+    return this.segmentManager.isLoading;
+  }
+
+  get isEditingSegments(): boolean {
+    return this.segmentManager.isEditing;
+  }
+
+  get segmentEditError(): string | null {
+    return this.segmentManager.error;
+  }
+
+  get canSplitSegment(): boolean {
+    return this.segmentManager.canSplit;
+  }
+
+  get canPushSegment(): boolean {
+    return this.segmentManager.canPush;
+  }
+
+  get canPullSegment(): boolean {
+    return this.segmentManager.canPull;
+  }
+
+  splitSegmentAtCurrentTime = () => this.segmentManager.split();
+  pushSegmentToCurrentTime = () => this.segmentManager.push();
+  pullSegmentToCurrentTime = () => this.segmentManager.pull();
+  skipToNextSegment = () => this.segmentManager.skipToNext();
+  skipToPrevSegment = () => this.segmentManager.skipToPrev();
+
+  getFrequencyBands(barCount = 4): number[] {
+    return this.dsp.getFrequencyBands(barCount, this.isPlaying);
+  }
+
+  // --- Deck Initializers ---
 
   private initDecks() {
     for (let i = 0; i < 2; i++) {
@@ -133,84 +158,25 @@ export class AudioEngine {
     }
   }
 
+  private ensureDeckNodesAttached() {
+    this.dsp.init();
+    for (const deck of this.decks) {
+      if (!deck.sourceNode) {
+        const attached = this.dsp.attachMediaElement(deck.audio);
+        if (attached) {
+          deck.sourceNode = attached.sourceNode;
+          deck.gainNode = attached.gainNode;
+        }
+      }
+    }
+  }
+
   private get activeDeck(): AudioDeck {
     return this.decks[this.activeDeckIdx];
   }
 
   private get standbyDeck(): AudioDeck {
     return this.decks[1 - this.activeDeckIdx];
-  }
-
-  private initContext() {
-    if (!this.ctx && typeof window !== "undefined") {
-      const AudioContextClass =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext;
-      this.ctx = new AudioContextClass();
-
-      // Master Graph Setup
-      this.inputBus = this.ctx.createGain();
-      this.masterGain = this.ctx.createGain();
-
-      // Normalizer (DynamicsCompressor) Chain
-      this.compressorNode = this.ctx.createDynamicsCompressor();
-      const now = this.ctx.currentTime;
-      this.compressorNode.threshold.setValueAtTime(-24, now);
-      this.compressorNode.knee.setValueAtTime(30, now);
-      this.compressorNode.ratio.setValueAtTime(3, now);
-      this.compressorNode.attack.setValueAtTime(0.003, now);
-      this.compressorNode.release.setValueAtTime(0.25, now);
-
-      this.normalizerGain = this.ctx.createGain();
-      this.bypassGain = this.ctx.createGain();
-
-      // Hook up compressor vs bypass wet/dry paths
-      this.inputBus.connect(this.compressorNode);
-      this.compressorNode.connect(this.normalizerGain);
-      this.normalizerGain.connect(this.masterGain);
-
-      this.inputBus.connect(this.bypassGain);
-      this.bypassGain.connect(this.masterGain);
-
-      this.syncNormalizationRouting();
-
-      // Analyser Node
-      this.analyserNode = this.ctx.createAnalyser();
-      this.analyserNode.fftSize = 128;
-      this.analyserNode.smoothingTimeConstant = 0.8;
-      this.freqDataArray = new Uint8Array(this.analyserNode.frequencyBinCount);
-
-      this.masterGain.connect(this.analyserNode);
-      this.analyserNode.connect(this.ctx.destination);
-
-      // Connect both decks into the input bus
-      for (const deck of this.decks) {
-        deck.sourceNode = this.ctx.createMediaElementSource(deck.audio);
-        deck.gainNode = this.ctx.createGain();
-        deck.sourceNode.connect(deck.gainNode);
-        deck.gainNode.connect(this.inputBus);
-      }
-    }
-
-    if (this.ctx && this.ctx.state === "suspended") {
-      this.ctx.resume();
-    }
-  }
-
-  private syncNormalizationRouting() {
-    if (!this.ctx || !this.normalizerGain || !this.bypassGain) return;
-    const now = this.ctx.currentTime;
-    this.normalizerGain.gain.cancelScheduledValues(now);
-    this.bypassGain.gain.cancelScheduledValues(now);
-
-    if (this.normalizationEnabled) {
-      this.normalizerGain.gain.setValueAtTime(1, now);
-      this.bypassGain.gain.setValueAtTime(0, now);
-    } else {
-      this.normalizerGain.gain.setValueAtTime(0, now);
-      this.bypassGain.gain.setValueAtTime(1, now);
-    }
   }
 
   private setupDeckListeners(index: number) {
@@ -256,89 +222,7 @@ export class AudioEngine {
     });
   }
 
-  // --- Segments Loading ---
-
-  private async loadSegmentsForTrack(trackId: string) {
-    this.segments = [];
-    this.isLoadingSegments = true;
-
-    try {
-      const data = await sinatraApi.getTrackSegments(trackId);
-      // Confirm the user hasn't switched to a different track while loading
-      if (this.currentTrackId === trackId) {
-        this.segments = data;
-      }
-    } catch (err) {
-      console.error(`Failed to load segments for track ${trackId}:`, err);
-      if (this.currentTrackId === trackId) {
-        this.segments = [];
-      }
-    } finally {
-      if (this.currentTrackId === trackId) {
-        this.isLoadingSegments = false;
-      }
-    }
-  }
-
-  // --- Segment Navigation Methods (Callable via CommandBar / Keyboard) ---
-
-  /**
-   * Skips to the beginning of the next segment.
-   */
-  skipToNextSegment() {
-    if (this.segments.length === 0) return;
-    const next = this.segments.find(
-      (s) => s.start_sec > this.currentTime + 0.25
-    );
-    if (next) {
-      this.seekTo(next.start_sec);
-    }
-  }
-
-  /**
-   * Skips to the beginning of current segment, or previous segment if already at the start.
-   */
-  skipToPrevSegment() {
-    if (this.segments.length === 0) return;
-    const cur = this.currentSegment;
-    // If playing more than 2 seconds into current segment, rewind to its beginning
-    if (cur && this.currentTime - cur.start_sec > 2.0) {
-      this.seekTo(cur.start_sec);
-      return;
-    }
-
-    const prev = [...this.segments]
-      .reverse()
-      .find((s) => s.end_sec <= this.currentTime - 0.25);
-
-    if (prev) {
-      this.seekTo(prev.start_sec);
-    } else {
-      this.seekTo(0);
-    }
-  }
-
-  // --- Deck & Gain Helpers ---
-
-  private setDeckGainImmediate(deck: AudioDeck, value: number) {
-    if (!this.ctx || !deck.gainNode) return;
-    const now = this.ctx.currentTime;
-    deck.gainNode.gain.cancelScheduledValues(now);
-    deck.gainNode.gain.setValueAtTime(value, now);
-  }
-
-  private rampDeckGain(
-    deck: AudioDeck,
-    from: number,
-    to: number,
-    durationSec: number
-  ) {
-    if (!this.ctx || !deck.gainNode) return;
-    const now = this.ctx.currentTime;
-    deck.gainNode.gain.cancelScheduledValues(now);
-    deck.gainNode.gain.setValueAtTime(from, now);
-    deck.gainNode.gain.linearRampToValueAtTime(to, now + durationSec);
-  }
+  // --- Deck Utilities ---
 
   private safeSeekDeck(deck: AudioDeck, targetSeconds: number) {
     if (targetSeconds <= 0) return;
@@ -383,6 +267,8 @@ export class AudioEngine {
       : 0;
     this.isPlaying = !active.audio.paused;
 
+    // Load segments for the newly promoted active track
+    this.segmentManager.loadForTrack(next.id);
     this.onTrackAdvanced?.();
   }
 
@@ -411,12 +297,10 @@ export class AudioEngine {
       const standby = this.standbyDeck;
       standby.audio.pause();
       standby.audio.currentTime = 0;
-      this.setDeckGainImmediate(standby, 1);
+      this.dsp.setGainImmediate(standby.gainNode, 1);
       this.isTransitioning = false;
     }
   }
-
-  // --- Transition Evaluation & Execution ---
 
   private get crossfadeDuration(): number {
     if (this.transitionMode === "crossfade_3s") return 3;
@@ -443,7 +327,6 @@ export class AudioEngine {
     const remaining = effectiveEnd - current;
     const xfadeSec = this.crossfadeDuration;
 
-    // 1. Preload upcoming track ahead of any transition window
     const preloadWindow = Math.max(xfadeSec + 2, PRELOAD_LOOKAHEAD_SEC);
     if (remaining <= preloadWindow) {
       const next = this.getNextTrack?.();
@@ -452,13 +335,11 @@ export class AudioEngine {
       const shouldCueStart = isGapless || xfadeSec > 0;
       this.preloadDeck(this.standbyDeck, next, shouldCueStart);
 
-      // 2. Crossfade Trigger
       if (xfadeSec > 0 && remaining <= xfadeSec) {
         this.executeCrossfade(next, xfadeSec);
         return;
       }
 
-      // 3. Gapless Trigger
       if (isGapless) {
         if (remaining <= GAPLESS_IMMEDIATE_THRESHOLD_SEC) {
           this.executeGaplessHandoff(next);
@@ -492,7 +373,7 @@ export class AudioEngine {
     const incoming = this.standbyDeck;
 
     this.preloadDeck(incoming, next, true);
-    this.setDeckGainImmediate(incoming, 1);
+    this.dsp.setGainImmediate(incoming.gainNode, 1);
 
     try {
       await incoming.audio.play();
@@ -510,7 +391,7 @@ export class AudioEngine {
   }
 
   private async executeCrossfade(next: NextTrack, durationSec: number) {
-    if (!this.ctx || this.isTransitioning) return;
+    if (this.isTransitioning) return;
     this.isTransitioning = true;
 
     if (this.gaplessTimer) {
@@ -522,7 +403,7 @@ export class AudioEngine {
     const incoming = this.standbyDeck;
 
     this.preloadDeck(incoming, next, true);
-    this.setDeckGainImmediate(incoming, 0);
+    this.dsp.setGainImmediate(incoming.gainNode, 0);
 
     try {
       await incoming.audio.play();
@@ -532,9 +413,8 @@ export class AudioEngine {
       return;
     }
 
-    // Linear crossfade gain ramps
-    this.rampDeckGain(incoming, 0, 1, durationSec);
-    this.rampDeckGain(outgoing, 1, 0, durationSec);
+    this.dsp.rampGain(incoming.gainNode, 0, 1, durationSec);
+    this.dsp.rampGain(outgoing.gainNode, 1, 0, durationSec);
 
     this.promoteStandbyDeck(next);
 
@@ -543,7 +423,7 @@ export class AudioEngine {
       this.transitionTimer = null;
       outgoing.audio.pause();
       outgoing.audio.currentTime = 0;
-      this.setDeckGainImmediate(outgoing, 1);
+      this.dsp.setGainImmediate(outgoing.gainNode, 1);
       this.isTransitioning = false;
     }, durationSec * 1000);
   }
@@ -551,11 +431,9 @@ export class AudioEngine {
   // --- Transport Controls ---
 
   async loadTrack(track: NextTrack, autoPlay = true) {
-    this.initContext();
-    this.syncNormalizationRouting();
+    this.ensureDeckNodesAttached();
     this.cancelActiveTransitions();
 
-    // If standby deck already preloaded this exact track, swap to it instead of re-fetching
     if (
       this.standbyDeck.trackId === track.id &&
       this.standbyDeck.audio.readyState >= 2
@@ -572,9 +450,9 @@ export class AudioEngine {
     this.currentRmsEnv = track.rms_env;
 
     this.preloadDeck(deck, track, this.transitionMode === "gapless");
-    this.setDeckGainImmediate(deck, 1);
+    this.dsp.setGainImmediate(deck.gainNode, 1);
 
-    this.loadSegmentsForTrack(track.id);
+    this.segmentManager.loadForTrack(track.id);
 
     if (autoPlay) {
       await this.play();
@@ -582,7 +460,7 @@ export class AudioEngine {
   }
 
   async play() {
-    this.initContext();
+    this.ensureDeckNodesAttached();
     if (this.pauseTimer) {
       clearTimeout(this.pauseTimer);
       this.pauseTimer = null;
@@ -593,10 +471,10 @@ export class AudioEngine {
 
     const rampTime = this.fadeEnabled ? FADE_PLAY_SEC : FADE_ANTI_POP_SEC;
 
-    if (deck.gainNode && this.ctx) {
-      this.setDeckGainImmediate(deck, 0);
+    if (deck.gainNode) {
+      this.dsp.setGainImmediate(deck.gainNode, 0);
       await deck.audio.play();
-      this.rampDeckGain(deck, 0, 1, rampTime);
+      this.dsp.rampGain(deck.gainNode, 0, 1, rampTime);
     } else {
       await deck.audio.play();
     }
@@ -619,13 +497,13 @@ export class AudioEngine {
 
     const rampTime = this.fadeEnabled ? FADE_PAUSE_SEC : FADE_ANTI_POP_SEC;
 
-    if (deck.gainNode && this.ctx) {
-      this.rampDeckGain(deck, 1, 0, rampTime);
+    if (deck.gainNode) {
+      this.dsp.rampGain(deck.gainNode, 1, 0, rampTime);
 
       this.pauseTimer = setTimeout(() => {
         this.pauseTimer = null;
         deck.audio.pause();
-        this.setDeckGainImmediate(deck, 1);
+        this.dsp.setGainImmediate(deck.gainNode, 1);
         this.isPlaying = false;
       }, rampTime * 1000);
     } else {
@@ -660,13 +538,13 @@ export class AudioEngine {
       this.duration || Infinity
     );
 
-    if (this.fadeEnabled && deck.gainNode && this.ctx && this.isPlaying) {
-      this.rampDeckGain(deck, 1, 0, FADE_SEEK_SEC);
+    if (this.fadeEnabled && deck.gainNode && this.isPlaying) {
+      this.dsp.rampGain(deck.gainNode, 1, 0, FADE_SEEK_SEC);
       this.seekTimer = setTimeout(() => {
         this.seekTimer = null;
         deck.audio.currentTime = target;
         this.currentTime = target;
-        this.rampDeckGain(deck, 0, 1, FADE_SEEK_SEC);
+        this.dsp.rampGain(deck.gainNode, 0, 1, FADE_SEEK_SEC);
       }, FADE_SEEK_SEC * 1000);
     } else {
       deck.audio.currentTime = target;
@@ -686,10 +564,8 @@ export class AudioEngine {
   }
 
   setVolume(val: number) {
-    if (this.masterGain && this.ctx) {
-      const now = this.ctx.currentTime;
-      this.masterGain.gain.cancelScheduledValues(now);
-      this.masterGain.gain.setValueAtTime(val, now);
+    if (this.dsp.isInitialized) {
+      this.dsp.setMasterVolume(val);
     } else {
       for (const deck of this.decks) {
         deck.audio.volume = val;
@@ -711,40 +587,5 @@ export class AudioEngine {
         }
       }
     }
-  }
-
-  getFrequencyBands(barCount = 4): number[] {
-    if (!this.analyserNode || !this.freqDataArray || !this.isPlaying) {
-      return new Array(barCount).fill(0);
-    }
-
-    this.analyserNode.getByteFrequencyData(this.freqDataArray);
-    const totalBins = this.freqDataArray.length;
-    const minBin = 1;
-    const maxBin = Math.floor(totalBins * 0.75);
-    const bands: number[] = [];
-
-    for (let i = 0; i < barCount; i++) {
-      const startIdx = Math.floor(
-        minBin * Math.pow(maxBin / minBin, i / barCount)
-      );
-      const endIdx = Math.max(
-        startIdx + 1,
-        Math.floor(minBin * Math.pow(maxBin / minBin, (i + 1) / barCount))
-      );
-
-      let sum = 0;
-      let count = 0;
-      for (let j = startIdx; j < endIdx && j < maxBin; j++) {
-        sum += this.freqDataArray[j];
-        count++;
-      }
-
-      const avg = count > 0 ? sum / count / 255 : 0;
-      const highBoost = 1 + (i / barCount) * 0.6;
-      bands.push(Math.min(1.0, avg * highBoost));
-    }
-
-    return bands;
   }
 }

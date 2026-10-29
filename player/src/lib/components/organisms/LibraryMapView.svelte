@@ -6,90 +6,18 @@
   import { player } from "$lib/core/player.svelte";
   import { findNearestPoint } from "$lib/utils/math";
   import MapTooltip from "$lib/components/molecules/MapTooltip.svelte";
-  import MapLegend from "$lib/components/molecules/MapLegend.svelte";
+  import EmotionLegend from "$lib/components/molecules/EmotionLegend.svelte";
   import type { Track } from "$lib/types/track";
-  import {
-    COWEN_EMOTION_COLORS,
-    LYRIC_EMOTION_COLORS,
-  } from "$lib/constants/emotions";
   import { cn } from "$lib/utils";
+  import { EMOTION_MAP, type EmotionMode } from "$lib/core/emotions.svelte";
 
   // =========================================================================
-  // 1. Types & View Strategies (Extraction Layer)
-  // =========================================================================
-
-  export type MapViewMode = "audio_emotion" | "lyrics_emotion";
-
-  export interface MapCoordinates {
-    x: number;
-    y: number;
-  }
-
-  export interface MapViewDefinition {
-    id: MapViewMode;
-    label: string;
-    description: string;
-    getEmotions: (track: Track) => Record<string, number> | null;
-    getCoordinates: (track: Track) => MapCoordinates | null;
-    getColor: (emotion: string) => string;
-  }
-
-  /** Extract acoustic emotion coordinates (coord_x, coord_y) */
-  function getAudioEmotionCoords(track: Track): MapCoordinates | null {
-    if (
-      track.coord_x != null &&
-      track.coord_y != null &&
-      !Number.isNaN(track.coord_x) &&
-      !Number.isNaN(track.coord_y)
-    ) {
-      return { x: track.coord_x, y: track.coord_y };
-    }
-    return null;
-  }
-
-  /** Extract lyrical emotion coordinates from [x, y] tuple */
-  function getLyricsEmotionCoords(track: Track): MapCoordinates | null {
-    const raw = track.lyrics_emotions_coords;
-    if (
-      Array.isArray(raw) &&
-      raw.length >= 2 &&
-      raw[0] != null &&
-      raw[1] != null &&
-      !Number.isNaN(raw[0]) &&
-      !Number.isNaN(raw[1])
-    ) {
-      return { x: Number(raw[0]), y: Number(raw[1]) };
-    }
-    return null;
-  }
-
-  /** Registry of available 2D map projections */
-  export const MAP_VIEWS: Record<MapViewMode, MapViewDefinition> = {
-    audio_emotion: {
-      id: "audio_emotion",
-      label: "Audio Mood",
-      description: "Acoustic emotion manifold projected via MERT and UMAP",
-      getEmotions: (track) => track.emotions,
-      getCoordinates: getAudioEmotionCoords,
-      getColor: (emotion) => COWEN_EMOTION_COLORS[emotion],
-    },
-    lyrics_emotion: {
-      id: "lyrics_emotion",
-      label: "Lyrics Mood",
-      description: "Affective text manifold derived from lyrical content",
-      getEmotions: (track) => track.lyrics_emotions,
-      getCoordinates: getLyricsEmotionCoords,
-      getColor: (emotion) => LYRIC_EMOTION_COLORS[emotion],
-    },
-  };
-
-  // =========================================================================
-  // 2. Component Props & Normalized Internal State
+  // Component Props & Normalized Internal State
   // =========================================================================
 
   interface Props {
     queuedTrackIds: Set<string>;
-    activeViewMode?: MapViewMode;
+    activeViewMode?: EmotionMode;
     class?: string;
   }
 
@@ -120,10 +48,10 @@
   let transform = $state(d3.zoomIdentity);
   let zoomBehavior: d3.ZoomBehavior<HTMLCanvasElement, unknown> | null = null;
   let hoveredPoint = $state<RenderPoint | null>(null);
-  let lastFittedViewMode = $state<MapViewMode | null>(null);
+  let lastFittedViewMode = $state<EmotionMode | null>(null);
 
   const activeViewConfig = $derived(
-    MAP_VIEWS[activeViewMode] ?? MAP_VIEWS.audio_emotion
+    EMOTION_MAP[activeViewMode] ?? EMOTION_MAP.audio_emotion
   );
 
   // =========================================================================
@@ -132,7 +60,10 @@
 
   function getDominantEmotion(emotions: Record<string, number>): string | null {
     const [dominant] = Object.entries(emotions).reduce<[string, number]>(
-      (best, [emotion, score]) => (activeViewConfig["getColor"](emotion) && score > best[1] ? [emotion, score] : best),
+      (best, [emotion, score]) =>
+        activeViewConfig["getColor"](emotion) && score > best[1]
+          ? [emotion, score]
+          : best,
       ["", -1]
     );
     return dominant || null;
@@ -470,7 +401,7 @@
     draw();
   }
 
-  function handleViewChange(mode: MapViewMode) {
+  function handleViewChange(mode: EmotionMode) {
     if (activeViewMode === mode) return;
     activeViewMode = mode;
     hoveredPoint = null;
@@ -543,7 +474,7 @@
     <div
       class="absolute top-3 left-3 z-10 flex items-center p-0.5 rounded-lg bg-card/90 backdrop-blur-md border border-border/80 shadow-xs"
     >
-      {#each Object.values(MAP_VIEWS) as viewDef}
+      {#each Object.values(EMOTION_MAP) as viewDef}
         <button
           type="button"
           onclick={() => handleViewChange(viewDef.id)}
@@ -584,7 +515,7 @@
   <!-- Sidebar: Legend & Tooltip Details -->
   <aside class="flex flex-col w-60 shrink-0 h-full overflow-hidden">
     <div class="shrink-0">
-      <MapLegend class="w-full" viewMode={activeViewMode} />
+      <EmotionLegend class="w-full" viewMode={activeViewMode} />
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto">
@@ -593,7 +524,9 @@
           track={activeTooltipTrack}
           isPlaying={player.currentTrack?.id === activeTooltipTrack.id}
           isQueued={queuedTrackIds.has(activeTooltipTrack.id)}
-          emotions={MAP_VIEWS[activeViewMode]["getEmotions"](activeTooltipTrack)}
+          emotions={EMOTION_MAP[activeViewMode]["getEmotions"](
+            activeTooltipTrack
+          )}
           class="w-full"
         />
       {/if}

@@ -37,7 +37,7 @@
   <h4
     class="text-[10px] font-semibold uppercase tracking-wider text-secondary-foreground pb-1 border-b border-border/40"
   >
-    Emotions
+    Core Emotions
   </h4>
 
   <div class="flex flex-col gap-2 mt-1">

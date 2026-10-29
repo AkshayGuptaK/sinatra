@@ -11,6 +11,7 @@
     handleCommandSubmit,
     handleSearchChange,
   } from "$lib/core/command.svelte";
+  import { EMOTION_MAP } from "$lib/core/emotions.svelte";
 
   interface Props {
     class?: string;
@@ -53,7 +54,9 @@
       segments={player.engine.segments}
       duration={player.engine.duration}
       currentTime={player.engine.currentTime}
-      rms={player.engine.currentRmsEnv}
+      rms={player.currentTrack?.rms_env}
+      emotions={player.currentTrack &&
+        EMOTION_MAP["audio_emotion"]["getEmotions"](player.currentTrack)}
     />
   </div>
 </div>

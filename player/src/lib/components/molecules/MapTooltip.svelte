@@ -6,7 +6,8 @@
     getTrackDisplayAttribution,
     getTrackDisplayTitle,
   } from "$lib/utils/display";
-  import EmotionsDisplay from "../atoms/EmotionsDisplay.svelte";
+  import EmotionsDisplay from "./EmotionsDisplay.svelte";
+  import { sortEmotions } from "$lib/core/emotions.svelte";
 
   interface Props {
     track: Track;
@@ -27,17 +28,8 @@
   let displayTitle = $derived(getTrackDisplayTitle(track));
   let displayArtist = $derived(getTrackDisplayAttribution(track));
 
-  // Extract all emotions, sort descending, filter out near-zero values
   const sortedEmotions = $derived.by(() => {
-    if (!emotions) return [];
-    return Object.entries(emotions)
-      .map(([name, score]) => ({
-        name,
-        pct: Math.round(Number(score) * 100),
-      }))
-      .filter((e) => e.pct > 30)
-      .sort((a, b) => b.pct - a.pct)
-      .slice(0, 10);
+    return sortEmotions(emotions);
   });
 </script>
 

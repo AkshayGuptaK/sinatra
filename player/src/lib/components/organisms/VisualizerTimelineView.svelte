@@ -2,9 +2,11 @@
   import { COWEN_EMOTION_COLORS } from "$lib/constants/emotions";
   import { player } from "$lib/core/player.svelte";
   import type { TrackSegment } from "$lib/types/track";
-  import EmotionsDisplay from "$lib/components/atoms/EmotionsDisplay.svelte";
+  import EmotionsDisplay from "$lib/components/molecules/EmotionsDisplay.svelte";
   import { formatTime } from "$lib/utils/time";
   import { cn } from "$lib/utils";
+  import EmotionLegend from "../molecules/EmotionLegend.svelte";
+  import { EMOTION_MAP, sortEmotions } from "$lib/core/emotions.svelte";
 
   const EMOTION_THRESHOLD = 0.3;
   const INSPECTOR_THRESHOLD_PCT = 30;
@@ -13,7 +15,8 @@
     segments: TrackSegment[];
     duration: number;
     currentTime: number;
-    rms: number[] | null;
+    rms?: number[];
+    emotions?: Record<string, number> | null;
     class?: string;
   }
 
@@ -22,6 +25,7 @@
     duration = 0,
     currentTime = 0,
     rms = [],
+    emotions = {},
     class: className = "",
   }: Props = $props();
 
@@ -80,6 +84,10 @@
       .sort((a, b) => b.pct - a.pct);
   });
 
+  const sortedEmotions = $derived.by(() => {
+    return sortEmotions(emotions);
+  });
+
   function handleTimelineClick(event: MouseEvent) {
     if (!containerEl || trackDuration <= 0) return;
     const rect = containerEl.getBoundingClientRect();
@@ -133,7 +141,7 @@
   });
 </script>
 
-<div class={cn("flex flex-col gap-4 w-full", className)}>
+<div class={cn("flex flex-col gap-4 w-full rounded-xl border-t border-border/60 ", className)}>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
@@ -143,7 +151,7 @@
       hoveredSegmentIndex = null;
       hoveredEmotion = null;
     }}
-    class="relative w-full h-72 rounded-xl border border-border/60 bg-card/40 backdrop-blur-sm p-4 overflow-hidden select-none cursor-pointer"
+    class="relative w-full h-72 bg-card/40 backdrop-blur-sm p-4 overflow-hidden select-none cursor-pointer"
   >
     <!-- Background Grid Lines -->
     <div
@@ -332,40 +340,45 @@
   <!-- Bottom: Segment Inspector Dock -->
   {#if displayedSegment}
     <div
-      class="w-full rounded-xl border border-border/50 bg-card/30 p-4 backdrop-blur-xs flex flex-col gap-3"
+      class="w-full bg-card/30 p-4 backdrop-blur-xs flex flex-col gap-3"
     >
-      <div
-        class="flex items-center justify-between text-xs border-b border-border/40 pb-2"
-      >
-        <div class="flex items-center gap-2">
-          <span class="font-semibold text-foreground">
-            Segment {displayedSegment.chunk_index + 1}
-          </span>
-          <span class="text-muted-foreground font-mono text-[11px]">
-            ({formatTime(displayedSegment.start_sec)} – {formatTime(
-              displayedSegment.end_sec
-            )})
-          </span>
+      <div class="flex gap-2">
+        <div class="flex-1">
+          <div class="flex justify-between">
+            <div class="flex items-center gap-2">
+              <span class="font-semibold text-[14px] text-foreground">
+                Segment {displayedSegment.chunk_index + 1}
+              </span>
+              <span class="text-muted-foreground font-mono text-[12px]">
+                ({formatTime(displayedSegment.start_sec)} – {formatTime(
+                  displayedSegment.end_sec
+                )})
+              </span>
+            </div>
+            <div>
+              {#if hoveredSegmentIndex !== null}
+                <span
+                  class="text-[10px] uppercase font-mono tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground"
+                >
+                  Hovered Preview
+                </span>
+              {:else}
+                <span
+                  class="text-[10px] uppercase font-mono tracking-wider px-2 py-0.5 rounded bg-primary/15 text-primary font-medium"
+                >
+                  Active Playing
+                </span>
+              {/if}
+            </div>
+          </div>
+          <EmotionsDisplay sortedEmotions={inspectorSortedEmotions} />
         </div>
-
-        <div>
-          {#if hoveredSegmentIndex !== null}
-            <span
-              class="text-[10px] uppercase font-mono tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground"
-            >
-              Hovered Preview
-            </span>
-          {:else}
-            <span
-              class="text-[10px] uppercase font-mono tracking-wider px-2 py-0.5 rounded bg-primary/15 text-primary font-medium"
-            >
-              Active Playing
-            </span>
-          {/if}
+        <div class="flex-1">
+          <div class="font-semibold text-[14px] text-foreground">Full Song</div>
+          <EmotionsDisplay {sortedEmotions} />
         </div>
+        <EmotionLegend viewMode="audio_emotion" />
       </div>
-
-      <EmotionsDisplay sortedEmotions={inspectorSortedEmotions} />
     </div>
   {/if}
 </div>

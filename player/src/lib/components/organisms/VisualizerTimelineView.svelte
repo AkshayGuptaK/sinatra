@@ -1,22 +1,25 @@
 <script lang="ts">
-  import { COWEN_EMOTION_COLORS } from "$lib/constants/emotions";
-  import { player } from "$lib/core/player.svelte";
   import type { TrackSegment } from "$lib/types/track";
-  import EmotionsDisplay from "$lib/components/molecules/EmotionsDisplay.svelte";
-  import { formatTime } from "$lib/utils/time";
   import { cn } from "$lib/utils";
-  import EmotionLegend from "../molecules/EmotionLegend.svelte";
-  import { EMOTION_MAP, sortEmotions } from "$lib/core/emotions.svelte";
+  import { formatTime } from "$lib/utils/time";
+  import { COWEN_EMOTION_COLORS } from "$lib/constants/emotions";
+  import { sortEmotions } from "$lib/core/emotions.svelte";
+  import EmotionLegend from "$lib/components/molecules/EmotionLegend.svelte";
+  import EmotionsDisplay from "$lib/components/molecules/EmotionsDisplay.svelte";
 
   const EMOTION_THRESHOLD = 0.3;
   const INSPECTOR_THRESHOLD_PCT = 30;
+  const BAR_HEIGHT = 5;
+  const BAR_STACK_GAP = 1.5;
 
   interface Props {
     segments: TrackSegment[];
     duration: number;
     currentTime: number;
+    isPlaying?: boolean;
     rms?: number[];
     emotions?: Record<string, number> | null;
+    onSeek?: (seconds: number) => void;
     class?: string;
   }
 
@@ -24,8 +27,10 @@
     segments = [],
     duration = 0,
     currentTime = 0,
+    isPlaying = false,
     rms = [],
     emotions = {},
+    onSeek,
     class: className = "",
   }: Props = $props();
 
@@ -38,7 +43,7 @@
     y: number;
   } | null>(null);
 
-  // Fallback track duration to prevent divide-by-zero
+  //Fallback track duration to prevent divide-by-zero
   const trackDuration = $derived(
     duration > 0
       ? duration
@@ -47,8 +52,37 @@
         : 1
   );
 
+  // --- Smooth 60fps Playhead Interpolation ---
+  let smoothTime = $state(0);
+  let lastSyncTime = 0;
+  let lastSyncPerf = 0;
+
+  $effect(() => {
+    // Sync anchor whenever currentTime prop updates from audio engine
+    lastSyncTime = currentTime;
+    lastSyncPerf = performance.now();
+    smoothTime = currentTime;
+  });
+
+  $effect(() => {
+    if (!isPlaying) {
+      smoothTime = currentTime;
+      return;
+    }
+
+    let rafId: number;
+    const tick = (now: number) => {
+      const elapsedSec = (now - lastSyncPerf) / 1000;
+      smoothTime = Math.min(trackDuration, lastSyncTime + elapsedSec);
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  });
+
   const playheadX = $derived(
-    Math.min(1000, Math.max(0, (currentTime / trackDuration) * 1000))
+    Math.min(1000, Math.max(0, (smoothTime / trackDuration) * 1000))
   );
 
   // Active playing segment index based on clock
@@ -59,18 +93,15 @@
   );
 
   // Target segment to display in the inspector dock: hovered overrides playing
-  const displayedSegment = $derived.by(() => {
-    if (hoveredSegmentIndex !== null && segments[hoveredSegmentIndex]) {
-      return segments[hoveredSegmentIndex];
-    }
-    if (
-      activePlayingSegmentIndex !== -1 &&
-      segments[activePlayingSegmentIndex]
-    ) {
-      return segments[activePlayingSegmentIndex];
-    }
-    return segments[0] ?? null;
-  });
+  const displayedSegmentIndex = $derived(
+    hoveredSegmentIndex !== null
+      ? hoveredSegmentIndex
+      : activePlayingSegmentIndex !== -1
+        ? activePlayingSegmentIndex
+        : 0
+  );
+
+  const displayedSegment = $derived(segments[displayedSegmentIndex] ?? null);
 
   // Extract and format emotions for EmotionsDisplay
   const inspectorSortedEmotions = $derived.by(() => {
@@ -88,6 +119,36 @@
     return sortEmotions(emotions);
   });
 
+  /**
+   * Computes non-overlapping Y coordinates for a segment's emotion bars.
+   * Emotions sharing the exact same rounded percentage are stacked vertically.
+   */
+  function getStackedSegmentEmotions(seg: TrackSegment) {
+    const countsByPct = new Map<number, number>();
+
+    return Object.entries(seg.emotions_normalized)
+      .filter(
+        ([emotion, score]) =>
+          score >= EMOTION_THRESHOLD && Boolean(COWEN_EMOTION_COLORS[emotion])
+      )
+      .sort((a, b) => a[0].localeCompare(b[0])) // Deterministic stacking order
+      .map(([emotion, score]) => {
+        const pct = Math.round(score * 100);
+        const stackIdx = countsByPct.get(pct) ?? 0;
+        countsByPct.set(pct, stackIdx + 1);
+
+        const baseY = 280 - (pct / 100) * 260;
+        const y = baseY - stackIdx * (BAR_HEIGHT + BAR_STACK_GAP);
+
+        return {
+          emotion,
+          pct,
+          y,
+          color: COWEN_EMOTION_COLORS[emotion],
+        };
+      });
+  }
+
   function handleTimelineClick(event: MouseEvent) {
     if (!containerEl || trackDuration <= 0) return;
     const rect = containerEl.getBoundingClientRect();
@@ -95,15 +156,17 @@
       0,
       Math.min(1, (event.clientX - rect.left) / rect.width)
     );
-    player.engine.seekTo(clickRatio * trackDuration);
+    const targetSec = clickRatio * trackDuration;
+    smoothTime = targetSec;
+    onSeek?.(targetSec);
   }
 
-  /// Closed polygon path for the gradient fill
+  // Closed polygon path for the gradient fill
   const rmsFillPath = $derived.by(() => {
     if (!rms || rms.length === 0) return "";
 
     const baselineY = 280;
-    const maxAmplitude = 230; // Max height: peaks reach y = 50
+    const maxAmplitude = 230;
     const n = rms.length;
     const stepX = 1000 / (n - 1 || 1);
 
@@ -141,7 +204,12 @@
   });
 </script>
 
-<div class={cn("flex flex-col gap-4 w-full rounded-xl border-t border-border/60 ", className)}>
+<div
+  class={cn(
+    "flex flex-col gap-4 w-full rounded-xl border-t border-border/60",
+    className
+  )}
+>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
@@ -217,14 +285,11 @@
 
       <!-- 1. Background RMS Volume Layer -->
       {#if rmsFillPath}
-        <!-- Gradient Area Fill -->
         <path
           d={rmsFillPath}
           fill="url(#rms-gradient)"
           class="transition-all duration-300 pointer-events-none"
         />
-
-        <!-- Subtle Top Crest Line -->
         <path
           d={rmsStrokePath}
           fill="none"
@@ -237,7 +302,7 @@
         />
       {/if}
 
-      <!-- 2. Segment Columns & Emotion Horizontal Bars -->
+      <!-- 2. Segment Columns & Stacked Emotion Horizontal Bars -->
       {#each segments as seg, idx}
         {@const segStartX = (seg.start_sec / trackDuration) * 1000}
         {@const segWidth = Math.max(
@@ -246,6 +311,7 @@
         )}
         {@const isCurrentSegment = activePlayingSegmentIndex === idx}
         {@const isHoveredSegment = hoveredSegmentIndex === idx}
+        {@const stackedBars = getStackedSegmentEmotions(seg)}
 
         <g
           class={cn(
@@ -265,48 +331,43 @@
             class="transition-opacity duration-150"
           />
 
-          {#each Object.entries(seg.emotions_normalized) as [emotion, score]}
-            {#if score >= EMOTION_THRESHOLD && COWEN_EMOTION_COLORS[emotion]}
-              {@const y = 280 - score * 260}
-              {@const color = COWEN_EMOTION_COLORS[emotion]}
-
-              <rect
-                x={segStartX + 1}
-                {y}
-                width={Math.max(1, segWidth - 2)}
-                height="5"
-                rx="2.5"
-                fill={color}
-                filter={isCurrentSegment || isHoveredSegment
-                  ? "url(#bar-glow)"
-                  : undefined}
-                class="cursor-pointer transition-all duration-150 hover:brightness-135 hover:[filter:url(#bar-hover-glow)]"
-                onpointerenter={(e) => {
-                  hoveredEmotion = {
-                    name: emotion,
-                    score: Math.round(score * 100),
-                    x: e.clientX,
-                    y: e.clientY,
-                  };
-                }}
-                onpointermove={(e) => {
-                  if (hoveredEmotion) {
-                    hoveredEmotion.x = e.clientX;
-                    hoveredEmotion.y = e.clientY;
-                  }
-                }}
-                onpointerleave={() => (hoveredEmotion = null)}
-              />
-            {/if}
+          {#each stackedBars as bar (bar.emotion)}
+            <rect
+              x={segStartX + 1}
+              y={bar.y}
+              width={Math.max(1, segWidth - 2)}
+              height={BAR_HEIGHT}
+              rx="2.5"
+              fill={bar.color}
+              filter={isCurrentSegment || isHoveredSegment
+                ? "url(#bar-glow)"
+                : undefined}
+              class="cursor-pointer transition-all duration-150 hover:brightness-135 hover:[filter:url(#bar-hover-glow)]"
+              onpointerenter={(e) => {
+                hoveredEmotion = {
+                  name: bar.emotion,
+                  score: bar.pct,
+                  x: e.clientX,
+                  y: e.clientY,
+                };
+              }}
+              onpointermove={(e) => {
+                if (hoveredEmotion) {
+                  hoveredEmotion.x = e.clientX;
+                  hoveredEmotion.y = e.clientY;
+                }
+              }}
+              onpointerleave={() => (hoveredEmotion = null)}
+            />
           {/each}
         </g>
       {/each}
 
-      <!-- 3. Current Playhead Vertical Line -->
+      <!-- 3. Current Playhead Vertical Line (60fps Smooth Glide) -->
       <line
-        x1={playheadX.toFixed(1)}
+        x1={playheadX.toFixed(2)}
         y1="0"
-        x2={playheadX.toFixed(1)}
+        x2={playheadX.toFixed(2)}
         y2="300"
         stroke="var(--foreground)"
         stroke-width="2"
@@ -339,15 +400,13 @@
 
   <!-- Bottom: Segment Inspector Dock -->
   {#if displayedSegment}
-    <div
-      class="w-full bg-card/30 p-4 backdrop-blur-xs flex flex-col gap-3"
-    >
+    <div class="w-full bg-card/30 p-4 backdrop-blur-xs flex flex-col gap-3">
       <div class="flex gap-2">
         <div class="flex-1">
           <div class="flex justify-between">
             <div class="flex items-center gap-2">
               <span class="font-semibold text-[14px] text-foreground">
-                Segment {(hoveredSegmentIndex || activePlayingSegmentIndex) + 1}
+                Segment {displayedSegmentIndex + 1}
               </span>
               <span class="text-muted-foreground font-mono text-[12px]">
                 ({formatTime(displayedSegment.start_sec)} – {formatTime(

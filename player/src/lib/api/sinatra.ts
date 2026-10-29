@@ -17,6 +17,8 @@ export interface TrackLyricMatch {
 
 export type SimilarityMode = "acoustics" | "emotion";
 
+export type SegmentEditAction = "split" | "push" | "pull";
+
 function appendConstraintToParams(
   constraint: FilterIntent,
   params: URLSearchParams
@@ -159,4 +161,26 @@ export const sinatraApi = {
 
     return res.json();
   },
+
+  async patchTrackSegments(
+    trackId: string,
+    action: SegmentEditAction,
+    timestamp: number
+  ): Promise<TrackSegment[]> {
+    const res = await fetch(
+      `${API_BASE_URL}/api/library/tracks/${encodeURIComponent(trackId)}/segments`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, timestamp }),
+      }
+    );
+  
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `Failed to edit segments: ${res.statusText}`);
+    }
+  
+    return res.json();
+  }
 };

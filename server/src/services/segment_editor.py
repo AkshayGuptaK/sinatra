@@ -8,7 +8,7 @@ from src.services.emotion_scorer import get_emotion_scorer
 from src.pg import get_pg
 from src.sources import FileSystemSource
 
-MIN_CHUNK_DURATION = 1.0  # Minimum allowable segment span in seconds
+MIN_CHUNK_DURATION = 10.0  # Minimum allowable segment span in seconds
 
 
 def _extract_chunk_features(
@@ -18,29 +18,19 @@ def _extract_chunk_features(
     embedder = get_mert_embedder()
     scorer = get_emotion_scorer()
 
-    inputs = embedder.processor(
-        waveform_slice,
-        sampling_rate=sr,
-        return_tensors="pt",
-        padding=True,
-    )
+    chunk = embedder.extract([waveform_slice])[0]
+    musical_vector = chunk["acoustic_embedding"]
 
-    with torch.no_grad():
-        outputs = embedder.model(
-            **inputs.to(embedder.device), output_hidden_states=True
-        )
-
-    musical_vector = (
-        outputs.hidden_states[-1].mean(dim=1).cpu().numpy().flatten().tolist()
+    emotions, emotion_vec, emotions_norm, emotion_norm_vec = scorer.score(
+        musical_vector
     )
-    moods, mood_vec, moods_norm, mood_norm_vec = scorer.score(musical_vector)
 
     return {
         "musical_embedding": musical_vector,
-        "emotions": moods,
-        "emotion_vector": mood_vec,
-        "emotions_normalized": moods_norm,
-        "emotion_vector_normalized": mood_norm_vec,
+        "emotions": emotions,
+        "emotion_vector": emotion_vec,
+        "emotions_normalized": emotions_norm,
+        "emotion_vector_normalized": emotion_norm_vec,
     }
 
 
@@ -107,12 +97,8 @@ def edit_track_segments(
                 f"Split point too close to segment end (< {MIN_CHUNK_DURATION}s)."
             )
 
-        feat_a = _extract_chunk_features(
-            get_slice(chunk_a_start, chunk_a_end), sr=sr
-        )
-        feat_b = _extract_chunk_features(
-            get_slice(chunk_b_start, chunk_b_end), sr=sr
-        )
+        feat_a = _extract_chunk_features(get_slice(chunk_a_start, chunk_a_end), sr=sr)
+        feat_b = _extract_chunk_features(get_slice(chunk_b_start, chunk_b_end), sr=sr)
 
         db.split_chunk(
             track_id=track_id,
@@ -127,9 +113,7 @@ def edit_track_segments(
     # --- ACTION: PUSH (Move previous boundary forward to timestamp) ---
     elif action == "push":
         if target_idx == 0:
-            raise ValueError(
-                "Cannot push split: current segment is the first segment."
-            )
+            raise ValueError("Cannot push split: current segment is the first segment.")
 
         prev_chunk = chunks[target_idx - 1]
         prev_start = prev_chunk["start_sec"]
@@ -146,9 +130,7 @@ def edit_track_segments(
                 f"Push would make current segment too short (< {MIN_CHUNK_DURATION}s)."
             )
 
-        feat_prev = _extract_chunk_features(
-            get_slice(prev_start, prev_end), sr=sr
-        )
+        feat_prev = _extract_chunk_features(get_slice(prev_start, prev_end), sr=sr)
         feat_cur = _extract_chunk_features(get_slice(cur_start, cur_end), sr=sr)
 
         db.update_two_adjacent_chunks(
@@ -163,9 +145,7 @@ def edit_track_segments(
     # --- ACTION: PULL (Move next boundary backward to timestamp) ---
     elif action == "pull":
         if target_idx >= len(chunks) - 1:
-            raise ValueError(
-                "Cannot pull split: current segment is the last segment."
-            )
+            raise ValueError("Cannot pull split: current segment is the last segment.")
 
         next_chunk = chunks[target_idx + 1]
         cur_start = target_chunk["start_sec"]
@@ -183,9 +163,7 @@ def edit_track_segments(
             )
 
         feat_cur = _extract_chunk_features(get_slice(cur_start, cur_end), sr=sr)
-        feat_next = _extract_chunk_features(
-            get_slice(next_start, next_end), sr=sr
-        )
+        feat_next = _extract_chunk_features(get_slice(next_start, next_end), sr=sr)
 
         db.update_two_adjacent_chunks(
             chunk_a_id=target_chunk["id"],

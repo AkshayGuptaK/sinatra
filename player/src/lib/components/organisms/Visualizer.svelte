@@ -12,6 +12,7 @@
     handleSearchChange,
   } from "$lib/core/command.svelte";
   import { EMOTION_MAP } from "$lib/core/emotions.svelte";
+  import TimelineControls from "../molecules/TimelineControls.svelte";
 
   interface Props {
     class?: string;
@@ -45,6 +46,15 @@
         onSearchChange={handleSearchChange}
         onCommandSubmit={handleCommandSubmit}
       />
+      <TimelineControls
+        canSplit={player.engine.canSplitSegment}
+        canPush={player.engine.canPushSegment}
+        canPull={player.engine.canPullSegment}
+        isEditing={player.engine.isEditingSegments}
+        onSplit={player.engine.splitSegmentAtCurrentTime}
+        onPush={player.engine.pushSegmentToCurrentTime}
+        onPull={player.engine.pullSegmentToCurrentTime}
+      />
     </div>
   </div>
 
@@ -54,6 +64,8 @@
       segments={player.engine.segments}
       duration={player.engine.duration}
       currentTime={player.engine.currentTime}
+      isPlaying={player.engine.isPlaying}
+      onSeek={(sec) => player.engine.seekTo(sec)}
       rms={player.currentTrack?.rms_env}
       emotions={player.currentTrack &&
         EMOTION_MAP["audio_emotion"]["getEmotions"](player.currentTrack)}

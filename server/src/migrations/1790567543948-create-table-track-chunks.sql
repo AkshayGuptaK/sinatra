@@ -1,7 +1,6 @@
 CREATE TABLE track_chunks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     track_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-    chunk_index INT4 NOT NULL,
     
     start_sec FLOAT8 NOT NULL,
     end_sec FLOAT8 NOT NULL,
@@ -16,5 +15,5 @@ CREATE TABLE track_chunks (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     
-    CONSTRAINT uq_track_chunk_index UNIQUE (track_id, chunk_index)
+    CONSTRAINT uq_track_chunk_start UNIQUE (track_id, start_sec);
 );

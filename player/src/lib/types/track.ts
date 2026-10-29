@@ -21,7 +21,6 @@ export interface Track {
 export type ProjectableTrack = MakeNonNullable<Track, "coord_x" | "coord_y">;
 
 export interface TrackSegment {
-  chunk_index: number;
   start_sec: number;
   end_sec: number;
   emotions_normalized: Record<string, number>;

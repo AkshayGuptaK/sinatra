@@ -238,7 +238,7 @@
       {/if}
 
       <!-- 2. Segment Columns & Emotion Horizontal Bars -->
-      {#each segments as seg, idx (seg.chunk_index)}
+      {#each segments as seg, idx}
         {@const segStartX = (seg.start_sec / trackDuration) * 1000}
         {@const segWidth = Math.max(
           2,
@@ -347,7 +347,7 @@
           <div class="flex justify-between">
             <div class="flex items-center gap-2">
               <span class="font-semibold text-[14px] text-foreground">
-                Segment {displayedSegment.chunk_index + 1}
+                Segment {(hoveredSegmentIndex || activePlayingSegmentIndex) + 1}
               </span>
               <span class="text-muted-foreground font-mono text-[12px]">
                 ({formatTime(displayedSegment.start_sec)} – {formatTime(

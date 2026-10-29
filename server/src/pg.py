@@ -83,8 +83,6 @@ class PostgresStore:
 
         batch_params = []
         for c in chunks:
-            idx = int(c.get("chunk_index", c.get("index", 0)))
-
             emotions = c.get("emotions")
             emotions_norm = c.get("emotions_normalized")
             emotions_json = json.dumps(emotions) if emotions is not None else None
@@ -102,7 +100,6 @@ class PostgresStore:
             batch_params.append(
                 (
                     track_id,
-                    idx,
                     float(c["start_sec"]),
                     float(c["end_sec"]),
                     musical_vec_str,
@@ -123,7 +120,6 @@ class PostgresStore:
                 """
                 INSERT INTO track_chunks (
                     track_id,
-                    chunk_index,
                     start_sec,
                     end_sec,
                     musical_embedding,
@@ -134,7 +130,6 @@ class PostgresStore:
                 )
                 VALUES (
                     %s::uuid,
-                    %s,
                     %s,
                     %s,
                     %s::vector,
@@ -163,7 +158,7 @@ class PostgresStore:
         coord_y: Optional[float] = 0,
         music_start: Optional[float] = 0.0,
         music_end: Optional[float] = None,
-        rms_env: Optional[list[float]] | None = None
+        rms_env: Optional[list[float]] | None = None,
     ) -> None:
         # Format JSONB strings
         emotions_json = json.dumps(emotions) if emotions is not None else None
@@ -256,7 +251,7 @@ class PostgresStore:
                     coord_y,
                     music_start,
                     music_end if music_end is not None else duration,
-                    rms_env
+                    rms_env,
                 ),
             )
             track_id = cur.fetchone()[0]
@@ -342,13 +337,13 @@ class PostgresStore:
         """
         query = """
             SELECT 
-                chunk_index,
+                id::text,
                 start_sec,
                 end_sec,
                 emotions_normalized
             FROM track_chunks
             WHERE track_id = %s::uuid
-            ORDER BY chunk_index ASC;
+            ORDER BY start_sec ASC;
         """
         try:
             with self.conn.cursor() as cur:
@@ -356,7 +351,7 @@ class PostgresStore:
                 rows = cur.fetchall()
                 return [
                     {
-                        "chunk_index": int(r[0]),
+                        "id": r[0],
                         "start_sec": float(r[1]),
                         "end_sec": float(r[2]),
                         "emotions_normalized": r[3] or {},

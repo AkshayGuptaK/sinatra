@@ -7,14 +7,20 @@ from src.models.mert import get_mert_embedder
 from src.models.projector.mood_projector import get_mood_projector
 from src.services import get_emotion_scorer, get_metadata_extractor
 from src.services.audio_chunker import get_audio_chunker
+from src.sources import FileSystemSource
 
 ai_executor = ThreadPoolExecutor(max_workers=1)
 
 
 def _process_single_file(path):
     try:
+        # Decode Audio (Stereo for phase-immune silence detection)
+        raw_audio = FileSystemSource.read_file(filepath_str, self.sample_rate, 2)
+        if hasattr(raw_audio, "numpy"):
+            raw_audio = raw_audio.numpy()
+        waveform = np.asarray(raw_audio, dtype=np.float32).squeeze()
         chunker = get_audio_chunker()
-        chunked_track = chunker.chunk(path)
+        chunked_track = chunker.chunk(waveform)
 
         if not chunked_track.chunks:
             print(f"⚠️ No audio chunks generated for {path}", flush=True)
@@ -23,6 +29,8 @@ def _process_single_file(path):
         music_start = float(chunked_track.chunks[0].start_sec)
         music_end = float(chunked_track.chunks[-1].end_sec)
 
+        rms_env = compute_rms_envelope(waveform, n_points=200)
+        
         embedder = get_mert_embedder()
         embedded_chunks = embedder.extract(chunked_track.chunks)
 
@@ -71,6 +79,7 @@ def _process_single_file(path):
             coord_y=coord_y,
             music_start=music_start,
             music_end=music_end,
+            rms_env=rms_env
         )
 
         db.save_track_chunks(track_id=track_id, chunks=embedded_chunks)

@@ -163,6 +163,7 @@ class PostgresStore:
         coord_y: Optional[float] = 0,
         music_start: Optional[float] = 0.0,
         music_end: Optional[float] = None,
+        rms_env: Optional[list[float]] | None = None
     ) -> None:
         # Format JSONB strings
         emotions_json = json.dumps(emotions) if emotions is not None else None
@@ -205,6 +206,7 @@ class PostgresStore:
                     coord_y,
                     music_start,
                     music_end,
+                    rms_env,
                     updated_at
                 )
                 VALUES (
@@ -222,6 +224,7 @@ class PostgresStore:
                     %s,             -- coord_y
                     %s,             -- music_start
                     %s,             -- music_end
+                    %s,             -- rms_env
                     NOW()           -- updated_at
                 )
                 ON CONFLICT (filepath) DO UPDATE SET
@@ -234,6 +237,7 @@ class PostgresStore:
                     coord_y = EXCLUDED.coord_y,
                     music_start = EXCLUDED.music_start,
                     music_end = EXCLUDED.music_end,
+                    rms_env = EXCLUDED.rms_env,
                     updated_at = NOW()
                 RETURNING id::text;
                 """,
@@ -251,7 +255,8 @@ class PostgresStore:
                     coord_x,
                     coord_y,
                     music_start,
-                    music_end if music_end is not None else duration
+                    music_end if music_end is not None else duration,
+                    rms_env
                 ),
             )
             track_id = cur.fetchone()[0]
@@ -292,6 +297,7 @@ class PostgresStore:
                music_start,
                music_end,
                duration,
+               rms_envelope,
                emotions_normalized,
                coord_x,
                coord_y,
@@ -315,11 +321,12 @@ class PostgresStore:
                         "start": float(r[6] or 0),
                         "end": float(r[7] or r[8]),
                         "duration": float(r[8]),
-                        "emotions": r[9] or {},
-                        "coord_x": r[10] or 0,
-                        "coord_y": r[11] or 0,
-                        "lyrics_emotions": r[12] or {},
-                        "lyrics_emotions_coords": r[13] or [0, 0],
+                        "rms_env": r[9] or [],
+                        "emotions": r[10] or {},
+                        "coord_x": r[11] or 0,
+                        "coord_y": r[12] or 0,
+                        "lyrics_emotions": r[13] or {},
+                        "lyrics_emotions_coords": r[14] or [0, 0],
                     }
                     for r in result
                 ]

@@ -60,7 +60,7 @@ export class MusicPlayer {
         return null;
       }
       let track = this.queue[nextIndex]
-      return { id: track.id, start: track.start, end: track.end }
+      return { id: track.id, start: track.start, end: track.end, rms_env: track.rms_env }
     };  
     this.engine.onTrackAdvanced = () => {
       if (this.hasNext) {

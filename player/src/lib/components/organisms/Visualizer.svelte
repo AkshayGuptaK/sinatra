@@ -53,6 +53,7 @@
       segments={player.engine.segments}
       duration={player.engine.duration}
       currentTime={player.engine.currentTime}
+      rms={player.engine.currentRmsEnv}
     />
   </div>
 </div>

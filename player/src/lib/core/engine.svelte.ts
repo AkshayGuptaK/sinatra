@@ -13,6 +13,7 @@ export interface NextTrack {
   id: string;
   start: number;
   end: number;
+  rms_env: number[];
 }
 
 const FADE_PLAY_SEC = 0.7;
@@ -53,6 +54,7 @@ export class AudioEngine {
   currentTrackId = $state<string | null>(null);
   currentMusicStart = $state<number>(0);
   currentMusicEnd = $state<number | null>(null);
+  currentRmsEnv = $state<number[] | null>(null);
 
   // Reactive settings subscriptions pulled from store
   fadeEnabled = $derived(Boolean(settings.get("playback.fade") ?? true));
@@ -374,6 +376,7 @@ export class AudioEngine {
     this.currentTrackId = next.id;
     this.currentMusicStart = next.start;
     this.currentMusicEnd = next.end;
+    this.currentRmsEnv = next.rms_env;
     this.currentTime = active.audio.currentTime;
     this.duration = Number.isFinite(active.audio.duration)
       ? active.audio.duration
@@ -566,6 +569,7 @@ export class AudioEngine {
     this.currentTrackId = track.id;
     this.currentMusicStart = track.start;
     this.currentMusicEnd = track.end;
+    this.currentRmsEnv = track.rms_env;
 
     this.preloadDeck(deck, track, this.transitionMode === "gapless");
     this.setDeckGainImmediate(deck, 1);

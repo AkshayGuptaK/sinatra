@@ -4,8 +4,6 @@ from typing import Optional, Union
 import librosa
 import numpy as np
 
-from src.sources import FileSystemSource
-
 
 @dataclass
 class AudioChunk:
@@ -112,21 +110,12 @@ class AudioChunker:
 
     def chunk(
         self,
-        filepath: Union[str, Path],
-        waveform: Optional[np.ndarray] = None,
+        waveform: np.ndarray,
     ) -> ChunkedTrack:
         filepath_str = str(filepath)
 
-        # 1. Decode Audio (Stereo for phase-immune silence detection)
-        if waveform is None:
-            raw_audio = FileSystemSource.read_file(filepath_str, self.sample_rate, 2)
-            if hasattr(raw_audio, "numpy"):
-                raw_audio = raw_audio.numpy()
-            waveform = np.asarray(raw_audio, dtype=np.float32).squeeze()
-
         original_total_sec = waveform.shape[-1] / self.sample_rate
 
-        # 2. Trim container silence
         trimmed_waveform, start_sample, end_sample = self.trim_container_silence(
             waveform
         )
@@ -140,13 +129,11 @@ class AudioChunker:
             music_end_sec = round(original_total_sec, 2)
             trimmed_total_sec = original_total_sec
 
-        # 3. Downmix to 1D Mono for Librosa segmentation and MERT
         if trimmed_waveform.ndim > 1:
             trimmed_waveform = trimmed_waveform.mean(axis=0)
 
         total_trimmed_samples = trimmed_waveform.shape[0]
 
-        # 4. Short track fallback
         if trimmed_total_sec <= self.crop_sec:
             single_chunk = AudioChunk(
                 index=0,
@@ -163,10 +150,8 @@ class AudioChunker:
                 chunks=[single_chunk],
             )
 
-        # 5. Detect structural sections on trimmed mono waveform
         sections = self._detect_sections(trimmed_waveform, trimmed_total_sec)
 
-        # 6. Extract 15s center crops for MERT, keeping true section start/end timestamps
         chunks: list[AudioChunk] = []
         for idx, (s_start, s_end) in enumerate(sections):
             sec_dur = s_end - s_start

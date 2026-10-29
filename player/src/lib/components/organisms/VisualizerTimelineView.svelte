@@ -13,6 +13,7 @@
     segments: TrackSegment[];
     duration: number;
     currentTime: number;
+    rms: number[] | null;
     class?: string;
   }
 
@@ -20,6 +21,7 @@
     segments = [],
     duration = 0,
     currentTime = 0,
+    rms = [],
     class: className = "",
   }: Props = $props();
 
@@ -88,24 +90,46 @@
     player.engine.seekTo(clickRatio * trackDuration);
   }
 
-  // Placeholder synthetic RMS envelope until backend RMS is connected
-  const mockRmsPath = $derived.by(() => {
-    if (segments.length === 0) return "";
-    const points: string[] = ["M 0 280"];
-    const step = 1000 / segments.length;
+  /// Closed polygon path for the gradient fill
+  const rmsFillPath = $derived.by(() => {
+    if (!rms || rms.length === 0) return "";
 
-    segments.forEach((seg, i) => {
-      const x = i * step;
-      const energy = seg.emotions_normalized["energizing/pump-up"] || 0.4;
-      const calm = seg.emotions_normalized["calm/relaxing/serene"] || 0.2;
-      const height =
-        280 -
-        Math.min(220, Math.max(40, (energy * 1.4 - calm * 0.5 + 0.3) * 160));
-      points.push(`L ${x.toFixed(1)} ${height.toFixed(1)}`);
-    });
+    const baselineY = 280;
+    const maxAmplitude = 230; // Max height: peaks reach y = 50
+    const n = rms.length;
+    const stepX = 1000 / (n - 1 || 1);
 
-    points.push("L 1000 280 Z");
+    const points: string[] = [`M 0 ${baselineY}`];
+
+    for (let i = 0; i < n; i++) {
+      const x = (i * stepX).toFixed(1);
+      const val = Math.max(0, Math.min(1, rms[i] ?? 0));
+      const y = (baselineY - val * maxAmplitude).toFixed(1);
+      points.push(`L ${x} ${y}`);
+    }
+
+    points.push(`L 1000 ${baselineY} Z`);
     return points.join(" ");
+  });
+
+  // Crisp line path tracking only the top crest of the volume curve
+  const rmsStrokePath = $derived.by(() => {
+    if (!rms || rms.length === 0) return "";
+
+    const baselineY = 280;
+    const maxAmplitude = 230;
+    const n = rms.length;
+    const stepX = 1000 / (n - 1 || 1);
+
+    return rms
+      .map((val, i) => {
+        const command = i === 0 ? "M" : "L";
+        const x = (i * stepX).toFixed(1);
+        const clamped = Math.max(0, Math.min(1, val ?? 0));
+        const y = (baselineY - clamped * maxAmplitude).toFixed(1);
+        return `${command} ${x} ${y}`;
+      })
+      .join(" ");
   });
 </script>
 
@@ -184,10 +208,23 @@
       </defs>
 
       <!-- 1. Background RMS Volume Layer -->
-      {#if mockRmsPath}
+      {#if rmsFillPath}
+        <!-- Gradient Area Fill -->
         <path
-          d={mockRmsPath}
+          d={rmsFillPath}
           fill="url(#rms-gradient)"
+          class="transition-all duration-300 pointer-events-none"
+        />
+
+        <!-- Subtle Top Crest Line -->
+        <path
+          d={rmsStrokePath}
+          fill="none"
+          stroke="var(--muted-foreground)"
+          stroke-width="1.5"
+          stroke-opacity="0.35"
+          stroke-linecap="round"
+          stroke-linejoin="round"
           class="transition-all duration-300 pointer-events-none"
         />
       {/if}

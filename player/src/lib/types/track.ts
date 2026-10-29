@@ -10,6 +10,7 @@ export interface Track {
   start: number;
   end: number;
   duration: number;
+  rms_env: number[];
   emotions: Record<string, number> | null;
   coord_x: number | null;
   coord_y: number | null;

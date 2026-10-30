@@ -16,10 +16,10 @@ class MertEmbedder(AudioEmbedder):
 
         print(f"🚀 Loading {self._model_id} on {self.device}...", flush=True)
         self.processor = Wav2Vec2FeatureExtractor.from_pretrained(
-            self._model_id, trust_remote_code=True
+            self._model_id, trust_remote_code=True, local_files_only=True
         )
         self.model = AutoModel.from_pretrained(
-            self._model_id, trust_remote_code=True
+            self._model_id, trust_remote_code=True, local_files_only=True
         ).to(self.device)
         self.model.eval()
 

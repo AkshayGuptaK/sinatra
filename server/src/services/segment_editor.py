@@ -18,7 +18,7 @@ def _extract_chunk_features(
     embedder = get_mert_embedder()
     scorer = get_emotion_scorer()
 
-    chunk = embedder.extract([waveform_slice])[0]
+    chunk = embedder.extract([{"waveform": waveform_slice}])[0]
     musical_vector = chunk["acoustic_embedding"]
 
     emotions, emotion_vec, emotions_norm, emotion_norm_vec = scorer.score(
@@ -44,7 +44,7 @@ def edit_track_segments(
     embeddings and emotions for modified segments.
     """
     db = get_pg()
-    filepath = db.get_track_filepath(track_id)
+    filepath = db.get_track_path_by_id(track_id)
     if not filepath:
         raise ValueError(f"Track with ID {track_id} not found.")
 
@@ -68,13 +68,15 @@ def edit_track_segments(
 
     # Load audio into memory once for all slice re-encodings
     sr = 24000
-    waveform = FileSystemSource.read_file(filepath, sample_rate=sr, channels=1)
+    waveform = FileSystemSource.read_file(filepath, target_sr=sr, channels=1)
     if waveform is None:
         raise RuntimeError(f"Failed to decode audio file: {filepath}")
+    
 
     if isinstance(waveform, torch.Tensor):
         waveform = waveform.detach().cpu().numpy()
     waveform = waveform.flatten()
+    
 
     def get_slice(start_s: float, end_s: float) -> np.ndarray:
         s_idx = max(0, int(start_s * sr))

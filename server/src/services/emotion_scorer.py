@@ -41,7 +41,7 @@ class EmotionScorer:
         else:
             self.ref_path = Path(reference_corpus_path)
 
-        print(f"Loading Cowen MoodScorer weights from: {self.weights_path}...")
+        print(f"Loading Cowen Emotion Scorer weights from: {self.weights_path}...")
         self.mood_names: List[str] = []
         self.weights: np.ndarray  # Shape: (1024, 24)
         self.biases: np.ndarray  # Shape: (24,)

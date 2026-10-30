@@ -1,5 +1,3 @@
-import { COWEN_EMOTION_COLORS } from "$lib/constants/emotions";
-
 export type FluidStyle = "smoke" | "water" | "oil";
 
 export interface FluidStyleParams {

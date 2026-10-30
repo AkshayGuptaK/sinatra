@@ -15,6 +15,7 @@ class FileSystemSource(Source):
     def __init__(self):
         self.source_dir = config["music_dir"]
 
+    @staticmethod
     def is_audio_file(filepath: str) -> bool:
         filename = os.path.basename(filepath)
 
@@ -48,6 +49,7 @@ class FileSystemSource(Source):
         ]
 
     # TODO: refactor this and below method read_bytes
+    @staticmethod
     def read_file(filepath, target_sr=44100, channels=2):
         """
         Robustly loads any audio file using system FFmpeg.

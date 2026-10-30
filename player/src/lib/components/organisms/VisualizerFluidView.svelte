@@ -3,7 +3,7 @@
   import type { TrackSegment } from "$lib/types/track";
   import type { DspVisualizerMetrics } from "$lib/core/dsp.svelte";
   import type { FluidStyle } from "$lib/config/visualizer";
-  import { FluidRenderer } from "$lib/utils/fluidWebGL";
+  import { FluidVisualizer } from "$lib/utils/fluidWebGL";
   import { extractSegmentProfile } from "$lib/utils/visualizerPalette";
 
   interface Props {
@@ -29,7 +29,7 @@
   }: Props = $props();
 
   let canvasEl = $state<HTMLCanvasElement | null>(null);
-  let renderer: FluidRenderer | null = null;
+  let renderer: FluidVisualizer | null = null;
   let animId: number | null = null;
 
   // Active segment profile reactively derived from currentTime
@@ -68,7 +68,7 @@
 
   onMount(() => {
     if (canvasEl) {
-      renderer = new FluidRenderer(canvasEl, stylePreset);
+      renderer = new FluidVisualizer(canvasEl, stylePreset);
       animId = requestAnimationFrame(renderLoop);
     }
   });

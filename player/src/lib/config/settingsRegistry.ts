@@ -132,4 +132,61 @@ export const SETTINGS_DEFINITIONS: SettingDefinition[] = [
     ],
     defaultValue: "3",
   },
+
+  // --- Visualizer ---
+  {
+    id: "visualizer.style",
+    category: "Visualizer",
+    label: "Fluid Style",
+    description: "Physical fluid simulation medium and boundary dynamics",
+    type: "select",
+    options: [
+      {
+        value: "smoke",
+        label: "Smoke",
+        description: "Atmospheric, wispy vapor with curling tendrils",
+      },
+      {
+        value: "water",
+        label: "Water",
+        description: "Rolling fluid with cohesive momentum transfer",
+      },
+      {
+        value: "oil",
+        label: "Oil",
+        description: "Heavy, viscous marbling with surface tension",
+      },
+    ],
+    defaultValue: "smoke",
+  },
+  {
+    id: "visualizer.performance",
+    category: "Visualizer",
+    label: "Performance Quality",
+    description: "Particle density, resolution, and simulation fidelity",
+    type: "select",
+    options: [
+      {
+        value: "battery",
+        label: "Battery Saver (30 FPS)",
+        description: "Low power: 6.4k particles, half resolution",
+      },
+      {
+        value: "balanced",
+        label: "Balanced (60 FPS)",
+        description: "Balanced: 16k particles, standard resolution",
+      },
+      {
+        value: "high",
+        label: "High Quality (60 FPS)",
+        description: "High fidelity: 25.6k particles, high resolution",
+      },
+      {
+        value: "ultra",
+        label: "Ultra Quality (Native FPS)",
+        description: "Uncapped refresh rate: 40k particles, max DPR",
+      },
+    ],
+    defaultValue: "balanced",
+  },
 ];

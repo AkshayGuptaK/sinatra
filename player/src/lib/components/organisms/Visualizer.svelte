@@ -1,5 +1,5 @@
-<!-- src/lib/components/organisms/Visualizer.svelte -->
 <script lang="ts">
+  import { cn } from "$lib/utils";
   import HeaderBanner from "$lib/components/molecules/HeaderBanner.svelte";
   import CommandBar from "$lib/components/molecules/CommandBar.svelte";
   import VisualizerTimelineView from "$lib/components/organisms/VisualizerTimelineView.svelte";
@@ -9,7 +9,7 @@
   } from "$lib/components/molecules/VisualizerControls.svelte";
   import { View, Settings } from "@lucide/svelte";
   import { player } from "$lib/core/player.svelte";
-  import { cn } from "$lib/utils";
+  import { settings } from "$lib/core/settings.svelte";
   import ControlButton from "$lib/components/atoms/ControlButton.svelte";
   import {
     handleCommandSubmit,
@@ -88,6 +88,8 @@
         currentTime={player.engine.currentTime}
         isPlaying={player.engine.isPlaying}
         rms={player.currentTrack?.rms_env}
+        qualityPreset={settings.get("visualizer.performance")}
+        stylePreset={settings.get("visualizer.style")}
         getDspMetrics={() => player.engine.dsp.getVisualizerMetrics()}
         class="w-full h-full"
       />

@@ -1,5 +1,4 @@
 import { COWEN_EMOTION_COLORS } from "$lib/constants/emotions";
-import { AROUSAL_CONFIG } from "$lib/config/visualizer";
 
 export interface ActiveEmotionColor {
   name: string;
@@ -12,6 +11,33 @@ export interface SegmentAffectiveProfile {
   colors: ActiveEmotionColor[];
   arousalScore: number; // 0.0 (deep calm) to 1.0 (hyper intense)
 }
+
+/**
+ * Configurable Arousal Classification.
+ * Add, remove, or rebalance emotions across high vs. low arousal sets.
+ */
+export const AROUSAL_CONFIG = {
+  highestArousalEmotions: new Set([
+    "energizing/pump-up",
+    "annoying",
+  ]),
+  highArousalEmotions: new Set([
+    "angry",
+    "indignant/defiant",
+    "anxious/tense",
+    "joyful/cheerful",
+  ]),
+  neutralEmotions: new Set(["amusing", "scary/fearful"]),
+  lowArousalEmotions: new Set([
+    "dreamy",
+    "beautiful",
+    "erotic/desirous",
+  ]),
+  lowestArousalEmotions: new Set([
+    "calm/relaxing/serene",
+    "sad/depressing",
+  ]),
+};
 
 function hexToRgb(hex: string): [number, number, number] {
   const clean = hex.replace("#", "");
@@ -77,8 +103,11 @@ export function extractSegmentProfile(
   let highSum = 0;
   let lowSum = 0;
   for (const [name, score] of coreEntries) {
+    if (AROUSAL_CONFIG.highestArousalEmotions.has(name)) highSum += 2 * score;
     if (AROUSAL_CONFIG.highArousalEmotions.has(name)) highSum += score;
     if (AROUSAL_CONFIG.lowArousalEmotions.has(name)) lowSum += score;
+    if (AROUSAL_CONFIG.lowestArousalEmotions.has(name)) lowSum += 2 * score;
+
   }
   const arousalScore = Math.max(0, Math.min(1, (highSum - lowSum + 2.0) / 4.0));
 

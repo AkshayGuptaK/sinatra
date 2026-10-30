@@ -1,4 +1,8 @@
-export type SettingCategory = "Appearance" | "AutoDJ" | "Playback";
+export type SettingCategory =
+  | "Appearance"
+  | "AutoDJ"
+  | "Playback"
+  | "Visualizer";
 
 export interface SelectOption<T extends string = string> {
   value: T;

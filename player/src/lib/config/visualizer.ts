@@ -33,29 +33,6 @@ export const FLUID_PRESETS: Record<FluidStyle, FluidStyleParams> = {
 };
 
 /**
- * Configurable Arousal Classification.
- * Add, remove, or rebalance emotions across high vs. low arousal sets.
- */
-export const AROUSAL_CONFIG = {
-  highArousalEmotions: new Set([
-    "energizing/pump-up",
-    "angry",
-    "indignant/defiant",
-    "anxious/tense",
-    "joyful/cheerful",
-    "annoying",
-  ]),
-  lowArousalEmotions: new Set([
-    "calm/relaxing/serene",
-    "sad/depressing",
-    "dreamy",
-    "beautiful",
-    "erotic/desirous",
-  ]),
-  neutralEmotions: new Set(["amusing", "scary/fearful"]),
-};
-
-/**
  * Dynamic Transfer Function Connectors.
  * Easily tweak how raw audio inputs scale into shader uniforms.
  */

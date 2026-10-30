@@ -43,19 +43,16 @@ export const AROUSAL_CONFIG = {
     "indignant/defiant",
     "anxious/tense",
     "joyful/cheerful",
+    "annoying",
   ]),
   lowArousalEmotions: new Set([
     "calm/relaxing/serene",
     "sad/depressing",
     "dreamy",
     "beautiful",
-  ]),
-  neutralEmotions: new Set([
-    "amusing",
-    "annoying",
     "erotic/desirous",
-    "scary/fearful",
   ]),
+  neutralEmotions: new Set(["amusing", "scary/fearful"]),
 };
 
 /**
@@ -78,4 +75,59 @@ export const VISUALIZER_TRANSFER_MAP = {
     sizeMultiplier: 1.0 + trebleAvg * 2.5,
     alphaMultiplier: 0.3 + trebleAvg * 0.7,
   }),
+};
+
+export type VisualizerQualityPreset = "battery" | "balanced" | "high" | "ultra";
+
+export interface PerformanceConfig {
+  /** Target render FPS: 30, 60, or 0 (uncapped / native display refresh) */
+  targetFps: number;
+  /** Active particle count drawn on screen */
+  particleCount: number;
+  /** Jacobi pressure solver iterations (higher = stiffer incompressibility) */
+  pressureIterations: number;
+  /** Simulation velocity grid resolution (power of 2) */
+  simRes: 128 | 256;
+  /** Visible dye resolution (power of 2) */
+  dyeRes: 512 | 1024;
+  /** Max Device Pixel Ratio clamp (1.0 saves significant GPU fill-rate on 4K/Retina) */
+  maxDpr: number;
+}
+
+export const VISUALIZER_PERFORMANCE_PRESETS: Record<
+  VisualizerQualityPreset,
+  PerformanceConfig
+> = {
+  battery: {
+    targetFps: 30,
+    particleCount: 6_400,
+    pressureIterations: 12,
+    simRes: 128,
+    dyeRes: 512,
+    maxDpr: 1.0,
+  },
+  balanced: {
+    targetFps: 60,
+    particleCount: 16_000,
+    pressureIterations: 18,
+    simRes: 256,
+    dyeRes: 1024,
+    maxDpr: 1.25,
+  },
+  high: {
+    targetFps: 60,
+    particleCount: 25_600,
+    pressureIterations: 22,
+    simRes: 256,
+    dyeRes: 1024,
+    maxDpr: 1.5,
+  },
+  ultra: {
+    targetFps: 0, // Native display refresh (e.g., 120Hz)
+    particleCount: 40_000,
+    pressureIterations: 26,
+    simRes: 256,
+    dyeRes: 1024,
+    maxDpr: 2.0,
+  },
 };

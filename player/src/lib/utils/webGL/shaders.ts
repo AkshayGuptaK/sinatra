@@ -297,6 +297,7 @@ const PARTICLE_RENDER_VS = `#version 300 es
   precision highp float;
   uniform sampler2D uParticleTex;
   uniform sampler2D uDyeTex;
+  uniform int uTexDim;
   uniform float uPointSize;
   uniform float uTreble;
   uniform float uParticleDensity;
@@ -304,8 +305,7 @@ const PARTICLE_RENDER_VS = `#version 300 es
   
   void main() {
       int id = gl_VertexID;
-      int texDim = 160;
-      ivec2 coord = ivec2(id % texDim, id / texDim);
+      ivec2 coord = ivec2(id % uTexDim, id / uTexDim);
       vec4 pData = texelFetch(uParticleTex, coord, 0);
       vec2 pos = pData.xy;
       float life = pData.z;

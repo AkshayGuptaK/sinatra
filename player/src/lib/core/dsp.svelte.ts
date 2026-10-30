@@ -102,7 +102,7 @@ export class AudioDspGraph {
     const activeBins = Math.floor(totalBins * 0.75); // ~16kHz
 
     // 1. Calculate 8 Logarithmic Bands
-    const bands = this.getFrequencyBands(8);
+    const bands = this.getFrequencyBands(8, true);
 
     // 2. Compute Bass Impulse (Positive delta of bands 0 & 1)
     const currentBass = (bands[0] + bands[1]) * 0.5;

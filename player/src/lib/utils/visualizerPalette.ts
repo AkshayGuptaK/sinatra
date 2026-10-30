@@ -31,10 +31,16 @@ export function extractSegmentProfile(
     return {
       colors: [
         {
-          name: "calm",
-          colorHex: "#10b981",
-          rgb: [0.06, 0.72, 0.5],
-          weight: 1.0,
+          name: "default",
+          colorHex: "#a0a3ff",
+          rgb: hexToRgb("#a0a3ff"),
+          weight: 0.5,
+        },
+        {
+          name: "default2",
+          colorHex: "#4cd7f6",
+          rgb: hexToRgb("#4cd7f6"),
+          weight: 0.5,
         },
       ],
       arousalScore: 0.2,
@@ -74,7 +80,7 @@ export function extractSegmentProfile(
     if (AROUSAL_CONFIG.highArousalEmotions.has(name)) highSum += score;
     if (AROUSAL_CONFIG.lowArousalEmotions.has(name)) lowSum += score;
   }
-  const arousalScore = Math.max(0, Math.min(1, (highSum - lowSum + 1.0) / 2.0));
+  const arousalScore = Math.max(0, Math.min(1, (highSum - lowSum + 2.0) / 4.0));
 
   return { colors, arousalScore };
 }

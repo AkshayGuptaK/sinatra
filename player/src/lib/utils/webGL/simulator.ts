@@ -1,4 +1,8 @@
 import {
+  VISUALIZER_PERFORMANCE_PRESETS,
+  type PerformanceConfig,
+} from "$lib/config/visualizer";
+import {
   BASE_VS,
   SPLAT_FS,
   CURL_FS,
@@ -65,11 +69,21 @@ export class FluidSimulationEngine {
   private particles!: DoubleFbo;
 
   // Resolutions
-  readonly simRes = 256;
-  readonly dyeRes = 1024;
-  readonly particleRes = 160; // 25,600 particles
+  public simRes = 256;
+  public dyeRes = 1024;
+  public particleRes = 200;
+  private perfConfig: PerformanceConfig;
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(
+    private canvas: HTMLCanvasElement,
+    perfConfig: PerformanceConfig = VISUALIZER_PERFORMANCE_PRESETS.balanced
+  ) {
+    this.perfConfig = perfConfig;
+    this.simRes = perfConfig.simRes;
+    this.dyeRes = perfConfig.dyeRes;
+    // Allocate enough texture slots for up to 40,000 particles (200x200)
+    this.particleRes = 200;
+
     const gl = canvas.getContext("webgl2", {
       alpha: false,
       depth: false,
@@ -94,6 +108,50 @@ export class FluidSimulationEngine {
     this.initPrograms();
     this.initBuffers();
     this.initParticles();
+    this.resize();
+  }
+
+  public setPerformanceConfig(perf: PerformanceConfig) {
+    const resChanged =
+      this.simRes !== perf.simRes || this.dyeRes !== perf.dyeRes;
+    this.perfConfig = perf;
+    this.simRes = perf.simRes;
+    this.dyeRes = perf.dyeRes;
+
+    if (resChanged) {
+      // Reallocate simulation & dye FBOs at the new resolution
+      const gl = this.gl;
+      for (const dfbo of [this.velocity, this.dye, this.pressure]) {
+        gl.deleteFramebuffer(dfbo.read.fbo);
+        gl.deleteFramebuffer(dfbo.write.fbo);
+        gl.deleteTexture(dfbo.read.tex);
+        gl.deleteTexture(dfbo.write.tex);
+      }
+      gl.deleteFramebuffer(this.divergence.fbo);
+      gl.deleteTexture(this.divergence.tex);
+      gl.deleteFramebuffer(this.curl.fbo);
+      gl.deleteTexture(this.curl.tex);
+
+      this.velocity = new DoubleFbo(
+        this.createFboAttachment(this.simRes, this.simRes, true),
+        this.createFboAttachment(this.simRes, this.simRes, true)
+      );
+      this.pressure = new DoubleFbo(
+        this.createFboAttachment(this.simRes, this.simRes, false),
+        this.createFboAttachment(this.simRes, this.simRes, false)
+      );
+      this.dye = new DoubleFbo(
+        this.createFboAttachment(this.dyeRes, this.dyeRes, true),
+        this.createFboAttachment(this.dyeRes, this.dyeRes, true)
+      );
+      this.divergence = this.createFboAttachment(
+        this.simRes,
+        this.simRes,
+        false
+      );
+      this.curl = this.createFboAttachment(this.simRes, this.simRes, false);
+    }
+
     this.resize();
   }
 
@@ -248,7 +306,7 @@ export class FluidSimulationEngine {
   // --------------------------------------------------------------------------
 
   public resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, this.perfConfig.maxDpr);
     const width = Math.max(1, Math.floor(this.canvas.clientWidth * dpr));
     const height = Math.max(1, Math.floor(this.canvas.clientHeight * dpr));
 
@@ -424,7 +482,8 @@ export class FluidSimulationEngine {
       simTexel[1]
     );
 
-    for (let i = 0; i < 22; i++) {
+    const iterations = this.perfConfig.pressureIterations;
+    for (let i = 0; i < iterations; i++) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.pressure.write.fbo);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.pressure.read.tex);
@@ -570,7 +629,7 @@ export class FluidSimulationEngine {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     // 2. Additive Stardust Particle Pass
-    if (particleDensity > 0.01) {
+    if (particleDensity > 0.01 && this.perfConfig.particleCount > 0) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 
@@ -585,8 +644,8 @@ export class FluidSimulationEngine {
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, this.dye.read.tex);
       gl.uniform1i(
-        gl.getUniformLocation(this.particleRenderProg, "uDyeTex"),
-        1
+        gl.getUniformLocation(this.particleRenderProg, "uTexDim"),
+        this.particleRes
       );
 
       gl.uniform1f(
@@ -602,8 +661,9 @@ export class FluidSimulationEngine {
         particleDensity
       );
 
-      const totalParticles = this.particleRes * this.particleRes;
-      gl.drawArrays(gl.POINTS, 0, totalParticles);
+      const maxCapacity = this.particleRes * this.particleRes;
+      const drawCount = Math.min(this.perfConfig.particleCount, maxCapacity);
+      gl.drawArrays(gl.POINTS, 0, drawCount);
 
       gl.disable(gl.BLEND);
     }

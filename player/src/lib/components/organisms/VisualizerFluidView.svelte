@@ -2,7 +2,10 @@
   import { onMount, onDestroy } from "svelte";
   import type { TrackSegment } from "$lib/types/track";
   import type { DspVisualizerMetrics } from "$lib/core/dsp.svelte";
-  import type { FluidStyle } from "$lib/config/visualizer";
+  import type {
+    FluidStyle,
+    VisualizerQualityPreset,
+  } from "$lib/config/visualizer";
   import { FluidVisualizer } from "$lib/utils/fluidWebGL";
   import { extractSegmentProfile } from "$lib/utils/visualizerPalette";
 
@@ -13,6 +16,7 @@
     isPlaying: boolean;
     rms?: number[];
     stylePreset?: FluidStyle;
+    qualityPreset?: VisualizerQualityPreset;
     getDspMetrics: () => DspVisualizerMetrics;
     class?: string;
   }
@@ -24,6 +28,7 @@
     isPlaying = false,
     rms = [],
     stylePreset = "smoke",
+    qualityPreset = "balanced",
     getDspMetrics,
     class: className = "",
   }: Props = $props();
@@ -31,13 +36,23 @@
   let canvasEl = $state<HTMLCanvasElement | null>(null);
   let renderer: FluidVisualizer | null = null;
   let animId: number | null = null;
+  let lastFrameTime = 0;
+
+  // Reactively sync preset changes without recreating the WebGL context
+  $effect(() => {
+    renderer?.setStylePreset(stylePreset);
+  });
+
+  $effect(() => {
+    renderer?.setQualityPreset(qualityPreset);
+  });
 
   // Active segment profile reactively derived from currentTime
   let activeProfile = $derived.by(() => {
     if (!segments.length || duration <= 0) return extractSegmentProfile(null);
     const seg =
       segments.find(
-        (s) => currentTime >= s.start_sec && currentTime <= s.end_sec
+        (s) => currentTime >= s.start_sec && currentTime < s.end_sec
       ) ?? segments[0];
     return extractSegmentProfile(seg?.emotions_normalized);
   });
@@ -52,23 +67,38 @@
     return rms[idx] ?? 0.2;
   });
 
-  function renderLoop() {
-    if (renderer) {
-      const dsp = getDspMetrics();
-      renderer.update({
-        dsp,
-        rms: currentRms,
-        profile: activeProfile,
-        isPlaying,
-      });
-      renderer.draw();
-    }
+  function renderLoop(now: number) {
     animId = requestAnimationFrame(renderLoop);
+    if (!renderer) return;
+
+    const targetFps = renderer.getTargetFps();
+    if (targetFps > 0) {
+      const frameInterval = 1000 / targetFps;
+      const elapsed = now - lastFrameTime;
+
+      // 1ms tolerance prevents 60Hz monitor refresh jitter from skipping frames
+      if (elapsed < frameInterval - 1.0) {
+        return;
+      }
+      lastFrameTime = now - (elapsed % frameInterval);
+    } else {
+      lastFrameTime = now;
+    }
+
+    const dsp = getDspMetrics();
+    renderer.update({
+      dsp,
+      rms: currentRms,
+      profile: activeProfile,
+      isPlaying,
+    });
+    renderer.draw();
   }
 
   onMount(() => {
     if (canvasEl) {
-      renderer = new FluidVisualizer(canvasEl, stylePreset);
+      renderer = new FluidVisualizer(canvasEl, stylePreset, qualityPreset);
+      lastFrameTime = performance.now();
       animId = requestAnimationFrame(renderLoop);
     }
   });

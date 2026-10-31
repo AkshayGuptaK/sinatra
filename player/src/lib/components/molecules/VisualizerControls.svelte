@@ -1,19 +1,24 @@
 <script lang="ts">
-  import { Timeline, Bubbles } from "@lucide/svelte";
+  import { Mic, Timeline, Bubbles } from "@lucide/svelte";
   import ControlButton from "$lib/components/atoms/ControlButton.svelte";
   import { cn } from "$lib/utils";
+  import ToggleButton from "../atoms/ToggleButton.svelte";
 
   export type VisualizerViewMode = "timeline" | "fluid";
 
   interface Props {
     viewMode?: VisualizerViewMode;
     onViewChange?: (mode: VisualizerViewMode) => void;
+    isLyricsOpen?: boolean;
+    onToggleLyrics?: () => void;
     class?: string;
   }
 
   let {
     viewMode = "timeline",
     onViewChange,
+    isLyricsOpen = false,
+    onToggleLyrics,
     class: className = "",
   }: Props = $props();
 </script>
@@ -46,4 +51,19 @@
       )}
     ></ControlButton>
   </div>
+
+  <ToggleButton
+    active={isLyricsOpen}
+    inactiveIcon={Mic}
+    activeIcon={Mic}
+    inactiveLabel="Show lyrics"
+    activeLabel="Hide lyrics"
+    inactiveVariant="ghost"
+    activeVariant="secondary"
+    size="icon"
+    iconClass="size-4"
+    activeClass="size-8 text-primary font-medium bg-muted/60"
+    inactiveClass="size-8 text-muted-foreground hover:text-foreground"
+    onToggle={() => onToggleLyrics?.()}
+  />
 </div>

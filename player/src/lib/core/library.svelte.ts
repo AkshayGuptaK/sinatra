@@ -5,8 +5,8 @@ import type {
   SortableField,
   SortDirection,
 } from "$lib/types/metadata";
-import { player } from "$lib/core/player.svelte";
 import type { FilterIntent } from "$lib/utils/commandParser";
+import { player } from "$lib/core/player.svelte";
 
 export interface TagRecommendation {
   tag: string;
@@ -26,6 +26,8 @@ export class MusicLibrary {
 
   lyricMatches = $state<Map<string, string[]>>(new Map());
   isSearchingLyrics = $state(false);
+  isLoadingLyrics = $state(false);
+
   private lyricSearchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private lastLyricQuery = "";
 
@@ -46,6 +48,34 @@ export class MusicLibrary {
       this.error = e?.message || "Failed to fetch tracks";
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  /**
+   * Lazy-loads lyrics for a track only if they haven't been fetched yet.
+   * Populates `track.lyrics` directly in `this.tracks`.
+   */
+  async ensureTrackLyrics(trackId: string): Promise<void> {
+    const track = this.tracks.find((t) => t.id === trackId);
+    if (!track || track.lyrics !== undefined) return;
+
+    this.isLoadingLyrics = true;
+    try {
+      const fetched = await sinatraApi.getTrackLyrics(trackId);
+      const lyrics = fetched ?? "";
+
+      const idx = this.tracks.findIndex((t) => t.id === trackId);
+      if (idx !== -1) {
+        this.tracks[idx] = {
+          ...this.tracks[idx],
+          lyrics,
+        };
+      }
+      player.syncTrackMetadata(trackId, { lyrics });
+    } catch (err) {
+      console.error(`Failed to fetch lyrics for track ${trackId}:`, err);
+    } finally {
+      this.isLoadingLyrics = false;
     }
   }
 
@@ -244,6 +274,8 @@ export class MusicLibrary {
       ...originalTrack,
       ...fields,
     };
+
+    player.syncTrackMetadata(trackId, fields);
 
     try {
       await sinatraApi.updateTrackMetadata(trackId, fields);

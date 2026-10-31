@@ -21,9 +21,11 @@
   interface Props {
     class?: string;
     openSettings?: () => void;
+    isLyricsOpen: boolean;
+    onToggleLyrics?: () => void;
   }
 
-  let { class: className = "", openSettings }: Props = $props();
+  let { class: className = "", openSettings, isLyricsOpen, onToggleLyrics }: Props = $props();
 
   let viewMode = $state<VisualizerViewMode>("timeline");
 </script>
@@ -69,6 +71,8 @@
         <VisualizerControls
           {viewMode}
           onViewChange={(mode) => (viewMode = mode)}
+          {isLyricsOpen}
+          {onToggleLyrics}
         />
       </div>
     </div>

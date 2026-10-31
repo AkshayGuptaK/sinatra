@@ -51,20 +51,31 @@ export class MusicPlayer {
       let nextIndex;
 
       if (this.loopMode === "one") {
-        nextIndex = this.currentIndex
-      } else if (this.currentIndex >= 0 && this.currentIndex + 1 < this.queue.length) {
+        nextIndex = this.currentIndex;
+      } else if (
+        this.currentIndex >= 0 &&
+        this.currentIndex + 1 < this.queue.length
+      ) {
         nextIndex = this.currentIndex + 1;
       } else if (this.loopMode === "all" && this.queue.length > 0) {
         nextIndex = 0;
       } else {
         return null;
       }
-      let track = this.queue[nextIndex]
-      return { id: track.id, start: track.start, end: track.end, rms_env: track.rms_env }
-    };  
+      let track = this.queue[nextIndex];
+      return {
+        id: track.id,
+        start: track.start,
+        end: track.end,
+        rms_env: track.rms_env,
+      };
+    };
     this.engine.onTrackAdvanced = () => {
       if (this.hasNext) {
-        if (this.loopMode === "all" && this.currentIndex + 1 === this.queue.length) {
+        if (
+          this.loopMode === "all" &&
+          this.currentIndex + 1 === this.queue.length
+        ) {
           this.currentIndex = 0;
         } else {
           this.currentIndex += 1;
@@ -103,6 +114,19 @@ export class MusicPlayer {
     this.currentIndex = -1;
     this.engine.pause();
     this.engine.seekTo(0);
+  }
+
+  /**
+   * Immutably syncs updated track metadata into all matching queue entries.
+   * Triggers re-derivation of currentTrack and reactive queue items.
+   */
+  syncTrackMetadata(trackId: string, fields: Partial<Track>) {
+    this.queue = this.queue.map((t) =>
+      t.id === trackId ? { ...t, ...fields } : t
+    );
+    this.originalQueue = this.originalQueue.map((t) =>
+      t.id === trackId ? { ...t, ...fields } : t
+    );
   }
 
   /**

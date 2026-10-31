@@ -7,6 +7,7 @@ export interface Track {
   album: string;
   mood: string;
   tags: string[];
+  lyrics?: string;
   start: number;
   end: number;
   duration: number;

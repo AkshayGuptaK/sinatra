@@ -75,6 +75,15 @@ export const sinatraApi = {
     return res.json();
   },
 
+  async getTrackLyrics(trackId: string): Promise<string> {
+    const res = await fetch(
+      `${API_BASE_URL}/api/library/tracks/${encodeURIComponent(trackId)}/lyrics`
+    );
+    if (!res.ok) throw new Error("Failed to fetch lyrics");
+    const data = await res.json();
+    return data.lyrics ?? "";
+  },
+
   async updateTrackMetadata(
     trackId: string,
     fields: MetadataFields

@@ -75,6 +75,7 @@ class TrackMetadataUpdate(BaseModel):
     album: Optional[str] = None
     mood: Optional[str] = None
     tags: Optional[List[str]] = None
+    lyrics: Optional[str] = None
 
 
 class SegmentEditPayload(BaseModel):
@@ -128,6 +129,16 @@ async def get_track_segments(track_id: str):
         return JSONResponse(content=segments)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/library/tracks/{track_id}/lyrics")
+async def get_track_lyrics(track_id: str):
+    """Fetches full lyrics text for a single track."""
+    db = get_pg()
+    lyrics = db.get_track_lyrics(track_id)
+    if not lyrics:
+        raise HTTPException(status_code=404, detail="Track not found")
+    return {"lyrics": lyrics}
 
 
 @app.get("/api/library/tracks/similar/{track_id}")

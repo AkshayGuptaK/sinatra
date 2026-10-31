@@ -1,7 +1,7 @@
 import type { Track } from "./track";
 
 export type MetadataFields = Partial<
-  Pick<Track, "title" | "artist" | "album" | "mood" | "tags">
+  Pick<Track, "title" | "artist" | "album" | "mood" | "tags" | "lyrics">
 >;
 
 export type FilterableField = "title" | "artist" | "album" | "mood" | "tags";

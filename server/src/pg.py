@@ -497,13 +497,26 @@ class PostgresStore:
             print(f"Error fetching segments for track {track_id}: {e}")
             return []
 
+    def get_track_lyrics(self, track_id: str) -> str:
+        query = """
+        SELECT lyrics FROM nodes WHERE id = %s::uuid;
+        """
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(query, (track_id,))
+                result = cur.fetchone()
+                return result[0] if result else None
+        except Exception as e:
+            print(f"Error fetching lyrics for track {track_id}: {e}")
+            return None
+
     def get_track_path_by_id(self, track_id):
         query = """
         SELECT filepath FROM nodes WHERE id = %s;
         """
         try:
             with self.conn.cursor() as cur:
-                cur.execute(query, ([track_id]))
+                cur.execute(query, (track_id,))
                 result = cur.fetchone()
                 return result[0] if result else None
         except Exception as e:
@@ -745,13 +758,14 @@ class PostgresStore:
             return []
 
     def update_track_metadata(self, track_id: str, fields: Dict[str, Any]) -> bool:
-        """Updates editable metadata fields (title, artist, album, mood, tags) for a track."""
+        """Updates editable metadata fields (title, artist, album, mood, tags, lyrics) for a track."""
         allowed_fields = {
             "title": "title",
             "artist": "artist",
             "album": "album",
             "mood": "mood",
             "tags": "tags",
+            "lyrics": "lyrics",
         }
 
         updates = []

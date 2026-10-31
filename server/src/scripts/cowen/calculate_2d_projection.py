@@ -41,7 +41,6 @@ EMOTION_COLS = [
 # As per the Cowen paper, only 13 emotions are truly orthogonal
 CORE_EMOTIONS = [
     "amusing",
-    "angry",
     "annoying",
     "anxious/tense",
     "beautiful",
@@ -53,6 +52,7 @@ CORE_EMOTIONS = [
     "joyful/cheerful",
     "sad/depressing",
     "scary/fearful",
+    "triumphant/heroic",
 ]
 
 def load_and_project() -> pd.DataFrame:

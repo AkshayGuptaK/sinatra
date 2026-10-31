@@ -159,16 +159,6 @@ def _fit_and_evaluate(
     return results_df
 
 
-def run_dsp_regression(n_splits: int = 10):
-    return _fit_and_evaluate(
-        csv_path_or_df=Path(FEATURES_CSV),
-        output_path=Path(OUTPUT_FEATURES_WEIGHTS_CSV),
-        feature_start_col="vocal_probability",
-        feature_label="18 Handcrafted DSP Features",
-        n_splits=n_splits,
-    )
-
-
 def run_mert_regression(
     csv_name: str = "cowen_MERT-v2-30s_L24_final_embeddings",
     output_name: str | None = None,
@@ -185,59 +175,6 @@ def run_mert_regression(
         feature_start_col=None,
         feature_label=f"MERT [{csv_name}]",
         verbose=verbose,
-        n_splits=n_splits,
-    )
-
-
-def run_dsp_mert_hybrid_regression(n_splits: int = 10):
-    dsp_path = Path(FEATURES_CSV)
-    mert_path = Path(MERT_EMBEDDINGS_CSV)
-
-    if not dsp_path.exists() or not mert_path.exists():
-        print(f"❌ Both {FEATURES_CSV} and {MERT_EMBEDDINGS_CSV} must exist.")
-        return None
-
-    dsp_df = pd.read_csv(dsp_path)
-    mert_df = pd.read_csv(mert_path)
-
-    dsp_cols = list(dsp_df.columns)
-    dsp_split = dsp_cols.index("vocal_probability")
-    dsp_feature_cols = dsp_cols[dsp_split:]
-
-    mert_cols = list(mert_df.columns)
-    mert_feature_cols = [c for c in mert_cols if c.startswith("mert_")]
-
-    id_col = None
-    for candidate in ["path", "filename", "audio_path", "track_id"]:
-        if candidate in dsp_df.columns and candidate in mert_df.columns:
-            id_col = candidate
-            break
-
-    if id_col:
-        print(f"Merging DSP and MERT on identifier column: '{id_col}'")
-        combined_df = pd.merge(
-            dsp_df,
-            mert_df[[id_col] + mert_feature_cols],
-            on=id_col,
-            how="inner",
-        )
-    else:
-        print("No shared ID column found; asserting 1-to-1 row index alignment...")
-        if len(dsp_df) != len(mert_df):
-            print(
-                f"❌ Row count mismatch: DSP has {len(dsp_df)}, MERT has {len(mert_df)}"
-            )
-            return None
-        combined_df = pd.concat([dsp_df, mert_df[mert_feature_cols]], axis=1)
-
-    combined_features = dsp_feature_cols + mert_feature_cols
-
-    return _fit_and_evaluate(
-        csv_path_or_df=combined_df,
-        output_path=DATASETS_DIR / "cowen_hybrid_regression_weights.csv",
-        feature_start_col=None,
-        feature_cols=combined_features,
-        feature_label=f"Hybrid ({len(dsp_feature_cols)} DSP + {len(mert_feature_cols)} MERT)",
         n_splits=n_splits,
     )
 
@@ -295,43 +232,6 @@ def compare_mert_embeddings(
     return comp_df
 
 
-def run_comparison(n_splits: int = 10):
-    dsp_res = run_dsp_regression(n_splits=n_splits)
-    mert_res = run_mert_regression(n_splits=n_splits)
-    hybrid_res = run_dsp_mert_hybrid_regression(n_splits=n_splits)
-
-    if dsp_res is None or mert_res is None or hybrid_res is None:
-        return
-
-    comp_df = pd.merge(
-        dsp_res[["mood", "r2"]].rename(columns={"r2": "dsp_r2"}),
-        mert_res[["mood", "r2"]].rename(columns={"r2": "mert_r2"}),
-        on="mood",
-    )
-    comp_df = pd.merge(
-        comp_df,
-        hybrid_res[["mood", "r2"]].rename(columns={"r2": "hybrid_r2"}),
-        on="mood",
-    )
-    comp_df["hybrid_vs_mert"] = comp_df["hybrid_r2"] - comp_df["mert_r2"]
-
-    print("\n" + "#" * 84)
-    print(
-        f"{'Mood Dimension':<26} | {'DSP R²':<8} | {'MERT R²':<8} | {'Hybrid R²':<9} | {'Hybrid-MERT Δ'}"
-    )
-    print("#" * 84)
-    for _, row in comp_df.iterrows():
-        print(
-            f"{row['mood']:<26} | {row['dsp_r2']:+.4f}   | {row['mert_r2']:+.4f}   | {row['hybrid_r2']:+.4f}    | {row['hybrid_vs_mert']:+.4f}"
-        )
-    print("#" * 84)
-
-    mean_mert = comp_df["mert_r2"].mean()
-    mean_hybrid = comp_df["hybrid_r2"].mean()
-    print(
-        f"\nMean R² -> MERT: {mean_mert:.4f} | Hybrid: {mean_hybrid:.4f} (Δ: {mean_hybrid - mean_mert:+.4f})"
-    )
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Cowen Emotion Regression Runner")
@@ -339,7 +239,7 @@ if __name__ == "__main__":
         "mode",
         nargs="?",
         default="mert",
-        help="Mode: mert, dsp, hybrid, all, or compare-mert",
+        help="Mode: mert or compare-mert",
     )
     parser.add_argument(
         "--file",
@@ -368,7 +268,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     mode = args.mode.lower()
 
-    if mode in ("compare-mert", "compare_mert"):
+    if mode == ("compare-mert"):
         files = args.files or [
             "cowen_mert_embeddings",
             "cowen_MERT-v2-30s_L14_embeddings",
@@ -382,9 +282,5 @@ if __name__ == "__main__":
         run_mert_regression(
             csv_name=args.file, output_name=args.output, n_splits=args.splits
         )
-    elif mode == "hybrid":
-        run_dsp_mert_hybrid_regression(n_splits=args.splits)
-    elif mode == "all":
-        run_comparison(n_splits=args.splits)
     else:
-        run_dsp_regression(n_splits=args.splits)
+        print("Unsupported mode")

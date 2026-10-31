@@ -280,7 +280,7 @@ class PostgresStore:
                         created_at, updated_at
                     ) VALUES (
                         %s::uuid, %s, %s,
-                        %s::vector, %s, %s::vector, %s, %s::vector,
+                        %s::vector, %s, %s::vector,
                         NOW(), NOW()
                     );
                 """

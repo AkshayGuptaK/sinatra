@@ -11,13 +11,13 @@ def generate_library_coords(method: str = "kr", k: int = 5):
 
     with db.conn.cursor() as cur:
         cur.execute(
-            "SELECT filepath, emotions, emotions_normalized FROM nodes WHERE emotions IS NOT NULL;"
+            "SELECT filepath, emotions FROM nodes WHERE emotions IS NOT NULL;"
         )
         rows = cur.fetchall()
 
     for i in range(0, len(rows), BATCH_SIZE):
         batch = rows[i : i + BATCH_SIZE]
-        emotions_input = [(r[1], r[2]) for r in batch]
+        emotions_input = [r[1] for r in batch]
         coords = projector.project_batch(emotions_input)
 
         update_payloads = [(x, y, r[0]) for (x, y), r in zip(coords, batch)]

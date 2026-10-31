@@ -11,11 +11,10 @@ class MoodProjector:
     """Projects 24-dimensional Cowen emotional scores into 2D manifold coordinates.
 
     Supports Kernel Ridge Regression ('kr') and KNN manifold interpolation ('knn').
-    Applies empirical threshold masking on normalized scores while preserving
-    unnormalized amplitude dynamics.
+    Applies empirical threshold masking.
     """
 
-    THRESHOLD = 0.3
+    THRESHOLD = 0.1
 
     def __init__(self, method: str = "kr", k: int = 5):
         self.method = method.lower()
@@ -75,64 +74,38 @@ class MoodProjector:
 
             self._project_fn = lambda X_input: kr_model.predict(X_input)
 
-    def _prepare_sparse_vector(
-        self,
-        emotions: Dict[str, float],
-        emotions_normalized: Optional[Dict[str, float]] = None,
-    ) -> np.ndarray:
-        """Applies 0.4 normalized thresholding to filter unnormalized emotion scores."""
-        norm_dict = emotions_normalized or {}
-
-        raw_vals = np.array(
+    def _prepare_sparse_vector(self, emotions: Dict[str, float]) -> np.ndarray:
+        """Applies thresholding to filter emotion scores."""
+        vals = np.array(
             [float(emotions.get(col, 0.0)) for col in self.emotion_cols],
             dtype=np.float64,
         )
-        norm_vals = np.array(
-            [float(norm_dict.get(col, 0.0)) for col in self.emotion_cols],
-            dtype=np.float64,
-        )
 
-        sparse_raw = np.where(norm_vals >= self.THRESHOLD, raw_vals, 0.0)
+        sparse = np.where(vals >= self.THRESHOLD, vals, 0.0)
 
         # Fallback: if all filtered out, retain the dominant peak
-        if np.all(sparse_raw == 0.0):
-            top_idx = (
-                int(np.argmax(norm_vals))
-                if len(norm_dict) > 0
-                else int(np.argmax(raw_vals))
-            )
-            sparse_raw[top_idx] = raw_vals[top_idx]
+        if np.all(sparse == 0.0):
+            top_idx = int(np.argmax(vals))
+            sparse[top_idx] = vals[top_idx]
 
-        return sparse_raw
+        return sparse
 
-    def project_track(
-        self,
-        emotions: Dict[str, float],
-        emotions_normalized: Optional[Dict[str, float]] = None,
-    ) -> Tuple[float, float]:
-        """Projects a single track's emotions into 2D coordinates (coord_x, coord_y).
-
-        Args:
-            emotions: Raw unnormalized emotion dict.
-            emotions_normalized: Calibrated [0.0, 1.0] normalized emotion dict.
-
-        Returns:
-            Tuple of (coord_x, coord_y) as floats.
-        """
-        sparse_vector = self._prepare_sparse_vector(emotions, emotions_normalized)
+    def project_track(self, emotions: Dict[str, float]) -> Tuple[float, float]:
+        """Projects a single track's emotions into 2D coordinates (coord_x, coord_y)."""
+        sparse_vector = self._prepare_sparse_vector(emotions)
         X = np.expand_dims(sparse_vector, axis=0)
         coords = self._project_fn(X)[0]
         return float(coords[0]), float(coords[1])
 
     def project_batch(
-        self, records: List[Tuple[Dict[str, float], Optional[Dict[str, float]]]]
+        self, records: List[Dict[str, float]]
     ) -> List[Tuple[float, float]]:
         """Projects a batch of emotion pairs efficiently."""
         if not records:
             return []
 
         sparse_matrix = np.array(
-            [self._prepare_sparse_vector(raw, norm) for raw, norm in records],
+            [self._prepare_sparse_vector(record) for record in records],
             dtype=np.float64,
         )
         coords_batch = self._project_fn(sparse_matrix)

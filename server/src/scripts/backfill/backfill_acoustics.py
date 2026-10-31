@@ -19,6 +19,7 @@ warnings.filterwarnings(
     message=r".*An output with one or more elements was resized.*",
 )
 
+
 def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
     db = get_pg()
     chunker = get_audio_chunker()
@@ -37,7 +38,6 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
           AND (
               musical_embedding IS NULL 
               OR emotions IS NULL 
-              OR emotions_normalized IS NULL
               OR music_start IS NULL
           )
         """
@@ -68,8 +68,6 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
         SET musical_embedding = %s::vector,
             emotions = %s::jsonb,
             emotion_vector = %s::vector,
-            emotions_normalized = %s::jsonb,
-            emotion_vector_normalized = %s::vector,
             coord_x = %s,
             coord_y = %s,
             music_start = %s,
@@ -110,13 +108,9 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
             # 3. Score Each Chunk
             chunk_embs = []
             for c in embedded_chunks:
-                raw_dict, raw_vec, norm_dict, norm_vec = scorer.score(
-                    c["acoustic_embedding"]
-                )
-                c["emotions"] = raw_dict
-                c["emotion_vector"] = raw_vec
-                c["emotions_normalized"] = norm_dict
-                c["emotion_vector_normalized"] = norm_vec
+                emotion_dict, emotion_vec = scorer.score(c["acoustic_embedding"])
+                c["emotions"] = emotion_dict
+                c["emotion_vector"] = emotion_vec
                 chunk_embs.append(c["acoustic_embedding"])
 
             # 4. Duration-Weighted Global Vectors
@@ -135,25 +129,19 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
                 chunk_embs_mat * weights[:, np.newaxis], axis=0
             )
 
-            # 5. Global Affective Scoring (Median-Anchored Normalized)
+            # 5. Global Affective Scoring
             (
                 global_emotions,
-                global_raw_vec,
-                global_emotions_norm,
-                global_norm_vec,
+                global_emotion_vec,
             ) = scorer.score(global_musical_embedding)
 
             # 6. Coordinate Projection (coord_x, coord_y)
-            coord_x, coord_y = projector.project_track(
-                global_emotions, global_emotions_norm
-            )
+            coord_x, coord_y = projector.project_track(global_emotions)
 
             # 7. Serialize Types for PostgreSQL
             musical_emb_str = db._format_vector_str(global_musical_embedding)
             emotions_json = json.dumps(global_emotions)
-            emotion_vec_str = db._format_vector_str(global_raw_vec)
-            emotions_norm_json = json.dumps(global_emotions_norm)
-            emotion_norm_vec_str = db._format_vector_str(global_norm_vec)
+            emotion_vec_str = db._format_vector_str(global_emotion_vec)
 
             # 8. Update 'nodes' and atomically replace 'track_chunks'
             with db.conn.transaction():
@@ -164,8 +152,6 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
                             musical_emb_str,
                             emotions_json,
                             emotion_vec_str,
-                            emotions_norm_json,
-                            emotion_norm_vec_str,
                             coord_x,
                             coord_y,
                             music_start,

@@ -9,8 +9,6 @@ CREATE TABLE track_chunks (
     
     emotions JSONB,
     emotion_vector vector(24),
-    emotions_normalized JSONB,
-    emotion_vector_normalized vector(24),
     
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

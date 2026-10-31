@@ -21,7 +21,7 @@ def _extract_chunk_features(
     chunk = embedder.extract([{"waveform": waveform_slice}])[0]
     musical_vector = chunk["acoustic_embedding"]
 
-    emotions, emotion_vec, emotions_norm, emotion_norm_vec = scorer.score(
+    emotions, emotion_vec = scorer.score(
         musical_vector
     )
 
@@ -29,8 +29,6 @@ def _extract_chunk_features(
         "musical_embedding": musical_vector,
         "emotions": emotions,
         "emotion_vector": emotion_vec,
-        "emotions_normalized": emotions_norm,
-        "emotion_vector_normalized": emotion_norm_vec,
     }
 
 

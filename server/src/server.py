@@ -121,7 +121,7 @@ async def update_track(track_id: str, payload: TrackMetadataUpdate):
 async def get_track_segments(track_id: str):
     """
     Returns ordered segment slices for a track with start/end timestamps
-    and normalized emotion distributions.
+    and emotion distributions.
     """
     try:
         db = get_pg()

@@ -74,16 +74,10 @@ PostgreSQL is the single source of truth for audio metadata, affective projectio
 | `musical_embedding` | `vector(1024)` | Dense neural representation from `MERT-v2-30s`.
 
 |
-| `emotion_vector` | `vector(24)` | Unnormalized predicted Cowen emotional scores.
+| `emotion_vector` | `vector(24)` | Predicted Cowen emotional scores.
 
 |
-| `emotions` | `jsonb` | Key-value dictionary of unnormalized emotion probabilities.
-
-|
-| `emotion_vector_normalized` | `vector(24)` | L2-normalized 24D unit vector (pure affective mixture).
-
-|
-| `emotions_normalized` | `jsonb` | Key-value dictionary of normalized emotion probabilities.
+| `emotions` | `jsonb` | Key-value dictionary of emotion probabilities.
 
 |
 | `semantic_embedding` | `vector(512)` | Dense multimodal audio embedding (LAION-CLAP). |
@@ -130,7 +124,7 @@ musical_embedding [1024-D]
 24 Ridge Probes (Trained on Cowen 2020)   Auto-Tag Suggester
        │                                  (Cosine / Linear Head)
        ▼
-emotion_vector [24-D] ───(L2 Norm)───► emotion_vector_normalized [24-D]
+emotion_vector [24-D]
        │
        ▼ (UMAP Model fitted on Cowen 2020 Manifold)
 2D Coordinates (coord_x, coord_y)
@@ -142,7 +136,7 @@ emotion_vector [24-D] ───(L2 Norm)───► emotion_vector_normalized [
 
 3. **Affective Scoring (`emotion_vector`):** Ridge regression heads fit on the Cowen dataset project 1024-D embeddings into Cowen's retained 24 dimensions (excluding non-generalizable somatic noise like _goose bumps_, _nauseating_, _painful_, and _entrancing_).
 
-4. **Coordinate Manifold (`coord_x`, `coord_y`):** A pre-fitted parametric UMAP model maps the 24D unnormalized emotion vectors into 2D display coordinates.
+4. **Coordinate Manifold (`coord_x`, `coord_y`):** A pre-fitted parametric UMAP model maps the 24D emotion vectors into 2D display coordinates.
 
 5. **Lyrical Processing (`lyrical_embedding`):** Lyrical text retrieved by `syncedlyrics` is passed to local Ollama via `qwen3-embedding:4b` to yield a 2560-dimensional dense representation stored as `halfvec`.
 

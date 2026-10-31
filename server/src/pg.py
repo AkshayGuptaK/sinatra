@@ -84,18 +84,11 @@ class PostgresStore:
         batch_params = []
         for c in chunks:
             emotions = c.get("emotions")
-            emotions_norm = c.get("emotions_normalized")
             emotions_json = json.dumps(emotions) if emotions is not None else None
-            emotions_norm_json = (
-                json.dumps(emotions_norm) if emotions_norm is not None else None
-            )
 
             musical_emb = c.get("musical_embedding", c.get("acoustic_embedding"))
             musical_vec_str = self._format_vector_str(musical_emb)
             emotion_vec_str = self._format_vector_str(c.get("emotion_vector"))
-            emotion_norm_vec_str = self._format_vector_str(
-                c.get("emotion_vector_normalized")
-            )
 
             batch_params.append(
                 (
@@ -105,8 +98,6 @@ class PostgresStore:
                     musical_vec_str,
                     emotions_json,
                     emotion_vec_str,
-                    emotions_norm_json,
-                    emotion_norm_vec_str,
                 )
             )
 
@@ -125,8 +116,6 @@ class PostgresStore:
                     musical_embedding,
                     emotions,
                     emotion_vector,
-                    emotions_normalized,
-                    emotion_vector_normalized
                 )
                 VALUES (
                     %s::uuid,
@@ -135,8 +124,6 @@ class PostgresStore:
                     %s::vector,
                     %s::jsonb,
                     %s::vector,
-                    %s::jsonb,
-                    %s::vector
                 );
                 """,
                 batch_params,
@@ -152,8 +139,6 @@ class PostgresStore:
         musical_embedding: List[float],
         emotions: Optional[Dict[str, float]] = None,
         emotion_vector: Optional[List[float]] = None,
-        emotions_normalized: Optional[Dict[str, float]] = None,
-        emotion_vector_normalized: Optional[List[float]] = None,
         coord_x: Optional[float] = 0,
         coord_y: Optional[float] = 0,
         music_start: Optional[float] = 0.0,
@@ -162,19 +147,11 @@ class PostgresStore:
     ) -> None:
         # Format JSONB strings
         emotions_json = json.dumps(emotions) if emotions is not None else None
-        emotions_norm_json = (
-            json.dumps(emotions_normalized) if emotions_normalized is not None else None
-        )
 
         # Format vector strings
         emotion_vec_str = (
             f"[{','.join(f'{x:.6f}' for x in emotion_vector)}]"
             if emotion_vector is not None
-            else None
-        )
-        emotion_norm_vec_str = (
-            f"[{','.join(f'{x:.6f}' for x in emotion_vector_normalized)}]"
-            if emotion_vector_normalized is not None
             else None
         )
         musical_emb_str = (
@@ -195,8 +172,6 @@ class PostgresStore:
                     musical_embedding, 
                     emotions, 
                     emotion_vector,
-                    emotions_normalized,
-                    emotion_vector_normalized,
                     coord_x,
                     coord_y,
                     music_start,
@@ -213,8 +188,6 @@ class PostgresStore:
                     %s::vector,     -- musical_embedding
                     %s::jsonb,      -- emotions
                     %s::vector,     -- emotion_vector
-                    %s::jsonb,      -- emotions_normalized
-                    %s::vector,     -- emotion_vector_normalized
                     %s,             -- coord_x
                     %s,             -- coord_y
                     %s,             -- music_start
@@ -226,8 +199,6 @@ class PostgresStore:
                     musical_embedding = EXCLUDED.musical_embedding,
                     emotions = EXCLUDED.emotions,
                     emotion_vector = EXCLUDED.emotion_vector,
-                    emotions_normalized = EXCLUDED.emotions_normalized,
-                    emotion_vector_normalized = EXCLUDED.emotion_vector_normalized,
                     coord_x = EXCLUDED.coord_x,
                     coord_y = EXCLUDED.coord_y,
                     music_start = EXCLUDED.music_start,
@@ -245,8 +216,6 @@ class PostgresStore:
                     musical_embedding,
                     emotions_json,
                     emotion_vec_str,
-                    emotions_norm_json,
-                    emotion_norm_vec_str,
                     coord_x,
                     coord_y,
                     music_start,
@@ -289,8 +258,6 @@ class PostgresStore:
                         musical_embedding = %s::vector,
                         emotions = %s,
                         emotion_vector = %s::vector,
-                        emotions_normalized = %s,
-                        emotion_vector_normalized = %s::vector,
                         updated_at = NOW()
                     WHERE id = %s::uuid;
                 """
@@ -301,8 +268,6 @@ class PostgresStore:
                         f"[{','.join(f'{x:.6f}' for x in chunk_a_features['musical_embedding'])}]",
                         json.dumps(chunk_a_features["emotions"]),
                         f"[{','.join(f'{x:.6f}' for x in chunk_a_features['emotion_vector'])}]",
-                        json.dumps(chunk_a_features["emotions_normalized"]),
-                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['emotion_vector_normalized'])}]",
                         chunk_a_id,
                     ),
                 )
@@ -312,7 +277,6 @@ class PostgresStore:
                     INSERT INTO track_chunks (
                         track_id, start_sec, end_sec,
                         musical_embedding, emotions, emotion_vector,
-                        emotions_normalized, emotion_vector_normalized,
                         created_at, updated_at
                     ) VALUES (
                         %s::uuid, %s, %s,
@@ -329,8 +293,6 @@ class PostgresStore:
                         f"[{','.join(f'{x:.6f}' for x in chunk_b_features['musical_embedding'])}]",
                         json.dumps(chunk_b_features["emotions"]),
                         f"[{','.join(f'{x:.6f}' for x in chunk_b_features['emotion_vector'])}]",
-                        json.dumps(chunk_b_features["emotions_normalized"]),
-                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['emotion_vector_normalized'])}]",
                     ),
                 )
             self.conn.commit()
@@ -357,8 +319,6 @@ class PostgresStore:
                         musical_embedding = %s::vector,
                         emotions = %s,
                         emotion_vector = %s::vector,
-                        emotions_normalized = %s,
-                        emotion_vector_normalized = %s::vector,
                         updated_at = NOW()
                     WHERE id = %s::uuid;
                 """
@@ -369,8 +329,6 @@ class PostgresStore:
                         f"[{','.join(f'{x:.6f}' for x in chunk_a_features['musical_embedding'])}]",
                         json.dumps(chunk_a_features["emotions"]),
                         f"[{','.join(f'{x:.6f}' for x in chunk_a_features['emotion_vector'])}]",
-                        json.dumps(chunk_a_features["emotions_normalized"]),
-                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['emotion_vector_normalized'])}]",
                         chunk_a_id,
                     ),
                 )
@@ -382,8 +340,6 @@ class PostgresStore:
                         musical_embedding = %s::vector,
                         emotions = %s,
                         emotion_vector = %s::vector,
-                        emotions_normalized = %s,
-                        emotion_vector_normalized = %s::vector,
                         updated_at = NOW()
                     WHERE id = %s::uuid;
                 """
@@ -394,8 +350,6 @@ class PostgresStore:
                         f"[{','.join(f'{x:.6f}' for x in chunk_b_features['musical_embedding'])}]",
                         json.dumps(chunk_b_features["emotions"]),
                         f"[{','.join(f'{x:.6f}' for x in chunk_b_features['emotion_vector'])}]",
-                        json.dumps(chunk_b_features["emotions_normalized"]),
-                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['emotion_vector_normalized'])}]",
                         chunk_b_id,
                     ),
                 )
@@ -467,7 +421,7 @@ class PostgresStore:
 
     def get_track_segments(self, track_id: str) -> list[dict[str, Any]]:
         """
-        Fetches chronological segment boundaries and normalized Cowen emotions
+        Fetches chronological segment boundaries and Cowen emotions
         for a given track from track_chunks.
         """
         query = """

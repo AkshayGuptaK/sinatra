@@ -24,7 +24,7 @@ export type ProjectableTrack = MakeNonNullable<Track, "coord_x" | "coord_y">;
 export interface TrackSegment {
   start_sec: number;
   end_sec: number;
-  emotions_normalized: Record<string, number>;
+  emotions: Record<string, number>;
 }
 
 export function isTrackWithCoordinates(

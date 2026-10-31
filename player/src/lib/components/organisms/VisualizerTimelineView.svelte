@@ -7,8 +7,8 @@
   import EmotionLegend from "$lib/components/molecules/EmotionLegend.svelte";
   import EmotionsDisplay from "$lib/components/molecules/EmotionsDisplay.svelte";
 
-  const EMOTION_THRESHOLD = 0.3;
-  const INSPECTOR_THRESHOLD_PCT = 30;
+  const EMOTION_THRESHOLD = 0.1;
+  const INSPECTOR_THRESHOLD_PCT = 10;
   const BAR_HEIGHT = 5;
   const BAR_STACK_GAP = 1.5;
 
@@ -105,8 +105,8 @@
 
   // Extract and format emotions for EmotionsDisplay
   const inspectorSortedEmotions = $derived.by(() => {
-    if (!displayedSegment?.emotions_normalized) return [];
-    return Object.entries(displayedSegment.emotions_normalized)
+    if (!displayedSegment?.emotions) return [];
+    return Object.entries(displayedSegment.emotions)
       .map(([name, score]) => ({
         name,
         pct: Math.round(score * 100),
@@ -126,7 +126,7 @@
   function getStackedSegmentEmotions(seg: TrackSegment) {
     const countsByPct = new Map<number, number>();
 
-    return Object.entries(seg.emotions_normalized)
+    return Object.entries(seg.emotions)
       .filter(
         ([emotion, score]) =>
           score >= EMOTION_THRESHOLD && Boolean(COWEN_EMOTION_COLORS[emotion])

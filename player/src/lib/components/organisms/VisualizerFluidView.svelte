@@ -54,7 +54,7 @@
       segments.find(
         (s) => currentTime >= s.start_sec && currentTime < s.end_sec
       ) ?? segments[0];
-    return extractSegmentProfile(seg?.emotions_normalized);
+    return extractSegmentProfile(seg?.emotions);
   });
 
   // Normalized RMS level at current playhead

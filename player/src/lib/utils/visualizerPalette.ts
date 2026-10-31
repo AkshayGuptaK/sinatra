@@ -22,7 +22,7 @@ export const AROUSAL_CONFIG = {
     "annoying",
   ]),
   highArousalEmotions: new Set([
-    "angry",
+    "triumphant/heroic",
     "indignant/defiant",
     "anxious/tense",
     "joyful/cheerful",
@@ -51,7 +51,7 @@ function hexToRgb(hex: string): [number, number, number] {
 
 export function extractSegmentProfile(
   emotions: Record<string, number> | null | undefined,
-  threshold = 0.3
+  threshold = 0.1
 ): SegmentAffectiveProfile {
   if (!emotions) {
     return {

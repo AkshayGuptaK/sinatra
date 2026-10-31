@@ -428,7 +428,7 @@ class PostgresStore:
                music_end,
                duration,
                rms_envelope,
-               emotions_normalized,
+               emotions,
                coord_x,
                coord_y,
                lyrics_emotions,
@@ -475,7 +475,7 @@ class PostgresStore:
                 id::text,
                 start_sec,
                 end_sec,
-                emotions_normalized
+                emotions
             FROM track_chunks
             WHERE track_id = %s::uuid
             ORDER BY start_sec ASC;
@@ -489,7 +489,7 @@ class PostgresStore:
                         "id": r[0],
                         "start_sec": float(r[1]),
                         "end_sec": float(r[2]),
-                        "emotions_normalized": r[3] or {},
+                        "emotions": r[3] or {},
                     }
                     for r in rows
                 ]

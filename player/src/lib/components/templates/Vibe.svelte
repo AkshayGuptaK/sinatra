@@ -1,7 +1,5 @@
 <script lang="ts">
   import NowPlaying from "$lib/components/organisms/NowPlaying.svelte";
-  import VisualizerTimelineView from "$lib/components/organisms/VisualizerTimelineView.svelte";
-  import { player } from "$lib/core/player.svelte";
   import Visualizer from "../organisms/Visualizer.svelte";
 
   interface Props {

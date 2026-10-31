@@ -1,5 +1,6 @@
 <script lang="ts">
   import { cn } from "$lib/utils";
+  import ControlButton from "$lib/components/atoms/ControlButton.svelte";
   import HeaderBanner from "$lib/components/molecules/HeaderBanner.svelte";
   import CommandBar from "$lib/components/molecules/CommandBar.svelte";
   import VisualizerTimelineView from "$lib/components/organisms/VisualizerTimelineView.svelte";
@@ -7,10 +8,10 @@
   import VisualizerControls, {
     type VisualizerViewMode,
   } from "$lib/components/molecules/VisualizerControls.svelte";
+  import TimelineControls from "$lib/components/molecules/TimelineControls.svelte";
   import { View, Settings } from "@lucide/svelte";
   import { player } from "$lib/core/player.svelte";
   import { settings } from "$lib/core/settings.svelte";
-  import ControlButton from "$lib/components/atoms/ControlButton.svelte";
   import {
     handleCommandSubmit,
     handleSearchChange,
@@ -52,17 +53,24 @@
         onSearchChange={handleSearchChange}
         onCommandSubmit={handleCommandSubmit}
       />
-      <VisualizerControls
-        canSplit={player.engine.canSplitSegment}
-        canPush={player.engine.canPushSegment}
-        canPull={player.engine.canPullSegment}
-        isEditing={player.engine.isEditingSegments}
-        onSplit={player.engine.splitSegmentAtCurrentTime}
-        onPush={player.engine.pushSegmentToCurrentTime}
-        onPull={player.engine.pullSegmentToCurrentTime}
-        {viewMode}
-        onViewChange={(mode) => (viewMode = mode)}
-      />
+      <div class="flex gap-2">
+        {#if viewMode === "timeline"}
+          <TimelineControls
+            canSplit={player.engine.canSplitSegment}
+            canPush={player.engine.canPushSegment}
+            canPull={player.engine.canPullSegment}
+            isEditing={player.engine.isEditingSegments}
+            onSplit={player.engine.splitSegmentAtCurrentTime}
+            onPush={player.engine.pushSegmentToCurrentTime}
+            onPull={player.engine.pullSegmentToCurrentTime}
+          />
+        {/if}
+
+        <VisualizerControls
+          {viewMode}
+          onViewChange={(mode) => (viewMode = mode)}
+        />
+      </div>
     </div>
   </div>
 

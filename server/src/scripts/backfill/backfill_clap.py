@@ -15,7 +15,7 @@ def backfill_clap_embeddings():
         cur.execute(
             """
             SELECT filepath 
-            FROM nodes 
+            FROM tracks 
             WHERE filepath IS NOT NULL 
               AND semantic_embedding IS NULL;
             """
@@ -65,7 +65,7 @@ def _flush_batch(db, batch_data: List[Tuple[str, str]]):
         # Psycopg 3's executemany handles batching natively
         cur.executemany(
             """
-            UPDATE nodes 
+            UPDATE tracks 
             SET semantic_embedding = %s::vector,
                 updated_at = NOW()
             WHERE filepath = %s;

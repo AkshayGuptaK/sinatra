@@ -11,7 +11,7 @@ def generate_library_coords(method: str = "kr", k: int = 5):
 
     with db.conn.cursor() as cur:
         cur.execute(
-            "SELECT filepath, emotions FROM nodes WHERE emotions IS NOT NULL;"
+            "SELECT filepath, emotions FROM tracks WHERE emotions IS NOT NULL;"
         )
         rows = cur.fetchall()
 
@@ -24,7 +24,7 @@ def generate_library_coords(method: str = "kr", k: int = 5):
 
         with db.conn.cursor() as cur:
             cur.executemany(
-                "UPDATE nodes SET coord_x = %s, coord_y = %s, updated_at = NOW() WHERE filepath = %s;",
+                "UPDATE tracks SET coord_x = %s, coord_y = %s, updated_at = NOW() WHERE filepath = %s;",
                 update_payloads,
             )
         db.conn.commit()

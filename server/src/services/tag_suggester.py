@@ -58,7 +58,7 @@ class BalancedRidgeTagSuggester(BaseTagSuggester):
                 id::text,
                 musical_embedding,
                 tags
-            FROM nodes
+            FROM tracks
             WHERE musical_embedding IS NOT NULL
               AND tags IS NOT NULL
               AND cardinality(tags) > 0;

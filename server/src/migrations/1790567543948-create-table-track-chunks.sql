@@ -1,6 +1,6 @@
 CREATE TABLE track_chunks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    track_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
     
     start_sec FLOAT8 NOT NULL,
     end_sec FLOAT8 NOT NULL,

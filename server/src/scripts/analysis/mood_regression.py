@@ -83,7 +83,7 @@ def run_mood_regression(
             mood,
             musical_embedding,
             tags
-        FROM nodes
+        FROM tracks
         WHERE musical_embedding IS NOT NULL
           AND mood IS NOT NULL
           AND TRIM(mood) != '';
@@ -95,7 +95,7 @@ def run_mood_regression(
         rows = cur.fetchall()
 
     if not rows:
-        print("❌ No labeled tracks with `musical_embedding` found in nodes.")
+        print("❌ No labeled tracks with `musical_embedding` found in tracks.")
         return
 
     print(f"Loaded {len(rows)} labeled songs.")

@@ -144,7 +144,7 @@ def backfill_lyrics(
 
     query = """
         SELECT filepath, title, artist 
-        FROM nodes 
+        FROM tracks 
         WHERE filepath IS NOT NULL
           AND tags IS NOT NULL 
           AND array_length(tags, 1) > 0
@@ -249,7 +249,7 @@ def _flush_batch(db, batch_data: List[Tuple[str, str]]):
     with db.conn.cursor() as cur:
         cur.executemany(
             """
-            UPDATE nodes 
+            UPDATE tracks 
             SET lyrics = %s,
                 updated_at = NOW()
             WHERE filepath = %s;

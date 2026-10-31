@@ -1,4 +1,4 @@
-CREATE TABLE nodes (
+CREATE TABLE tracks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     filepath   TEXT UNIQUE NOT NULL,
 

@@ -30,7 +30,7 @@ def parse_vector(raw_vec) -> np.ndarray:
 def run_test_embedding_comparison(min_samples: int = 15):
     db = get_pg()
 
-    # Join test_embeddings with nodes to pull corresponding ground truth moods
+    # Join test_embeddings with tracks to pull corresponding ground truth moods
     query = """
         SELECT 
             t.filepath,
@@ -42,13 +42,13 @@ def run_test_embedding_comparison(min_samples: int = 15):
             t.mert_v2_l23_genre,
             t.mert_v2_l24_final
         FROM test_embeddings t
-        JOIN nodes n ON t.filepath = n.filepath
+        JOIN tracks n ON t.filepath = n.filepath
         WHERE n.mood IS NOT NULL 
           AND TRIM(n.mood) != ''
           AND t.mert_v2_l24_final IS NOT NULL;
     """
 
-    print("Fetching tracks from `test_embeddings` matched with `nodes.mood`...")
+    print("Fetching tracks from `test_embeddings` matched with `tracks.mood`...")
     with db.conn.cursor() as cur:
         cur.execute(query)
         rows = cur.fetchall()

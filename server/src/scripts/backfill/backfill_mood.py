@@ -8,7 +8,7 @@ def sync_fruits():
     print("⏳ Fetching file list...")
     with db.conn.cursor() as cur:
         # Fetch ID and Path for ALL files (we can optimize to fetch only NULL moods later)
-        cur.execute("SELECT id, filepath FROM nodes")
+        cur.execute("SELECT id, filepath FROM tracks")
         rows = cur.fetchall()
 
     print(f"Processing {len(rows)} tracks for metadata...")
@@ -56,7 +56,7 @@ def sync_fruits():
     if updates:
         print(f"💾 Updating {len(updates)} moods in DB...")
         with db.conn.cursor() as cur:
-            cur.executemany("UPDATE nodes SET mood = %s WHERE id = %s", updates)
+            cur.executemany("UPDATE tracks SET mood = %s WHERE id = %s", updates)
         db.conn.commit()
         print("✅ Metadata sync complete.")
     else:

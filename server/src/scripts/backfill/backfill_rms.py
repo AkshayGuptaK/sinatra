@@ -15,7 +15,7 @@ def backfill_rms(overwrite: bool = False):
 
     query = """
         SELECT id, filepath 
-        FROM nodes 
+        FROM tracks 
         WHERE filepath IS NOT NULL
     """
     if not overwrite:
@@ -90,7 +90,7 @@ def _flush_batch(db, batch_data: list[tuple[list[float], str]]):
     with db.conn.cursor() as cur:
         cur.executemany(
             """
-            UPDATE nodes 
+            UPDATE tracks 
             SET rms_envelope = %s::real[],
                 updated_at = NOW()
             WHERE id = %s;

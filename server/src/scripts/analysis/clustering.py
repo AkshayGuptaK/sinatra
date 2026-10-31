@@ -11,7 +11,7 @@ def perform_clustering(n_clusters=30):
     print("⏳ Fetching embeddings...", flush=True)
     with db.conn.cursor() as cur:
         cur.execute(
-            "SELECT id, musical_embedding FROM nodes WHERE musical_embedding IS NOT NULL"
+            "SELECT id, musical_embedding FROM tracks WHERE musical_embedding IS NOT NULL"
         )
         rows = cur.fetchall()
 
@@ -47,10 +47,10 @@ def perform_clustering(n_clusters=30):
 
         cur.execute(
             """
-            UPDATE nodes 
+            UPDATE tracks 
             SET cluster_id = tmp_clusters.cluster_id 
             FROM tmp_clusters 
-            WHERE nodes.id = tmp_clusters.node_id
+            WHERE tracks.id = tmp_clusters.node_id
         """
         )
 

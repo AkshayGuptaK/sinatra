@@ -1,21 +1,22 @@
 # This module syncs store state to source state
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import numpy as np
 from src.pg import get_pg
 from src.sources import *
 from src.models.mert import get_mert_embedder
 from src.models.projector.mood_projector import get_mood_projector
-from src.services import get_emotion_scorer, get_metadata_extractor
-from src.services.audio_chunker import get_audio_chunker
+from src.services import get_audio_chunker, get_emotion_scorer, get_metadata_extractor, compute_rms_envelope
 from src.sources import FileSystemSource
 
 ai_executor = ThreadPoolExecutor(max_workers=1)
 
+SAMPLE_RATE = 24000
 
 def _process_single_file(path):
     try:
         # Decode Audio (Stereo for phase-immune silence detection)
-        raw_audio = FileSystemSource.read_file(filepath_str, self.sample_rate, 2)
+        raw_audio = FileSystemSource.read_file(path, SAMPLE_RATE, 2)
         if hasattr(raw_audio, "numpy"):
             raw_audio = raw_audio.numpy()
         waveform = np.asarray(raw_audio, dtype=np.float32).squeeze()
@@ -34,7 +35,7 @@ def _process_single_file(path):
         embedder = get_mert_embedder()
         embedded_chunks = embedder.extract(chunked_track.chunks)
 
-        scorer = get_mood_scorer()
+        scorer = get_emotion_scorer()
         chunk_emotion_vecs = []
 
         for c in embedded_chunks:
@@ -67,7 +68,7 @@ def _process_single_file(path):
             duration=track_duration,
             musical_embedding=global_musical_embedding.tolist(),
             emotions=global_emotions,
-            emotion_vector=global_emot_vec.tolist(),
+            emotion_vector=global_emot_vec,
             coord_x=coord_x,
             coord_y=coord_y,
             music_start=music_start,
@@ -106,17 +107,17 @@ async def _ingest_files(paths, store):
     print("Ingestion batch complete.", flush=True)
 
 
-def _delete_orphaned_nodes(db_stats, local_stats, store):
+def _delete_orphaned_tracks(db_stats, local_stats, store):
     db_filenames = {s.location for s in db_stats}
     local_filenames = {s.location for s in local_stats}
     orphaned = db_filenames - local_filenames
 
     if orphaned:
-        print(f"Deleting {len(orphaned)} nodes for missing files", flush=True)
+        print(f"Deleting {len(orphaned)} tracks for missing files", flush=True)
         store.delete_by_filenames(orphaned)
 
 
-async def _update_stale_nodes(db_stats, local_stats, store):
+async def _update_stale_tracks(db_stats, local_stats, store):
     db_map = {s.location: s for s in db_stats}
     local_map = {s.location: s for s in local_stats}
 
@@ -160,7 +161,7 @@ async def sync_store():
     local_stats = fs.get_source_stats()
 
     print("Syncing...", flush=True)
-    _delete_orphaned_nodes(db_stats, local_stats, pg)
-    await _update_stale_nodes(db_stats, local_stats, pg)
+    _delete_orphaned_tracks(db_stats, local_stats, pg)
+    await _update_stale_tracks(db_stats, local_stats, pg)
     await _ingest_new_files(db_stats, local_stats, pg)
     print("Sync complete.", flush=True)

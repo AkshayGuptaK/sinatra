@@ -30,7 +30,7 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
     # 1. Query target tracks
     query = """
         SELECT id::text, filepath
-        FROM nodes
+        FROM tracks
         WHERE filepath IS NOT NULL
     """
     if not overwrite:
@@ -64,7 +64,7 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
         return
 
     update_sql = """
-        UPDATE nodes
+        UPDATE tracks
         SET musical_embedding = %s::vector,
             emotions = %s::jsonb,
             emotion_vector = %s::vector,
@@ -143,7 +143,7 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
             emotions_json = json.dumps(global_emotions)
             emotion_vec_str = db._format_vector_str(global_emotion_vec)
 
-            # 8. Update 'nodes' and atomically replace 'track_chunks'
+            # 8. Update 'tracks' and atomically replace 'track_chunks'
             with db.conn.transaction():
                 with db.conn.cursor() as cur:
                     cur.execute(

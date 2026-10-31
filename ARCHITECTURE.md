@@ -42,11 +42,11 @@ Sinatra is an intelligent desktop music player and affective MIR (Music Informat
 
 ---
 
-## 3. Database Schema & Vector Storage (`nodes`)
+## 3. Database Schema & Vector Storage (`tracks`)
 
 PostgreSQL is the single source of truth for audio metadata, affective projections, and neural embeddings. Migrations are tracked via `schema_migrations`.
 
-### PostgreSQL Schema: `public.nodes`
+### PostgreSQL Schema: `public.tracks`
 
 | Column | Type        | Description                                     |
 | ------ | ----------- | ----------------------------------------------- |
@@ -99,7 +99,7 @@ PostgreSQL is the single source of truth for audio metadata, affective projectio
 
 ### Indexing Strategies
 
-- **Lyrics Search:** Indexed via GIN trigram (`CREATE INDEX nodes_lyrics_trgm_idx ON nodes USING GIN (lyrics gin_trgm_ops);`). Enables sub-10ms substring and phrase lookups across the library without dictionary stopword interference.
+- **Lyrics Search:** Indexed via GIN trigram (`CREATE INDEX tracks_lyrics_trgm_idx ON tracks USING GIN (lyrics gin_trgm_ops);`). Enables sub-10ms substring and phrase lookups across the library without dictionary stopword interference.
 
 - **Embedding Lookups:** `musical_embedding` and `lyrical_embedding` perform exact sequential scans across current library sizes (~2,000 tracks take under 5 ms on Apple Silicon). HNSW indexing using `vector_cosine_ops` remains optional for scale.
 

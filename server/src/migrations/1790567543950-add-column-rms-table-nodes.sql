@@ -1,2 +1,2 @@
-ALTER TABLE public.nodes 
+ALTER TABLE tracks 
 ADD COLUMN IF NOT EXISTS rms_envelope real[];

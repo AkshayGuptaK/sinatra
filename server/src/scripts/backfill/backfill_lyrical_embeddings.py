@@ -12,7 +12,7 @@ def backfill_lyrics_embeddings(overwrite: bool = False):
 
     query = """
         SELECT id, lyrics 
-        FROM nodes 
+        FROM tracks 
         WHERE lyrics IS NOT NULL 
           AND trim(lyrics) != ''
     """
@@ -76,7 +76,7 @@ def _flush_batch(db, batch_data: List[Tuple[str, int]]):
     with db.conn.cursor() as cur:
         cur.executemany(
             """
-            UPDATE nodes 
+            UPDATE tracks 
             SET lyrical_embedding = %s::halfvec,
                 updated_at = NOW()
             WHERE id = %s;

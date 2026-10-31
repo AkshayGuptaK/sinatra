@@ -12,12 +12,12 @@ def sync_metadata(force_all: bool = False):
     print("Fetching track records from PostgreSQL...")
     with db.conn.cursor() as cur:
         if force_all:
-            cur.execute("SELECT id, filepath FROM nodes WHERE filepath IS NOT NULL;")
+            cur.execute("SELECT id, filepath FROM tracks WHERE filepath IS NOT NULL;")
         else:
             cur.execute(
                 """
                 SELECT id, filepath 
-                FROM nodes 
+                FROM tracks 
                 WHERE filepath IS NOT NULL 
                   AND (title IS NULL OR artist IS NULL OR album IS NULL OR duration IS NULL OR duration = 0);
                 """
@@ -60,7 +60,7 @@ def _flush_batch(db, batch_data):
     with db.conn.cursor() as cur:
         cur.executemany(
             """
-            UPDATE nodes 
+            UPDATE tracks 
             SET title = %s,
                 artist = %s,
                 album = %s,

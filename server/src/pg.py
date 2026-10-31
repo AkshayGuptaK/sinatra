@@ -115,7 +115,7 @@ class PostgresStore:
                     end_sec,
                     musical_embedding,
                     emotions,
-                    emotion_vector,
+                    emotion_vector
                 )
                 VALUES (
                     %s::uuid,
@@ -123,7 +123,7 @@ class PostgresStore:
                     %s,
                     %s::vector,
                     %s::jsonb,
-                    %s::vector,
+                    %s::vector
                 );
                 """,
                 batch_params,
@@ -163,7 +163,7 @@ class PostgresStore:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO nodes (
+                INSERT INTO tracks (
                     filepath,
                     title,
                     artist,
@@ -176,7 +176,7 @@ class PostgresStore:
                     coord_y,
                     music_start,
                     music_end,
-                    rms_env,
+                    rms_envelope,
                     updated_at
                 )
                 VALUES (
@@ -203,7 +203,7 @@ class PostgresStore:
                     coord_y = EXCLUDED.coord_y,
                     music_start = EXCLUDED.music_start,
                     music_end = EXCLUDED.music_end,
-                    rms_env = EXCLUDED.rms_env,
+                    rms_envelope = EXCLUDED.rms_envelope,
                     updated_at = NOW()
                 RETURNING id::text;
                 """,
@@ -231,7 +231,7 @@ class PostgresStore:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
-               DELETE FROM nodes WHERE filepath = ANY(%s)
+               DELETE FROM tracks WHERE filepath = ANY(%s)
                 """,
                 (list(filenames),),
             )
@@ -362,7 +362,7 @@ class PostgresStore:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
-               SELECT filepath, updated_at FROM nodes
+               SELECT filepath, updated_at FROM tracks
                 """,
             )
             return [
@@ -387,7 +387,7 @@ class PostgresStore:
                coord_y,
                lyrics_emotions,
                ARRAY[lyrics_emotions_coords[0], lyrics_emotions_coords[1]]::float[]
-        FROM nodes
+        FROM tracks
         ORDER BY title ASC
         """
         try:
@@ -453,7 +453,7 @@ class PostgresStore:
 
     def get_track_lyrics(self, track_id: str) -> str:
         query = """
-        SELECT lyrics FROM nodes WHERE id = %s::uuid;
+        SELECT lyrics FROM tracks WHERE id = %s::uuid;
         """
         try:
             with self.conn.cursor() as cur:
@@ -466,7 +466,7 @@ class PostgresStore:
 
     def get_track_path_by_id(self, track_id):
         query = """
-        SELECT filepath FROM nodes WHERE id = %s;
+        SELECT filepath FROM tracks WHERE id = %s;
         """
         try:
             with self.conn.cursor() as cur:
@@ -480,7 +480,7 @@ class PostgresStore:
     def get_track_by_id(self, track_id):
         query = """
         SELECT id::text, tags, musical_embedding
-        FROM nodes
+        FROM tracks
         WHERE id::text = %s
           AND musical_embedding IS NOT NULL;
         """
@@ -495,10 +495,10 @@ class PostgresStore:
     def get_similar_track(self, current_filepath):
         query = """
         SELECT filepath 
-        FROM nodes 
+        FROM tracks 
         WHERE filepath != %s
         ORDER BY musical_embedding <=> (
-            SELECT musical_embedding FROM nodes WHERE filepath = %s
+            SELECT musical_embedding FROM tracks WHERE filepath = %s
         ) ASC
         LIMIT 1;
         """
@@ -596,7 +596,7 @@ class PostgresStore:
         query = f"""
         WITH target AS (
             SELECT {embedding_col}
-            FROM nodes
+            FROM tracks
             WHERE id = %s::uuid
         )
         SELECT n.id::text,
@@ -609,7 +609,7 @@ class PostgresStore:
                COALESCE(n.music_end, 0.0) AS end,
                COALESCE(n.duration, 0.0) AS duration,
                ROUND((n.{embedding_col} <=> t.{embedding_col})::numeric, 4) AS distance
-        FROM nodes n, target t
+        FROM tracks n, target t
         WHERE {' AND '.join(where_clauses)}
         ORDER BY n.{embedding_col} <=> t.{embedding_col} ASC
         LIMIT %s;
@@ -643,7 +643,7 @@ class PostgresStore:
             cur.execute(
                 f"""
             SELECT filepath
-            FROM nodes
+            FROM tracks
             WHERE {metadata_field} = %(val)s;
             """,
                 {"val": metadata_value},
@@ -664,7 +664,7 @@ class PostgresStore:
 
         sql = f"""
             SELECT id::text, lyrics
-            FROM nodes
+            FROM tracks
             WHERE {' AND '.join(where_clauses)};
         """
 
@@ -742,7 +742,7 @@ class PostgresStore:
         values.append(track_id)
 
         query = f"""
-            UPDATE nodes
+            UPDATE tracks
             SET {', '.join(updates)}
             WHERE id = %s::uuid;
         """

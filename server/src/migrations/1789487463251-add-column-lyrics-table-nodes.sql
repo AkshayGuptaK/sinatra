@@ -1,3 +1,3 @@
-ALTER TABLE nodes 
+ALTER TABLE tracks 
 ADD COLUMN IF NOT EXISTS lyrics TEXT,
 ADD COLUMN IF NOT EXISTS lyrical_embedding halfvec(2560);

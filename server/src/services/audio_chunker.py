@@ -16,7 +16,6 @@ class AudioChunk:
 
 @dataclass
 class ChunkedTrack:
-    filepath: str
     total_duration: float
     music_start: float
     music_end: float
@@ -112,8 +111,6 @@ class AudioChunker:
         self,
         waveform: np.ndarray,
     ) -> ChunkedTrack:
-        filepath_str = str(filepath)
-
         original_total_sec = waveform.shape[-1] / self.sample_rate
 
         trimmed_waveform, start_sample, end_sample = self.trim_container_silence(
@@ -143,7 +140,6 @@ class AudioChunker:
                 waveform=trimmed_waveform.copy(),
             )
             return ChunkedTrack(
-                filepath=filepath_str,
                 total_duration=round(original_total_sec, 2),
                 music_start=music_start_sec,
                 music_end=music_end_sec,
@@ -179,7 +175,6 @@ class AudioChunker:
             )
 
         return ChunkedTrack(
-            filepath=filepath_str,
             total_duration=round(original_total_sec, 2),
             music_start=music_start_sec,
             music_end=music_end_sec,

@@ -21,7 +21,7 @@ def get_components(
     """Builds an adjacency graph for distances <= threshold and returns connected components.
 
     When min_degree=1, it behaves identically to pure connected components.
-    When min_degree > 1, nodes must have at least `min_degree` neighbors within
+    When min_degree > 1, tracks must have at least `min_degree` neighbors within
     the threshold to participate, eliminating weak single-edge bridging filaments.
     """
     mask = dist_matrix <= threshold
@@ -100,7 +100,7 @@ def discover_clusters(
             COALESCE(title, filepath) AS title,
             COALESCE(mood, 'UNLABELED') AS mood,
             {vector_column} AS embedding
-        FROM nodes
+        FROM tracks
         WHERE {vector_column} IS NOT NULL;
     """
 

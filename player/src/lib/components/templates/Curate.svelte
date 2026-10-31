@@ -15,7 +15,7 @@
 <div class="flex h-full w-full">
   <div class="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
     <div class="flex-1 min-h-0 w-full">
-      <Library class="h-full w-full" openSettings={openSettings}/>
+      <Library class="h-full w-full" openSettings={openSettings} switchToVibe={onToggleVibe}/>
     </div>
 
     <div class="w-full shrink-0">

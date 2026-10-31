@@ -30,6 +30,7 @@
     >
       <Visualizer
         {openSettings}
+        switchToCurate={onToggleVibe}
         {isLyricsOpen}
         onToggleLyrics={() => (isLyricsOpen = !isLyricsOpen)}
         class="h-full w-full"

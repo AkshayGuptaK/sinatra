@@ -9,18 +9,23 @@
   import LibraryListView from "$lib/components/organisms/LibraryListView.svelte";
   import LibraryMapView from "$lib/components/organisms/LibraryMapView.svelte";
   import ControlButton from "../atoms/ControlButton.svelte";
-  import { Library, Settings } from "@lucide/svelte";
+  import { Library, Settings, AudioLines } from "@lucide/svelte";
   import { library } from "$lib/core/library.svelte";
   import { player } from "$lib/core/player.svelte";
-  import { handleCommandSubmit, handleEnqueueAll, handleSearchChange } from "$lib/core/command.svelte";
+  import {
+    handleCommandSubmit,
+    handleEnqueueAll,
+    handleSearchChange,
+  } from "$lib/core/command.svelte";
   import { cn } from "$lib/utils";
 
   interface Props {
     class?: string;
     openSettings?: () => void;
+    switchToVibe?: () => void;
   }
 
-  let { class: className = "", openSettings }: Props = $props();
+  let { class: className = "", openSettings, switchToVibe }: Props = $props();
 
   let viewMode = $state<LibraryViewMode>("list");
 
@@ -45,14 +50,24 @@
   )}
 >
   <HeaderBanner title="Library" icon={Library}>
-    <ControlButton
-      icon={Settings}
-      onClick={openSettings}
-      label="Open Settings"
-      title="Settings (Cmd+,)"
-      class="size-4"
-      iconClass="size-4"
-    />
+    <div class="flex gap-3">
+      <ControlButton
+        icon={AudioLines}
+        onClick={switchToVibe}
+        label="Switch to Vibe mode"
+        title="Vibe Mode"
+        class="size-4"
+        iconClass="size-4"
+      />
+      <ControlButton
+        icon={Settings}
+        onClick={openSettings}
+        label="Open Settings"
+        title="Settings (Cmd+,)"
+        class="size-4"
+        iconClass="size-4"
+      />
+    </div>
   </HeaderBanner>
   <div class="flex flex-col w-full gap-3 shrink-0">
     <div

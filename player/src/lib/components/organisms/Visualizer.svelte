@@ -9,7 +9,7 @@
     type VisualizerViewMode,
   } from "$lib/components/molecules/VisualizerControls.svelte";
   import TimelineControls from "$lib/components/molecules/TimelineControls.svelte";
-  import { View, Settings } from "@lucide/svelte";
+  import { View, Settings, LayoutDashboard } from "@lucide/svelte";
   import { player } from "$lib/core/player.svelte";
   import { settings } from "$lib/core/settings.svelte";
   import {
@@ -21,11 +21,18 @@
   interface Props {
     class?: string;
     openSettings?: () => void;
+    switchToCurate?: () => void;
     isLyricsOpen: boolean;
     onToggleLyrics?: () => void;
   }
 
-  let { class: className = "", openSettings, isLyricsOpen, onToggleLyrics }: Props = $props();
+  let {
+    class: className = "",
+    openSettings,
+    switchToCurate,
+    isLyricsOpen,
+    onToggleLyrics,
+  }: Props = $props();
 
   let viewMode = $state<VisualizerViewMode>("timeline");
 </script>
@@ -37,14 +44,24 @@
   )}
 >
   <HeaderBanner title="Visualizer" icon={View}>
-    <ControlButton
-      icon={Settings}
-      onClick={openSettings}
-      label="Open Settings"
-      title="Settings (Cmd+,)"
-      class="size-4"
-      iconClass="size-4"
-    />
+    <div class="flex gap-3">
+      <ControlButton
+        icon={LayoutDashboard}
+        onClick={switchToCurate}
+        label="Switch to Curate mode"
+        title="Curate Mode"
+        class="size-4"
+        iconClass="size-4"
+      />
+      <ControlButton
+        icon={Settings}
+        onClick={openSettings}
+        label="Open Settings"
+        title="Settings (Cmd+,)"
+        class="size-4"
+        iconClass="size-4"
+      />
+    </div>
   </HeaderBanner>
 
   <div class="flex flex-col w-full gap-3 shrink-0">

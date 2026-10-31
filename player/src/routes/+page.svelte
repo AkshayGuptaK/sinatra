@@ -63,19 +63,32 @@
 <svelte:window onkeydown={handleKeyDown} />
 
 <main
-  class="h-screen w-screen p-2 bg-background text-foreground overflow-hidden select-none"
+  class="relative h-screen w-screen p-2 bg-background text-foreground overflow-hidden select-none"
 >
-  {#if activeDeck === "curate"}
+  <div
+    class="absolute inset-2 flex flex-col transition-opacity duration-150 {activeDeck ===
+    'curate'
+      ? 'opacity-100 z-10'
+      : 'opacity-0 pointer-events-none -z-10'}"
+  >
     <Curate
       openSettings={() => (isSettingsOpen = true)}
       onToggleVibe={handleToggleDeck}
     />
-  {:else}
+  </div>
+
+  <div
+    class="absolute inset-2 flex flex-col transition-opacity duration-150 {activeDeck ===
+    'vibe'
+      ? 'opacity-100 z-10'
+      : 'opacity-0 pointer-events-none -z-10'}"
+  >
     <Vibe
       openSettings={() => (isSettingsOpen = true)}
       onToggleVibe={handleToggleDeck}
     />
-  {/if}
+  </div>
+
   <SettingsDialog bind:open={isSettingsOpen} />
 </main>
 

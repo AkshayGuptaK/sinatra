@@ -10,6 +10,7 @@
   import type { Track } from "$lib/types/track";
   import { cn } from "$lib/utils";
   import { EMOTION_MAP, type EmotionMode } from "$lib/core/emotions.svelte";
+  import { blendHexColors } from "$lib/utils/colors";
 
   // =========================================================================
   // Component Props & Normalized Internal State
@@ -70,11 +71,21 @@
   }
 
   function getTrackColor(track: Track): string | null {
-    const emotions = activeViewConfig["getEmotions"](track);
+    const emotions = activeViewConfig.getEmotions(track);
     if (!emotions) return null;
-    const dominant = getDominantEmotion(emotions);
-    const color = dominant ? activeViewConfig["getColor"](dominant) : null;
-    return color;
+
+    const weightedColors = Object.entries(emotions).reduce<
+      { color: string; weight: number }[]
+    >((acc, [emotion, score]) => {
+      const color = activeViewConfig.getColor(emotion);
+      // Optional: ignore trace noise below 0.05 so low-confidence tail scores don't desaturate the dot
+      if (color && score > 0.05) {
+        acc.push({ color, weight: score });
+      }
+      return acc;
+    }, []);
+
+    return blendHexColors(weightedColors, 2);
   }
 
   function resolveThemeTokens(element: HTMLElement): CanvasThemeTokens {

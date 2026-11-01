@@ -568,17 +568,15 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto">
-      {#if activeTooltipTrack}
         <MapTooltip
           track={activeTooltipTrack}
-          isPlaying={player.currentTrack?.id === activeTooltipTrack.id}
-          isQueued={queuedTrackIds.has(activeTooltipTrack.id)}
-          emotions={EMOTION_MAP[activeViewMode]["getEmotions"](
+          isPlaying={!!activeTooltipTrack && player.currentTrack?.id === activeTooltipTrack.id}
+          isQueued={!!activeTooltipTrack && queuedTrackIds.has(activeTooltipTrack.id)}
+          emotions={activeTooltipTrack && EMOTION_MAP[activeViewMode]["getEmotions"](
             activeTooltipTrack
           )}
           class="w-full"
         />
-      {/if}
     </div>
   </aside>
 </div>

@@ -78,5 +78,5 @@ export function sortEmotions(emotions: Record<string, number> | null) {
     }))
     .filter((e) => e.pct > 10)
     .sort((a, b) => b.pct - a.pct)
-    .slice(0, 10);
+    .slice(0, 9);
 }

@@ -8,9 +8,15 @@
   import EditableTagList from "$lib/components/molecules/EditableTagList.svelte";
   import { cn } from "$lib/utils";
 
+  interface MatchedEmotion {
+    emotion: string;
+    level: number;
+  }
+
   interface Props {
     track: Track;
     matchedLyrics?: string[];
+    matchedEmotion: MatchedEmotion | null;
     isActive?: boolean;
     isPlaying?: boolean;
     isQueued?: boolean;
@@ -26,6 +32,7 @@
   let {
     track,
     matchedLyrics = [],
+    matchedEmotion,
     isActive = false,
     isPlaying = false,
     isQueued = false,
@@ -186,6 +193,21 @@
           +{remainingCount} more
         </span>
       {/if}
+    </div>
+  {/if}
+  {#if matchedEmotion}
+    <div
+      class="flex items-center gap-2 px-4 py-1.5 border-t border-border/40 bg-muted/20 text-xs select-text overflow-hidden"
+    >
+      <span
+        class="text-[10px] uppercase font-mono font-semibold tracking-wider text-secondary-foreground/80 shrink-0"
+      >
+        {matchedEmotion.emotion}
+      </span>
+
+      <span class="truncate italic text-foreground/80">
+        {(matchedEmotion.level * 100).toFixed(1)}%
+      </span>
     </div>
   {/if}
 </div>

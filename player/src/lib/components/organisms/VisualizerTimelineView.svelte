@@ -121,32 +121,59 @@
 
   /**
    * Computes non-overlapping Y coordinates for a segment's emotion bars.
-   * Emotions sharing the exact same rounded percentage are stacked vertically.
+   * Sorts emotions by score and enforces a minimum vertical clearance of
+   * (BAR_HEIGHT + BAR_STACK_GAP) between adjacent bars so that differences
+   * under 3% stack cleanly without overlapping.
    */
   function getStackedSegmentEmotions(seg: TrackSegment) {
-    const countsByPct = new Map<number, number>();
+    const emotions = seg.emotions ?? {};
+    const minSpacing = BAR_HEIGHT + BAR_STACK_GAP;
 
-    return Object.entries(seg.emotions)
+    const validEmotions = Object.entries(emotions)
       .filter(
         ([emotion, score]) =>
           score >= EMOTION_THRESHOLD && Boolean(COWEN_EMOTION_COLORS[emotion])
       )
-      .sort((a, b) => a[0].localeCompare(b[0])) // Deterministic stacking order
       .map(([emotion, score]) => {
         const pct = Math.round(score * 100);
-        const stackIdx = countsByPct.get(pct) ?? 0;
-        countsByPct.set(pct, stackIdx + 1);
-
         const baseY = 280 - (pct / 100) * 260;
-        const y = baseY - stackIdx * (BAR_HEIGHT + BAR_STACK_GAP);
-
         return {
           emotion,
           pct,
-          y,
+          baseY,
           color: COWEN_EMOTION_COLORS[emotion],
         };
+      })
+      .sort((a, b) => {
+        if (a.pct !== b.pct) {
+          return a.pct - b.pct;
+        }
+        return a.emotion.localeCompare(b.emotion);
       });
+
+    let prevY: number | null = null;
+
+    return validEmotions.map((item) => {
+      let y = item.baseY;
+
+      // In SVG space, upward is decreasing Y.
+      // If the bar collides with the one below it, push it upward.
+      if (prevY !== null) {
+        const maxYAllowed = prevY - minSpacing;
+        if (y > maxYAllowed) {
+          y = maxYAllowed;
+        }
+      }
+
+      prevY = y;
+
+      return {
+        emotion: item.emotion,
+        pct: item.pct,
+        y,
+        color: item.color,
+      };
+    });
   }
 
   function handleTimelineClick(event: MouseEvent) {
@@ -348,13 +375,13 @@
                   name: bar.emotion,
                   score: bar.pct,
                   x: e.clientX,
-                  y: e.clientY,
+                  y: e.clientY - 100,
                 };
               }}
               onpointermove={(e) => {
                 if (hoveredEmotion) {
                   hoveredEmotion.x = e.clientX;
-                  hoveredEmotion.y = e.clientY;
+                  hoveredEmotion.y = e.clientY - 100;
                 }
               }}
               onpointerleave={() => (hoveredEmotion = null)}

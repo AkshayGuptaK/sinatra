@@ -1,6 +1,5 @@
 import type { FilterableField } from "$lib/types/metadata";
 import { parseDurationToSeconds } from "./time";
-import type { SimilarityMode } from "$lib/api/sinatra";
 
 export type ComparisonOperator = ">" | "<" | ">=" | "<=";
 
@@ -12,6 +11,7 @@ export type FilterIntent =
       seconds: number;
     }
   | { type: "lyrics_filter"; query: string }
+  | { type: "emotion_filter"; query: string }
   | { type: "queued_filter"; filter: FilterIntent }
   | { type: "text_search"; query: string };
 
@@ -66,6 +66,13 @@ export function parseFilterCommand(input: string): FilterIntent {
       if (prefix === "lyrics" || prefix === "lyric") {
         return {
           type: "lyrics_filter",
+          query: rest,
+        };
+      }
+
+      if (prefix === "emotions" || prefix === "emotion") {
+        return {
+          type: "emotion_filter",
           query: rest,
         };
       }

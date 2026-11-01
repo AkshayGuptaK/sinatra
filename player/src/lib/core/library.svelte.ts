@@ -28,6 +28,18 @@ export class MusicLibrary {
   isSearchingLyrics = $state(false);
   isLoadingLyrics = $state(false);
 
+  /**
+   * The currently active emotion filter key (normalized to lowercase), or null if not filtering by emotion.
+   */
+  activeEmotionQuery = $derived.by(() => {
+    const emotionFilter = this.findFilterByType(
+      this.activeFilter,
+      "emotion_filter"
+    );
+    const q = emotionFilter?.query.trim().toLowerCase();
+    return q || null;
+  });
+
   private lyricSearchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private lastLyricQuery = "";
 
@@ -137,6 +149,35 @@ export class MusicLibrary {
   }
 
   /**
+   * Returns the matched emotion name and raw score (0.0 - 1.0) for a track if an emotion filter is active.
+   */
+  getTrackEmotionMatch(
+    track: Track
+  ): { emotion: string; level: number } | null {
+    const emotion = this.activeEmotionQuery;
+    if (!emotion) return null;
+    const level = track.emotions?.[emotion];
+    if (level === undefined || level <= 0.1) return null;
+    return { emotion, level };
+  }
+
+  /**
+   * Unwraps a FilterIntent (handling nested `queued_filter`) to find a specific filter type.
+   */
+  private findFilterByType<T extends FilterIntent["type"]>(
+    filter: FilterIntent | null,
+    type: T
+  ): Extract<FilterIntent, { type: T }> | null {
+    if (!filter) return null;
+    if (filter.type === type)
+      return filter as Extract<FilterIntent, { type: T }>;
+    if (filter.type === "queued_filter") {
+      return this.findFilterByType(filter.filter, type);
+    }
+    return null;
+  }
+
+  /**
    * Helper that evaluates whether a track matches a FilterIntent recursively.
    */
   private matchesFilter(
@@ -174,6 +215,13 @@ export class MusicLibrary {
           case "<=":
             return duration <= filter.seconds;
         }
+      }
+
+      case "emotion_filter": {
+        const q = filter.query.trim().toLowerCase();
+        if (!q) return true;
+        const emotionLevel = track.emotions?.[q];
+        return !!emotionLevel && emotionLevel > 0.1;
       }
 
       case "lyrics_filter": {
@@ -230,18 +278,23 @@ export class MusicLibrary {
         }
 
         if (sortColumn === "tags") {
-          if (a.tags.length !== b.tags.length) {
-            return (a.tags.length - b.tags.length) * dirMultiplier;
+          const aTags = a.tags ?? [];
+          const bTags = b.tags ?? [];
+          if (aTags.length !== bTags.length) {
+            return (aTags.length - bTags.length) * dirMultiplier;
           }
-          const aFirst = a.tags[0] ?? "";
-          const bFirst = b.tags[0] ?? "";
-          return aFirst.localeCompare(bFirst) * dirMultiplier;
+          return (aTags[0] ?? "").localeCompare(bTags[0] ?? "") * dirMultiplier;
         }
 
         const aVal = String(a[sortColumn] ?? "");
         const bVal = String(b[sortColumn] ?? "");
         return aVal.localeCompare(bVal) * dirMultiplier;
       });
+    } else if (this.activeEmotionQuery) {
+      const emo = this.activeEmotionQuery;
+      tracks.sort(
+        (a, b) => (b.emotions?.[emo] ?? 0) - (a.emotions?.[emo] ?? 0)
+      );
     }
     return tracks;
   }
@@ -340,14 +393,15 @@ export class MusicLibrary {
       this.clearFilter();
       return;
     }
-    if (filter.type === "lyrics_filter") {
+    const lyricsFilter = this.findFilterByType(filter, "lyrics_filter");
+    if (lyricsFilter) {
       if (this.lyricSearchDebounceTimer) {
         clearTimeout(this.lyricSearchDebounceTimer);
       }
       this.lyricSearchDebounceTimer = setTimeout(() => {
-        this.performLyricSearch(filter.query);
+        this.performLyricSearch(lyricsFilter.query);
       }, 300);
-    } else if (this.activeFilter?.type === "lyrics_filter") {
+    } else if (this.findFilterByType(this.activeFilter, "lyrics_filter")) {
       this.lyricMatches = new Map();
       this.lastLyricQuery = "";
     }
@@ -365,7 +419,6 @@ export class MusicLibrary {
   }
 
   setHighlightedTrack(id: string | null) {
-    const a = this.highlightedTrackId;
     this.highlightedTrackId = id;
   }
 }

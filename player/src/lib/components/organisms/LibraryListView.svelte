@@ -143,6 +143,7 @@
           <LibraryTrackItem
             {track}
             matchedLyrics={library.lyricMatches.get(track.id) ?? []}
+            matchedEmotion={library.getTrackEmotionMatch(track)}
             isActive={player.currentTrackId === track.id}
             isPlaying={player.currentTrackId === track.id &&
               player.engine.isPlaying}

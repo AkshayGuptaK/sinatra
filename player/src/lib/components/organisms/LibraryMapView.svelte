@@ -1,3 +1,4 @@
+<!-- src/lib/components/organisms/LibraryMapView.svelte -->
 <script lang="ts">
   import { onMount } from "svelte";
   import * as d3 from "d3-zoom";
@@ -34,6 +35,7 @@
     x: number;
     y: number;
     color: string | null;
+    dominantEmotion: string | null;
   }
 
   interface CanvasThemeTokens {
@@ -49,6 +51,7 @@
   let transform = $state(d3.zoomIdentity);
   let zoomBehavior: d3.ZoomBehavior<HTMLCanvasElement, unknown> | null = null;
   let hoveredPoint = $state<RenderPoint | null>(null);
+  let hoveredLegendEmotion = $state<string | null>(null);
   let lastFittedViewMode = $state<EmotionMode | null>(null);
 
   const activeViewConfig = $derived(
@@ -59,10 +62,13 @@
   // 3. Color & Token Resolvers
   // =========================================================================
 
-  function getDominantEmotion(emotions: Record<string, number>): string | null {
+  function getDominantEmotion(
+    emotions: Record<string, number> | null | undefined
+  ): string | null {
+    if (!emotions) return null;
     const [dominant] = Object.entries(emotions).reduce<[string, number]>(
       (best, [emotion, score]) =>
-        activeViewConfig["getColor"](emotion) && score > best[1]
+        activeViewConfig.getColor(emotion) && score > best[1]
           ? [emotion, score]
           : best,
       ["", -1]
@@ -70,15 +76,15 @@
     return dominant || null;
   }
 
-  function getTrackColor(track: Track): string | null {
-    const emotions = activeViewConfig.getEmotions(track);
+  function getTrackColor(
+    emotions: Record<string, number> | null | undefined
+  ): string | null {
     if (!emotions) return null;
 
     const weightedColors = Object.entries(emotions).reduce<
       { color: string; weight: number }[]
     >((acc, [emotion, score]) => {
       const color = activeViewConfig.getColor(emotion);
-      // Optional: ignore trace noise below 0.05 so low-confidence tail scores don't desaturate the dot
       if (color && score > 0.05) {
         acc.push({ color, weight: score });
       }
@@ -110,10 +116,6 @@
   // 4. Reactive Projections (Normalizing Track to RenderPoint)
   // =========================================================================
 
-  /**
-   * Projects raw library tracks through the active view's coordinate extractor.
-   * Tracks missing coordinates for this view are safely filtered out.
-   */
   const renderPoints = $derived.by<RenderPoint[]>(() => {
     const extractor = activeViewConfig.getCoordinates;
     const points: RenderPoint[] = [];
@@ -121,12 +123,14 @@
     for (const track of library.displayedTracks) {
       const coords = extractor(track);
       if (coords) {
+        const emotions = activeViewConfig.getEmotions(track);
         points.push({
           id: track.id,
           track,
           x: coords.x,
           y: coords.y,
-          color: getTrackColor(track),
+          color: getTrackColor(emotions),
+          dominantEmotion: getDominantEmotion(emotions),
         });
       }
     }
@@ -200,12 +204,13 @@
     ctx: CanvasRenderingContext2D,
     point: RenderPoint,
     theme: CanvasThemeTokens,
-    dotRadius: number
+    dotRadius: number,
+    alphaMultiplier = 1
   ) {
     ctx.beginPath();
     ctx.arc(point.x, point.y, dotRadius, 0, Math.PI * 2);
     ctx.fillStyle = point.color || theme.defaultDot;
-    ctx.globalAlpha = 0.85;
+    ctx.globalAlpha = 0.85 * alphaMultiplier;
     ctx.fill();
   }
 
@@ -213,21 +218,22 @@
     ctx: CanvasRenderingContext2D,
     point: RenderPoint,
     theme: CanvasThemeTokens,
-    dotRadius: number
+    dotRadius: number,
+    alphaMultiplier = 1
   ) {
     // Outer accent ring
     ctx.beginPath();
     ctx.arc(point.x, point.y, 1.625 * dotRadius, 0, Math.PI * 2);
     ctx.strokeStyle = theme.accentRing;
     ctx.lineWidth = 1.5 / transform.k;
-    ctx.globalAlpha = 0.9;
+    ctx.globalAlpha = 0.9 * alphaMultiplier;
     ctx.stroke();
 
     // Core point
     ctx.beginPath();
     ctx.arc(point.x, point.y, dotRadius, 0, Math.PI * 2);
     ctx.fillStyle = point.color || theme.defaultDot;
-    ctx.globalAlpha = 1.0;
+    ctx.globalAlpha = 1.0 * alphaMultiplier;
     ctx.fill();
   }
 
@@ -235,7 +241,8 @@
     ctx: CanvasRenderingContext2D,
     point: RenderPoint,
     theme: CanvasThemeTokens,
-    dotRadius: number
+    dotRadius: number,
+    alphaMultiplier = 1
   ) {
     const coreColor = point.color || theme.defaultDot;
     const haloRadius = dotRadius * 2.2;
@@ -255,7 +262,7 @@
     ctx.beginPath();
     ctx.arc(point.x, point.y, haloRadius, 0, Math.PI * 2);
     ctx.fillStyle = gradient;
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = 0.55 * alphaMultiplier;
     ctx.fill();
 
     // 2. Sharp primary accent perimeter ring
@@ -263,14 +270,14 @@
     ctx.arc(point.x, point.y, haloRadius, 0, Math.PI * 2);
     ctx.strokeStyle = theme.accentRing;
     ctx.lineWidth = 1.5 / transform.k;
-    ctx.globalAlpha = 0.85;
+    ctx.globalAlpha = 0.85 * alphaMultiplier;
     ctx.stroke();
 
     // 3. Saturated Core Dot
     ctx.beginPath();
     ctx.arc(point.x, point.y, dotRadius * 1.1, 0, Math.PI * 2);
     ctx.fillStyle = coreColor;
-    ctx.globalAlpha = 1.0;
+    ctx.globalAlpha = 1.0 * alphaMultiplier;
     ctx.fill();
   }
 
@@ -298,6 +305,23 @@
     ctx.stroke();
   }
 
+  function renderPointByState(
+    ctx: CanvasRenderingContext2D,
+    point: RenderPoint,
+    activeTrackId: string | undefined,
+    theme: CanvasThemeTokens,
+    dotRadius: number,
+    alphaMultiplier: number
+  ) {
+    if (point.id === activeTrackId) {
+      drawActiveTrack(ctx, point, theme, dotRadius, alphaMultiplier);
+    } else if (queuedTrackIds.has(point.id)) {
+      drawQueuedTrack(ctx, point, theme, dotRadius, alphaMultiplier);
+    } else {
+      drawNormalTrack(ctx, point, theme, dotRadius, alphaMultiplier);
+    }
+  }
+
   function draw() {
     if (!canvasEl) return;
     const ctx = canvasEl.getContext("2d");
@@ -323,13 +347,22 @@
     const activeTrackId = player.currentTrack?.id;
     const dotRadius = Math.max(0.01, 4 / transform.k);
 
-    for (const point of renderPoints) {
-      if (point.id === activeTrackId) {
-        drawActiveTrack(ctx, point, theme, dotRadius);
-      } else if (queuedTrackIds.has(point.id)) {
-        drawQueuedTrack(ctx, point, theme, dotRadius);
-      } else {
-        drawNormalTrack(ctx, point, theme, dotRadius);
+    if (hoveredLegendEmotion) {
+      // Pass 1: Draw faded non-matching points in the background
+      for (const point of renderPoints) {
+        if (point.dominantEmotion !== hoveredLegendEmotion) {
+          renderPointByState(ctx, point, activeTrackId, theme, dotRadius, 0.12);
+        }
+      }
+      // Pass 2: Draw matching dominant-emotion points in the foreground
+      for (const point of renderPoints) {
+        if (point.dominantEmotion === hoveredLegendEmotion) {
+          renderPointByState(ctx, point, activeTrackId, theme, dotRadius, 1.0);
+        }
+      }
+    } else {
+      for (const point of renderPoints) {
+        renderPointByState(ctx, point, activeTrackId, theme, dotRadius, 1.0);
       }
     }
 
@@ -356,7 +389,6 @@
       y: (screenY - transform.y) / transform.k,
     };
 
-    // Operates directly on projected points
     const nearest = findNearestPoint(
       renderPoints,
       targetWorld,
@@ -416,6 +448,7 @@
     if (activeViewMode === mode) return;
     activeViewMode = mode;
     hoveredPoint = null;
+    hoveredLegendEmotion = null;
   }
 
   // =========================================================================
@@ -452,6 +485,7 @@
     queuedTrackIds;
     player.currentTrack?.id;
     highlightedPoint;
+    hoveredLegendEmotion;
 
     // Automatically re-center viewport when projection view changes or points first load
     if (
@@ -470,7 +504,7 @@
 
 <div
   class={cn(
-    "relative flex flex-row w-full h-full min-h-0 overflow-hidden bg-card select-none p-1 gap-3",
+    "relative flex flex-row w-full h-full min-h-0 overflow-hidden bg-card select-none p-1 gap-1",
     className
   )}
 >
@@ -526,7 +560,11 @@
   <!-- Sidebar: Legend & Tooltip Details -->
   <aside class="flex flex-col w-60 shrink-0 h-full overflow-hidden">
     <div class="shrink-0">
-      <EmotionLegend class="w-full" viewMode={activeViewMode} />
+      <EmotionLegend
+        class="w-full"
+        viewMode={activeViewMode}
+        bind:hoveredEmotion={hoveredLegendEmotion}
+      />
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto">

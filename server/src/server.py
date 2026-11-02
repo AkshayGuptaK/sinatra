@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api import (
     audio_router,
+    explore_router,
     lyrics_router,
     suggestions_router,
     tracks_router,
@@ -52,3 +53,4 @@ app.include_router(tracks_router)
 app.include_router(lyrics_router)
 app.include_router(suggestions_router)
 app.include_router(audio_router)
+app.include_router(explore_router)

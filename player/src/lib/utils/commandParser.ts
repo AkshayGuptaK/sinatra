@@ -1,5 +1,6 @@
 import type { FilterableField } from "$lib/types/metadata";
 import { parseDurationToSeconds } from "./time";
+import type { ExploreSearchFilter } from "$lib/api/explore";
 
 export type ComparisonOperator = ">" | "<" | ">=" | "<=";
 
@@ -23,6 +24,40 @@ export type ParsedIntent =
   | FilterIntent;
 
 const nullCommand: FilterIntent = { type: "text_search", query: "" };
+
+export type SearchIntent =
+  | {
+      type: "catalog_search";
+      query: string;
+      filter?: ExploreSearchFilter;
+      limit?: number;
+    }
+  | {
+      type: "artist_detail";
+      artistId: string;
+    }
+  | {
+      type: "artist_albums";
+      artistId: string;
+      params: string;
+    }
+  | {
+      type: "album_detail";
+      albumId: string;
+    }
+  | {
+      type: "mood_playlists";
+      title?: string;
+      params: string;
+    }
+  | {
+      type: "playlist_detail";
+      playlistId: string;
+    }
+  | {
+      type: "charts";
+      country?: string;
+    };
 
 /**
  * Recursively parses a filter expression.

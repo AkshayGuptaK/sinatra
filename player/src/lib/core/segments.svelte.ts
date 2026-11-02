@@ -1,4 +1,4 @@
-import { sinatraApi } from "$lib/api/sinatra";
+import { sinatraApi } from "$lib/api/main";
 import type { TrackSegment } from "$lib/types/track";
 
 const MIN_SEGMENT_DURATION_SEC = 1.0;

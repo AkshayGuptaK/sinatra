@@ -20,11 +20,9 @@
 
   interface Props {
     class?: string;
-    openSettings?: () => void;
-    switchToVibe?: () => void;
   }
 
-  let { class: className = "", openSettings, switchToVibe }: Props = $props();
+  let { class: className = "" }: Props = $props();
 
   let viewMode = $state<LibraryViewMode>("list");
 

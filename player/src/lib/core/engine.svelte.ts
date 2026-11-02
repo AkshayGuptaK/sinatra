@@ -1,4 +1,4 @@
-import { sinatraApi } from "$lib/api/sinatra";
+import { sinatraApi } from "$lib/api/main";
 import { settings } from "$lib/core/settings.svelte";
 import type { TrackSegment } from "$lib/types/track";
 import { AudioDspGraph } from "./dsp.svelte";

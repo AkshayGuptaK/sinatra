@@ -1,5 +1,5 @@
 import { AudioEngine } from "./engine.svelte";
-import { sinatraApi, type SimilarityMode } from "$lib/api/sinatra";
+import { sinatraApi, type SimilarityMode } from "$lib/api/main";
 import { settings } from "$lib/core/settings.svelte";
 import { type Track } from "$lib/types/track";
 import type { FilterIntent } from "$lib/utils/commandParser";

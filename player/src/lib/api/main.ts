@@ -2,7 +2,7 @@ import type { Track, TrackSegment } from "$lib/types/track";
 import type { MetadataFields } from "$lib/types/metadata";
 import type { FilterIntent } from "$lib/utils/commandParser";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export interface SuggestTagsResponse {
   track_id?: string;
@@ -193,3 +193,4 @@ export const sinatraApi = {
     return res.json();
   }
 };
+

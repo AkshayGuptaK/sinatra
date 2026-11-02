@@ -1,4 +1,4 @@
-import { sinatraApi } from "$lib/api/sinatra";
+import { sinatraApi } from "$lib/api/main";
 import type { Track } from "$lib/types/track";
 import type {
   MetadataFields,

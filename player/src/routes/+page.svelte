@@ -2,6 +2,7 @@
   import "../app.css";
   import { onMount, onDestroy } from "svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
+  import Explore from "$lib/components/templates/Explore.svelte";
   import Curate from "$lib/components/templates/Curate.svelte";
   import Vibe from "$lib/components/templates/Vibe.svelte";
   import Settings from "$lib/components/templates/Settings.svelte";
@@ -16,7 +17,6 @@
     type AppDeck,
   } from "$lib/components/molecules/NavigationRail.svelte";
   import NowPlaying from "$lib/components/organisms/NowPlaying.svelte";
-  // Future: import Explore from "$lib/components/templates/Explore.svelte";
 
   let activeDeck = $state<AppDeck>("curate");
 
@@ -93,7 +93,9 @@
         <Vibe />
       </div>
 
-      <div class="h-full w-full" class:hidden={activeDeck !== "explore"}></div>
+      <div class="h-full w-full" class:hidden={activeDeck !== "explore"}>
+        <Explore />
+      </div>
 
       <div class="h-full w-full" class:hidden={activeDeck !== "settings"}>
         <Settings />

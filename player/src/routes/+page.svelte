@@ -4,7 +4,7 @@
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import Curate from "$lib/components/templates/Curate.svelte";
   import Vibe from "$lib/components/templates/Vibe.svelte";
-  import SettingsDialog from "$lib/components/organisms/SettingsDialog.svelte";
+  import Settings from "$lib/components/templates/Settings.svelte";
   import { library } from "$lib/core/library.svelte";
   import { player } from "$lib/core/player.svelte";
   import { playerSession } from "$lib/core/playerSession.svelte";
@@ -12,25 +12,41 @@
     getTrackDisplayAttribution,
     getTrackDisplayTitle,
   } from "$lib/utils/display";
+  import NavigationRail, {
+    type AppDeck,
+  } from "$lib/components/molecules/NavigationRail.svelte";
+  import NowPlaying from "$lib/components/organisms/NowPlaying.svelte";
+  // Future: import Explore from "$lib/components/templates/Explore.svelte";
 
-  type AppDeck = "curate" | "vibe";
   let activeDeck = $state<AppDeck>("curate");
-  let isSettingsOpen = $state(false);
-
-  function handleToggleDeck() {
-    activeDeck = activeDeck === "curate" ? "vibe" : "curate";
-  }
 
   function handleKeyDown(event: KeyboardEvent) {
-    if (
-      event.key === "Escape" &&
-      activeDeck === "vibe" &&
-      !(document.activeElement instanceof HTMLInputElement)
-    ) {
-      activeDeck = "curate";
+    // Top-level shortcuts (Cmd+1..3, Cmd+,)
+    if (event.metaKey || event.ctrlKey) {
+      switch (event.key) {
+        case "1": {
+          activeDeck = "explore";
+          event.preventDefault();
+          break;
+        }
+        case "2": {
+          activeDeck = "curate";
+          event.preventDefault();
+          break;
+        }
+        case "3": {
+          activeDeck = "vibe";
+          event.preventDefault();
+          break;
+        }
+        case ",": {
+          activeDeck = "settings";
+          event.preventDefault();
+          break;
+        }
+      }
     }
   }
-
   onMount(async () => {
     await playerSession.setupCloseListener(player);
 
@@ -62,35 +78,32 @@
 
 <svelte:window onkeydown={handleKeyDown} />
 
-<main
-  class="relative h-screen w-screen p-2 bg-background text-foreground overflow-hidden select-none"
+<div
+  class="flex h-screen w-screen bg-background rounded-xl text-foreground overflow-hidden select-none"
 >
-  <div
-    class="absolute inset-2 flex flex-col transition-opacity duration-150 {activeDeck ===
-    'curate'
-      ? 'opacity-100 z-10'
-      : 'opacity-0 pointer-events-none -z-10'}"
-  >
-    <Curate
-      openSettings={() => (isSettingsOpen = true)}
-      onToggleVibe={handleToggleDeck}
-    />
-  </div>
+  <NavigationRail {activeDeck} onSelectDeck={(deck) => (activeDeck = deck)} />
 
-  <div
-    class="absolute inset-2 flex flex-col transition-opacity duration-150 {activeDeck ===
-    'vibe'
-      ? 'opacity-100 z-10'
-      : 'opacity-0 pointer-events-none -z-10'}"
-  >
-    <Vibe
-      openSettings={() => (isSettingsOpen = true)}
-      onToggleVibe={handleToggleDeck}
-    />
-  </div>
+  <div class="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
+    <main class="flex-1 min-h-0 w-full overflow-hidden relative">
+      <div class="h-full w-full" class:hidden={activeDeck !== "curate"}>
+        <Curate />
+      </div>
 
-  <SettingsDialog bind:open={isSettingsOpen} />
-</main>
+      <div class="h-full w-full" class:hidden={activeDeck !== "vibe"}>
+        <Vibe />
+      </div>
+
+      <div class="h-full w-full" class:hidden={activeDeck !== "explore"}></div>
+
+      <div class="h-full w-full" class:hidden={activeDeck !== "settings"}>
+        <Settings />
+      </div>
+    </main>
+    <footer class="w-full shrink-0">
+      <NowPlaying onTrackClick={() => (activeDeck = "vibe")} />
+    </footer>
+  </div>
+</div>
 
 <style>
   :root {

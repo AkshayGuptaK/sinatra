@@ -1,6 +1,5 @@
 <script lang="ts">
   import { cn } from "$lib/utils";
-  import ControlButton from "$lib/components/atoms/ControlButton.svelte";
   import HeaderBanner from "$lib/components/molecules/HeaderBanner.svelte";
   import CommandBar from "$lib/components/molecules/CommandBar.svelte";
   import VisualizerTimelineView from "$lib/components/organisms/VisualizerTimelineView.svelte";
@@ -9,7 +8,7 @@
     type VisualizerViewMode,
   } from "$lib/components/molecules/VisualizerControls.svelte";
   import TimelineControls from "$lib/components/molecules/TimelineControls.svelte";
-  import { View, Settings, LayoutDashboard } from "@lucide/svelte";
+  import { View } from "@lucide/svelte";
   import { player } from "$lib/core/player.svelte";
   import { settings } from "$lib/core/settings.svelte";
   import {
@@ -20,19 +19,11 @@
 
   interface Props {
     class?: string;
-    openSettings?: () => void;
-    switchToCurate?: () => void;
     isLyricsOpen: boolean;
     onToggleLyrics?: () => void;
   }
 
-  let {
-    class: className = "",
-    openSettings,
-    switchToCurate,
-    isLyricsOpen,
-    onToggleLyrics,
-  }: Props = $props();
+  let { class: className = "", isLyricsOpen, onToggleLyrics }: Props = $props();
 
   let viewMode = $state<VisualizerViewMode>("timeline");
 </script>
@@ -43,27 +34,7 @@
     className
   )}
 >
-  <HeaderBanner title="Visualizer" icon={View}>
-    <div class="flex gap-3">
-      <ControlButton
-        icon={LayoutDashboard}
-        onClick={switchToCurate}
-        label="Switch to Curate mode"
-        title="Curate Mode"
-        class="size-4"
-        iconClass="size-4"
-      />
-      <ControlButton
-        icon={Settings}
-        onClick={openSettings}
-        label="Open Settings"
-        title="Settings (Cmd+,)"
-        class="size-4"
-        iconClass="size-4"
-      />
-    </div>
-  </HeaderBanner>
-
+  <HeaderBanner title="Visualizer" icon={View} />
   <div class="flex flex-col w-full gap-3 shrink-0">
     <div
       class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-2"

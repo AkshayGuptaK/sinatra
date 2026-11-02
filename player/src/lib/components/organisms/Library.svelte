@@ -8,8 +8,7 @@
   import LibraryDurationSummary from "$lib/components/molecules/LibraryDurationSummary.svelte";
   import LibraryListView from "$lib/components/organisms/LibraryListView.svelte";
   import LibraryMapView from "$lib/components/organisms/LibraryMapView.svelte";
-  import ControlButton from "../atoms/ControlButton.svelte";
-  import { Library, Settings, AudioLines } from "@lucide/svelte";
+  import { Library } from "@lucide/svelte";
   import { library } from "$lib/core/library.svelte";
   import { player } from "$lib/core/player.svelte";
   import {
@@ -45,30 +44,11 @@
 
 <div
   class={cn(
-    "flex flex-col w-full h-full min-h-0 rounded-xl border bg-card text-card-foreground shadow-lg overflow-hidden",
+    "flex flex-col w-full h-full min-h-0 border bg-card text-card-foreground shadow-lg overflow-hidden",
     className
   )}
 >
-  <HeaderBanner title="Library" icon={Library}>
-    <div class="flex gap-3">
-      <ControlButton
-        icon={AudioLines}
-        onClick={switchToVibe}
-        label="Switch to Vibe mode"
-        title="Vibe Mode"
-        class="size-4"
-        iconClass="size-4"
-      />
-      <ControlButton
-        icon={Settings}
-        onClick={openSettings}
-        label="Open Settings"
-        title="Settings (Cmd+,)"
-        class="size-4"
-        iconClass="size-4"
-      />
-    </div>
-  </HeaderBanner>
+  <HeaderBanner title="Library" icon={Library} />
   <div class="flex flex-col w-full gap-3 shrink-0">
     <div
       class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-2"

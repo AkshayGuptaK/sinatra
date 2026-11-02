@@ -3,15 +3,8 @@
   import { player } from "$lib/core/player.svelte";
   import { library } from "$lib/core/library.svelte";
   import LyricsSidebar from "../molecules/LyricsSidebar.svelte";
-  import NowPlaying from "$lib/components/organisms/NowPlaying.svelte";
   import Visualizer from "../organisms/Visualizer.svelte";
 
-  interface Props {
-    openSettings?: () => void;
-    onToggleVibe?: () => void;
-  }
-
-  let { openSettings, onToggleVibe }: Props = $props();
   let isLyricsOpen = $state(false);
 
   // Lazy-fetch lyrics into `library.tracks` only when sidebar is open
@@ -29,8 +22,6 @@
       class="flex-1 min-w-0 h-full overflow-hidden transition-all duration-300"
     >
       <Visualizer
-        {openSettings}
-        switchToCurate={onToggleVibe}
         {isLyricsOpen}
         onToggleLyrics={() => (isLyricsOpen = !isLyricsOpen)}
         class="h-full w-full"
@@ -49,7 +40,9 @@
           disabled={!player.currentTrack}
           onSave={async (lyrics) => {
             if (player.currentTrack) {
-              await library.updateTrackMetadata(player.currentTrack.id, { lyrics });
+              await library.updateTrackMetadata(player.currentTrack.id, {
+                lyrics,
+              });
             }
           }}
           onClose={() => (isLyricsOpen = false)}
@@ -58,7 +51,4 @@
       </aside>
     {/if}
   </div>
-  <footer class="w-full shrink-0">
-    <NowPlaying class="w-full" onTrackClick={onToggleVibe} />
-  </footer>
 </div>

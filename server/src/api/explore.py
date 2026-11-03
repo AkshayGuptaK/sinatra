@@ -1,8 +1,10 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path as FastPath, Query
 from fastapi.responses import JSONResponse
+from pathlib import Path
 from src.services.explore import MusicExplorer, get_supported_sources
 from src.api.utils import resolve_explorer
+from src.config import config
 
 router = APIRouter(prefix="/api/explore", tags=["explore"])
 
@@ -162,3 +164,44 @@ def get_charts(
         return JSONResponse(content=charts)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{source}/download/{track_id}")
+def download_explore_track(
+    track_id: str = FastPath(
+        ..., description="Remote track identifier (e.g. YouTube video ID)"
+    ),
+    explorer: MusicExplorer = Depends(resolve_explorer),
+    source: str = FastPath(..., description="Explore provider ID (e.g. 'ytm')"),
+):
+    """Downloads a remote track to the configured music directory.
+
+    Once placed in the directory, the file watcher automatically ingests
+    and syncs the track into the library database.
+    """
+    music_dir_str = config["music_dir"]
+    music_dir = Path(music_dir_str).expanduser().resolve()
+
+    if not music_dir.exists():
+        music_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        saved_file = explorer.download_track(
+            video_id=track_id, destination_dir=music_dir
+        )
+        print("saved")
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "source": source,
+                "track_id": track_id,
+                "filepath": str(saved_file),
+            },
+        )
+    except Exception as e:
+        print("error", e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to download track '{track_id}' from source '{source}': {e}",
+        )

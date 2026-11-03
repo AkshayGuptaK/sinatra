@@ -48,7 +48,7 @@
     </div>
     <div>
       {#each explorer.tracks as track}
-        <ExplorerTrackItem {track} onEnqueue={enqueueTrack}/>
+        <ExplorerTrackItem {track} onEnqueue={enqueueTrack} onDownload={track => explorer.download(track.video_id)}/>
       {/each}
     </div>
   </div>

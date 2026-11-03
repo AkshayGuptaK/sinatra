@@ -1,8 +1,12 @@
-import subprocess
+import re
+import shutil
 import socket
+import subprocess
+import tempfile
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal, Optional, Iterator
+from pathlib import Path
 import urllib3.util.connection as urllib3_conn
 import urllib.request
 import numpy as np
@@ -98,6 +102,8 @@ class AudioStreamInfo:
     duration: Optional[int]
     http_headers: dict[str, str] = field(default_factory=dict)
     expires_at: float = 0.0
+    title: Optional[str] = None
+    artist: Optional[str] = None
 
 
 # =============================================================================
@@ -388,17 +394,50 @@ class YoutubeExplorer:
         }
 
     # -------------------------------------------------------------------------
-    #  Music Playback
+    #  Music Playback and Download
     # -------------------------------------------------------------------------
 
+    @staticmethod
+    def _build_ffmpeg_network_args(http_headers: dict[str, str]) -> list[str]:
+        """Builds resilient network reconnect and CDN authentication flags for FFmpeg."""
+        args = [
+            "-reconnect",
+            "1",
+            "-reconnect_streamed",
+            "1",
+            "-reconnect_delay_max",
+            "5",
+        ]
+        if http_headers:
+            header_str = "".join(f"{k}: {v}\r\n" for k, v in http_headers.items())
+            args.extend(["-headers", header_str])
+        return args
+
+    @staticmethod
+    def _sanitize_filename(name: str) -> str:
+        """Removes illegal filesystem characters from titles/artists."""
+        return re.sub(r'[\\/*?:"<>|]', "", name).strip()
+
+    @staticmethod
+    def _resolve_unique_path(destination_dir: Path, filename: str) -> Path:
+        """Resolves collisions by appending incrementing counter suffixes."""
+        target = destination_dir / filename
+        stem = target.stem
+        suffix = target.suffix
+        counter = 1
+        while target.exists():
+            target = destination_dir / f"{stem} ({counter}){suffix}"
+            counter += 1
+        return target
+
+    # -------------------------------------------------------------------------
+    # Stream Resolution & Caching
+    # -------------------------------------------------------------------------
     @classmethod
     def get_stream_info(
         cls, video_id: str, force_refresh: bool = False
     ) -> AudioStreamInfo:
-        """
-        Uses yt-dlp to decipher and resolve the direct audio-only stream URL.
-        Strictly requests audio-only formats (Opus/M4A) with no video track.
-        """
+        """Extracts direct audio-only stream URL, headers, and metadata using yt-dlp."""
         now = time.time()
         cached = cls._stream_cache.get(video_id)
         if cached and not force_refresh and cached.expires_at > now:
@@ -406,7 +445,6 @@ class YoutubeExplorer:
 
         url = f"https://music.youtube.com/watch?v={video_id}"
         ydl_opts = {
-            # Strictly select audio-only streams (preferring Opus, then M4A)
             "format": "bestaudio[acodec=opus]/bestaudio[ext=m4a]/bestaudio",
             "quiet": True,
             "no_warnings": True,
@@ -426,57 +464,39 @@ class YoutubeExplorer:
             duration=info.get("duration"),
             http_headers=info.get("http_headers", {}),
             expires_at=now + cls.STREAM_CACHE_TTL_SEC,
+            title=info.get("title") or info.get("track"),
+            artist=info.get("artist") or info.get("uploader") or info.get("creator"),
         )
         cls._stream_cache[video_id] = stream_info
         return stream_info
 
+    # -------------------------------------------------------------------------
+    # In-Memory Stream Ingestion (PyTorch Tensor)
+    # -------------------------------------------------------------------------
     @classmethod
     def read_stream(
         cls, video_id: str, target_sr: int = 44100, channels: int = 2
     ) -> Optional[torch.Tensor]:
-        """
-        Streams and decodes a YouTube Music track by video_id into a PyTorch tensor
-        using system FFmpeg. Matches the exact interface of FileSystemSource.read_file().
-        - channels: 1 for Mono, 2 for Stereo
-        """
+        """Streams and decodes audio into a PyTorch Float32 tensor matching read_file."""
         try:
             stream_info = cls.get_stream_info(video_id)
-
-            # Format yt-dlp's HTTP headers for FFmpeg's -headers flag (CRLF separated)
-            header_lines = "".join(
-                f"{k}: {v}\r\n" for k, v in stream_info.http_headers.items()
-            )
 
             cmd = [
                 "ffmpeg",
                 "-v",
                 "error",
-                # Automatic reconnect flags in case Google's CDN drops mid-stream
-                "-reconnect",
-                "1",
-                "-reconnect_streamed",
-                "1",
-                "-reconnect_delay_max",
-                "5",
+                *cls._build_ffmpeg_network_args(stream_info.http_headers),
+                "-i",
+                stream_info.stream_url,
+                "-vn",
+                "-f",
+                "f32le",
+                "-ac",
+                str(channels),
+                "-ar",
+                str(target_sr),
+                "-",
             ]
-
-            if header_lines:
-                cmd.extend(["-headers", header_lines])
-
-            cmd.extend(
-                [
-                    "-i",
-                    stream_info.stream_url,
-                    "-vn",  # Explicitly disable any video stream
-                    "-f",
-                    "f32le",  # PCM Float32
-                    "-ac",
-                    str(channels),
-                    "-ar",
-                    str(target_sr),
-                    "-",  # Pipe to stdout
-                ]
-            )
 
             process = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
@@ -484,19 +504,16 @@ class YoutubeExplorer:
             stdout, stderr = process.communicate()
 
             if process.returncode != 0 or len(stdout) == 0:
-                if len(stdout) == 0:
-                    print(f"FFmpeg failed for video_id {video_id}: {stderr.decode()}")
-                    return None
+                print(
+                    f"FFmpeg stream decode failed for {video_id}: {stderr.decode()}"
+                )
+                return None
 
-            # 1. Read raw bytes to numpy
             audio_np = np.frombuffer(stdout, dtype=np.float32).copy()
-
-            # 2. Reshape to (Channels, Time)
-            # FFmpeg outputs interleaved data: [L, R, L, R...]
             if channels > 1:
-                audio_np = audio_np.reshape(-1, channels).T  # -> (2, Samples)
+                audio_np = audio_np.reshape(-1, channels).T
             else:
-                audio_np = audio_np.reshape(1, -1)  # -> (1, Samples)
+                audio_np = audio_np.reshape(1, -1)
 
             return torch.from_numpy(audio_np)
 
@@ -504,6 +521,9 @@ class YoutubeExplorer:
             print(f"YouTube Stream Load Error ({video_id}): {e}")
             return None
 
+    # -------------------------------------------------------------------------
+    # HTTP Byte Streaming (FastAPI / HTML5 Audio)
+    # -------------------------------------------------------------------------
     @classmethod
     def iter_audio_chunks(
         cls,
@@ -511,16 +531,15 @@ class YoutubeExplorer:
         range_header: Optional[str] = None,
         chunk_size: int = 65536,
     ) -> tuple[Iterator[bytes], int, dict[str, str]]:
-        """
-        Streams raw compressed audio chunks (Opus/M4A) with HTTP Range support
-        for FastAPI's StreamingResponse (browser playback & scrubbing).
-        """
+        """Proxies compressed stream chunks supporting HTTP Range requests for browser playback."""
         stream_info = cls.get_stream_info(video_id)
         req_headers = dict(stream_info.http_headers)
         if range_header:
             req_headers["Range"] = range_header
 
-        req = urllib.request.Request(stream_info.stream_url, headers=req_headers)
+        req = urllib.request.Request(
+            stream_info.stream_url, headers=req_headers
+        )
         resp = urllib.request.urlopen(req, timeout=15)
 
         status_code = resp.getcode() or 200
@@ -554,6 +573,74 @@ class YoutubeExplorer:
                 resp.close()
 
         return _chunk_generator(), status_code, resp_headers
+
+    # -------------------------------------------------------------------------
+    # Disk Materialization (Download)
+    # -------------------------------------------------------------------------
+    def download_track(self, video_id: str, destination_dir: Path) -> Path:
+        """Downloads and remuxes track audio to .opus with metadata using FFmpeg.
+
+        Avoids yt-dlp 403 errors by reusing authenticated stream headers.
+        """
+        destination_dir.mkdir(parents=True, exist_ok=True)
+        stream_info = self.get_stream_info(video_id)
+
+        artist = self._sanitize_filename(stream_info.artist or "Unknown Artist")
+        title = self._sanitize_filename(stream_info.title or "Unknown Title")
+        out_filename = f"{artist} - {title}.opus"
+
+        with tempfile.TemporaryDirectory(prefix="sinatra_dl_") as tmp_dir:
+            temp_file = Path(tmp_dir) / out_filename
+
+            cmd = [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-y",
+                *self._build_ffmpeg_network_args(stream_info.http_headers),
+                "-i",
+                stream_info.stream_url,
+                "-vn",
+            ]
+
+            # Direct stream copy if source is already Opus; otherwise transcode
+            if stream_info.acodec == "opus":
+                cmd.extend(["-c:a", "copy"])
+            else:
+                cmd.extend(["-c:a", "libopus", "-b:a", "160k"])
+
+            # Embed essential metadata tags
+            cmd.extend(
+                [
+                    "-metadata",
+                    f"title={stream_info.title or 'Unknown Title'}",
+                    "-metadata",
+                    f"artist={stream_info.artist or 'Unknown Artist'}",
+                    str(temp_file),
+                ]
+            )
+
+            result = subprocess.run(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            if (
+                result.returncode != 0
+                or not temp_file.exists()
+                or temp_file.stat().st_size == 0
+            ):
+                err_msg = result.stderr.decode().strip()
+                raise RuntimeError(
+                    f"FFmpeg download failed for {video_id}: {err_msg}"
+                )
+
+            final_destination = self._resolve_unique_path(
+                destination_dir, out_filename
+            )
+
+            # Atomic move across filesystems
+            shutil.move(str(temp_file), str(final_destination))
+
+        return final_destination
 
     # =========================================================================
     # Internal Normalization Helpers

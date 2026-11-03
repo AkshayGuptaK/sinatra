@@ -123,6 +123,14 @@ export interface SearchExploreParams {
   ignoreSpelling?: boolean;
 }
 
+export interface DownloadTrackResponse {
+  status: "success";
+  source: string;
+  track_id: string;
+  filename: string;
+  filepath: string;
+}
+
 // =============================================================================
 // API Client Methods
 // =============================================================================
@@ -349,6 +357,33 @@ export const explorerApi = {
     if (!res.ok) {
       throw new Error(`Failed to fetch charts: ${res.statusText}`);
     }
+    return res.json();
+  },
+
+  /**
+   * Downloads a remote track to the server's music library directory,
+   * triggering the automatic sync and embedding pipeline.
+   */
+  async downloadTrack(
+    source: string,
+    trackId: string
+  ): Promise<DownloadTrackResponse> {
+    const res = await fetch(
+      `${API_BASE_URL}/api/explore/${encodeURIComponent(
+        source
+      )}/download/${encodeURIComponent(trackId)}`,
+      {
+        method: "POST",
+      }
+    );
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(
+        errorData.detail || `Failed to download track: ${res.statusText}`
+      );
+    }
+
     return res.json();
   },
 };

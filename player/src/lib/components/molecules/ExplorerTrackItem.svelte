@@ -9,6 +9,7 @@
     Video,
     ListPlus,
     ListX,
+    Download,
   } from "@lucide/svelte";
 
   export interface Props {
@@ -20,6 +21,7 @@
     onPlay?: (track: RemoteTrack) => void;
     onEnqueue?: (track: RemoteTrack) => void;
     onDequeue?: (track: RemoteTrack) => void;
+    onDownload?: (track: RemoteTrack) => void;
   }
 
   let {
@@ -31,6 +33,7 @@
     onPlay,
     onEnqueue,
     onDequeue,
+    onDownload,
   }: Props = $props();
 
   let isImageLoaded = $state(false);
@@ -189,6 +192,16 @@
       {:else}
         <ListPlus class="w-4 h-4" />
       {/if}
+    </button>
+
+    <button
+      type="button"
+      onclick={() => onDownload?.(track)}
+      title={"Download Track"}
+      aria-label={"Download Track"}
+      class="p-1.5 rounded-md transition-all text-neutral-400 hover:text-white hover:bg-neutral-800 opacity-0 group-hover:opacity-100 focus:opacity-100"
+    >
+      <Download class="w-4 h-4" />
     </button>
 
     {#if track.duration != null && track.duration > 0}

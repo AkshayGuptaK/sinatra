@@ -163,6 +163,14 @@ export class MusicExplorer {
     }
   }
 
+  async download(trackId: string) {
+    try {
+      await explorerApi.downloadTrack(this.activeSource, trackId);
+    } catch (err) {
+      console.error("Track download failed:", err);
+    }
+  }
+
   private resetViewData(): void {
     this.tracks = [];
     this.albums = [];

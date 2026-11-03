@@ -1,4 +1,5 @@
 from typing import Any, Iterator, Optional, Protocol
+from pathlib import Path
 import torch
 
 
@@ -50,3 +51,5 @@ class MusicExplorer(Protocol):
         range_header: Optional[str] = None,
         chunk_size: int = 65536,
     ) -> tuple[Iterator[bytes], int, dict[str, str]]: ...
+
+    def download_track(self, track_id: str, destination_dir: Path) -> Path: ...

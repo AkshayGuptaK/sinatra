@@ -21,7 +21,9 @@ export interface LibraryTrack {
 
 export type ProjectableTrack = MakeNonNullable<LibraryTrack, "coord_x" | "coord_y">;
 
-export type QueuedTrack = Pick<LibraryTrack, "id" | "title" | "artist" | "album" | "start" | "end" | "duration" | "rms_env">
+export type QueuedTrack = Pick<LibraryTrack, "id" | "title" | "artist" | "album" | "start" | "end" | "duration" | "rms_env"> & {
+  source?: string
+}
 
 export interface TrackSegment {
   start_sec: number;

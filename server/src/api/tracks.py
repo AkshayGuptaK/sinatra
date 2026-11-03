@@ -75,6 +75,8 @@ async def get_track_segments(track_id: str):
     try:
         db = get_pg()
         segments = db.get_track_segments(track_id)
+        if len(segments) == 0:
+            raise HTTPException(status_code=404, detail=f"Segments not found for track {track_id}")
         return JSONResponse(content=segments)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -103,7 +105,7 @@ async def get_similar_library_tracks(
     track_id: str,
     mode: str = Query(
         default="acoustics",
-        description="Similarity space: 'acoustics' (timbre/sound) or 'emotion' (affective mood)",
+        description="Similarity space: 'acoustics' (timbre/sound) or 'acoustic_emotion' (affective mood)",
     ),
     stoplist: Optional[str] = Query(
         default=None,

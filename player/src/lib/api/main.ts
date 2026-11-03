@@ -1,4 +1,4 @@
-import type { Track, TrackSegment } from "$lib/types/track";
+import type { LibraryTrack, TrackSegment } from "$lib/types/track";
 import type { MetadataFields } from "$lib/types/metadata";
 import type { FilterIntent } from "$lib/utils/commandParser";
 
@@ -51,11 +51,14 @@ function appendConstraintToParams(
 }
 
 export const sinatraApi = {
-  getStreamUrl(trackId: string): string {
-    return `${API_BASE_URL}/api/audio/${encodeURIComponent(trackId)}`;
+  getStreamUrl(trackId: string, source?: string): string {
+    const base = `${API_BASE_URL}/api/audio/${encodeURIComponent(trackId)}`;
+    if (source && source !== 'local') {
+      return `${base}?source=${encodeURIComponent(source)}`;
+    }
+    return base;
   },
-
-  async getLibraryTracks(): Promise<Track[]> {
+  async getLibraryTracks(): Promise<LibraryTrack[]> {
     const res = await fetch(`${API_BASE_URL}/api/library/tracks`);
     if (!res.ok) {
       throw new Error(`Failed to fetch library tracks: ${res.statusText}`);
@@ -108,7 +111,7 @@ export const sinatraApi = {
     limit: number = 3,
     constraint: FilterIntent | null = null,
     mode: SimilarityMode = "acoustics"
-  ): Promise<Track[]> {
+  ): Promise<LibraryTrack[]> {
     const params = new URLSearchParams({
       limit: limit.toString(),
       mode: mode,

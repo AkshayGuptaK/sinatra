@@ -16,6 +16,7 @@ export interface NextTrack {
   start: number;
   end: number;
   rms_env?: number[];
+  source?: string;
 }
 
 const FADE_PLAY_SEC = 0.7;
@@ -245,7 +246,7 @@ export class AudioEngine {
   private preloadDeck(deck: AudioDeck, track: NextTrack, cueStart = false) {
     if (deck.trackId !== track.id) {
       deck.trackId = track.id;
-      deck.audio.src = sinatraApi.getStreamUrl(track.id);
+      deck.audio.src = sinatraApi.getStreamUrl(track.id, track.source);
       deck.audio.load();
     }
     if (cueStart && track.start > 0) {

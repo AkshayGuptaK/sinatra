@@ -1,12 +1,12 @@
-<!-- src/lib/components/organisms/Library.svelte -->
 <script lang="ts">
   import HeaderBanner from "$lib/components/molecules/HeaderBanner.svelte";
   import CommandBar from "$lib/components/molecules/CommandBar.svelte";
+  import ExplorerTrackItem from "$lib/components/molecules/ExplorerTrackItem.svelte";
   import { Compass } from "@lucide/svelte";
   import { explorer } from "$lib/core/explorer.svelte";
   import { player } from "$lib/core/player.svelte";
   import { cn } from "$lib/utils";
-  import ExplorerTrackItem from "../molecules/ExplorerTrackItem.svelte";
+  import type { RemoteTrack } from "$lib/api/explore";
 
   interface Props {
     class?: string;
@@ -15,6 +15,17 @@
   let { class: className = "" }: Props = $props();
 
   const queuedTrackIds = $derived(new Set(player.queue.map((t) => t.id)));
+
+  function enqueueTrack(track: RemoteTrack) {
+    const queueTrack = {
+      ...track,
+      id: track.video_id,
+      album: track.album || "",
+      start: 0,
+      end: track.duration,
+    };
+    player.enqueue(queueTrack);
+  }
 </script>
 
 <div
@@ -37,8 +48,8 @@
     </div>
     <div>
       {#each explorer.tracks as track}
-        <ExplorerTrackItem track={track} />
-    {/each}
+        <ExplorerTrackItem {track} onEnqueue={enqueueTrack}/>
+      {/each}
     </div>
   </div>
 </div>

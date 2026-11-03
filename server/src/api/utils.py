@@ -1,3 +1,4 @@
+from fastapi import Path
 from src.services.explore import MusicExplorer, get_explorer
 
 

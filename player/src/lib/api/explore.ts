@@ -5,10 +5,10 @@ export interface RemoteTrack {
   video_id: string;
   title: string;
   artist: string;
+  duration: number;
   artist_id?: string | null;
   album?: string | null;
   album_id?: string | null;
-  duration?: number | null;
   thumbnail?: string | null;
   is_explicit?: boolean;
   lyrics_browse_id?: string | null;

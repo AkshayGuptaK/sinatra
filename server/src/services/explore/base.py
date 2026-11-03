@@ -1,4 +1,5 @@
-from typing import Any, Optional, Protocol
+from typing import Any, Iterator, Optional, Protocol
+import torch
 
 
 class MusicExplorer(Protocol):
@@ -35,3 +36,17 @@ class MusicExplorer(Protocol):
     ) -> dict[str, Any]: ...
 
     def get_charts(self, country: str = "ZZ") -> dict[str, Any]: ...
+
+    # --- Audio Streaming & Ingestion ---
+    def get_stream_info(self, track_id: str, force_refresh: bool = False) -> Any: ...
+
+    def read_stream(
+        self, track_id: str, target_sr: int = 44100, channels: int = 2
+    ) -> Optional[torch.Tensor]: ...
+
+    def iter_audio_chunks(
+        self,
+        track_id: str,
+        range_header: Optional[str] = None,
+        chunk_size: int = 65536,
+    ) -> tuple[Iterator[bytes], int, dict[str, str]]: ...

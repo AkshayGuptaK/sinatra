@@ -1,18 +1,10 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import JSONResponse
-from src.services.explore import MusicExplorer, get_explorer, get_supported_sources
+from src.services.explore import MusicExplorer, get_supported_sources
+from src.api.utils import resolve_explorer
 
 router = APIRouter(prefix="/api/explore", tags=["explore"])
-
-
-def resolve_explorer(
-    source: str = Path(..., description="Explore provider ID (e.g. 'ytm', 'spotify')")
-) -> MusicExplorer:
-    try:
-        return get_explorer(source)
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
 
 
 @router.get("/sources")

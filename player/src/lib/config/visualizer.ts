@@ -368,8 +368,8 @@ export const DEFAULT_CHOREOGRAPHY_CONFIG: ChoreographyConfig = {
     driftSpeed: 0.2, // Very slow, organic wandering
     spreadDeg: 350, // Wide fan/bloom by default (set to 360 for full circle, 45 for jet)
     spreadLobes: 4, // 4 soft overlapping lobes across the arc
-    minSpeed: 28.0, // Gentle welling up when calm
-    maxSpeed: 145.0, // Energetic surge when high arousal
+    minSpeed: 30.0, // Gentle welling up when calm
+    maxSpeed: 120.0, // Energetic surge when high arousal
     rmsSpeedWeight: 0.45,
     bassSpeedWeight: 0.55,
     baseRadius: 0.0018,

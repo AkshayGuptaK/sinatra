@@ -3,24 +3,19 @@
   import { Search, Sparkles, Funnel, X, CornerDownLeft } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import TextInput from "$lib/components/atoms/TextInput.svelte";
-  import {
-    parseCommandInput,
-    type ParsedIntent,
-  } from "$lib/utils/commandParser";
+  import { parseCommandInput } from "$lib/utils/commandParser";
   import { cn } from "$lib/utils";
   import { getSettingSuggestions } from "$lib/utils/settingsSuggestions";
+  import {
+    handleCommandSubmit,
+    handleFilterChange,
+  } from "$lib/core/command.svelte";
 
   interface Props {
     class?: string;
-    onSearchChange?: (intent: ParsedIntent) => void;
-    onCommandSubmit?: (intent: ParsedIntent) => void;
   }
 
-  let {
-    class: className = "",
-    onSearchChange,
-    onCommandSubmit,
-  }: Props = $props();
+  let { class: className = "" }: Props = $props();
 
   let rawInput = $state("");
   let isFocused = $state(false);
@@ -37,6 +32,11 @@
       prefix: "/q",
       label: "/queue <prompt>",
       desc: "Add prompted music to queue",
+    },
+    {
+      prefix: "/s",
+      label: "/search <prompt>",
+      desc: "Explore music matching prompt",
     },
     {
       prefix: "/dj",
@@ -80,19 +80,25 @@
     },
   ];
 
-  // Only suggest when typing a command or filter prefix and before parameters are fully entered
+  // Only suggest base commands while typing the first token, or delegate to /set
   let matchingSuggestions = $derived.by(() => {
     const trimmed = rawInput.trimStart();
+
     if (trimmed.startsWith("/set")) {
       return getSettingSuggestions(trimmed);
     }
+
     if (!trimmed.startsWith("/") && !trimmed.startsWith(":")) {
       return [];
     }
 
-    const firstWord = trimmed.split(/\s+/)[0].toLowerCase();
+    if (/\s/.test(trimmed)) {
+      return [];
+    }
+
+    const token = trimmed.toLowerCase();
     return COMMAND_SUGGESTIONS.filter((s) =>
-      s.prefix.toLowerCase().startsWith(firstWord)
+      s.prefix.toLowerCase().startsWith(token)
     );
   });
 
@@ -106,18 +112,23 @@
   function handleInput(e: Event) {
     const target = e.target as HTMLInputElement;
     rawInput = target.value;
-    onSearchChange?.(parseCommandInput(rawInput));
+    handleFilterChange(parseCommandInput(rawInput));
   }
 
   function applySuggestion(prefix: string) {
     rawInput = prefix + " ";
     selectedIndex = 0;
-    onSearchChange?.(parseCommandInput(rawInput));
+    handleFilterChange(parseCommandInput(rawInput));
     inputEl?.focus();
   }
 
+  // Only complete "/set <key> <value>" suggestions are terminal commands that can submit directly from the menu
+  function isTerminalSuggestion(prefix: string): boolean {
+    const parts = prefix.trim().split(/\s+/);
+    return parts[0] === "/set" && parts.length >= 3;
+  }
+
   function handleKeydown(e: KeyboardEvent) {
-    // 1. Suggestion List Navigation
     if (matchingSuggestions.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -131,7 +142,6 @@
           matchingSuggestions.length;
         return;
       }
-      // Tab autocompletes the highlighted prefix
       if (e.key === "Tab") {
         e.preventDefault();
         applySuggestion(matchingSuggestions[selectedIndex].prefix);
@@ -139,58 +149,45 @@
       }
     }
 
-    // 2. Intent Submission
     if (e.key === "Enter") {
       e.preventDefault();
 
-      // Check if we are selecting an intermediate prefix (e.g., "/set appearance.theme" or "/p")
-      // that still needs arguments. If it's already a complete /set command (has 3 tokens), we submit.
-      const isTerminalCommand = (text: string) => {
-        const parts = text.trim().split(/\s+/);
-        // A /set command with key and value is terminal: /set <key> <val>
-        if (parts[0] === "/set") return parts.length >= 3;
-        // For other commands (/p, /q, /dj), having just the prefix is not terminal
-        return false;
-      };
-
       const selectedPrefix = matchingSuggestions[selectedIndex]?.prefix;
 
-      // Autocomplete only if it's an intermediate prefix that needs further typing
-      if (
-        matchingSuggestions.length > 0 &&
-        rawInput.trim() === selectedPrefix &&
-        !isTerminalCommand(rawInput)
-      ) {
-        applySuggestion(selectedPrefix);
+      // If suggestions are open, decide whether Enter autocompletes or submits
+      if (selectedPrefix) {
+        if (!isTerminalSuggestion(selectedPrefix)) {
+          // Intermediate prefix (e.g. "/s", ":artist", "/set appearance.theme") -> autocomplete it
+          applySuggestion(selectedPrefix);
+          return;
+        }
+        // Terminal suggestion (e.g. "/set appearance.theme dark") -> submit the selected suggestion
+        const parsed = parseCommandInput(selectedPrefix);
+        handleCommandSubmit(parsed);
+        rawInput = "";
+        inputEl?.blur();
         return;
       }
 
-      // If suggestions are visible and user highlighted one that is different from rawInput,
-      // apply it first if it's terminal and submit, or just take the selected prefix
-      const commandToSubmit =
-        matchingSuggestions.length > 0 && selectedPrefix
-          ? selectedPrefix
-          : rawInput;
-
-      const parsed = parseCommandInput(commandToSubmit);
-      onCommandSubmit?.(parsed);
+      // Otherwise, submit the user's rawInput directly (e.g. "/s turtles", "/p upbeat")
+      const parsed = parseCommandInput(rawInput);
+      handleCommandSubmit(parsed);
       rawInput = "";
       inputEl?.blur();
       return;
     }
 
-    // 3. Clear on Escape
     if (e.key === "Escape") {
       e.preventDefault();
       rawInput = "";
-      onSearchChange?.({ type: "text_search", query: "" });
+      handleFilterChange({ type: "text_search", query: "" });
       inputEl?.blur();
     }
   }
 
   function clearInput() {
     rawInput = "";
-    onSearchChange?.({ type: "text_search", query: "" });
+    handleFilterChange({ type: "text_search", query: "" });
     inputEl?.focus();
   }
 </script>

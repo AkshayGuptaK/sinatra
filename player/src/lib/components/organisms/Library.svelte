@@ -11,11 +11,7 @@
   import { Library } from "@lucide/svelte";
   import { library } from "$lib/core/library.svelte";
   import { player } from "$lib/core/player.svelte";
-  import {
-    handleCommandSubmit,
-    handleEnqueueAll,
-    handleSearchChange,
-  } from "$lib/core/command.svelte";
+  import { handleEnqueueAll } from "$lib/core/command.svelte";
   import { cn } from "$lib/utils";
 
   interface Props {
@@ -51,10 +47,7 @@
     <div
       class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-2"
     >
-      <CommandBar
-        onSearchChange={handleSearchChange}
-        onCommandSubmit={handleCommandSubmit}
-      />
+      <CommandBar />
 
       <div
         class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end"

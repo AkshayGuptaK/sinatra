@@ -11,10 +11,6 @@
   import { View } from "@lucide/svelte";
   import { player } from "$lib/core/player.svelte";
   import { settings } from "$lib/core/settings.svelte";
-  import {
-    handleCommandSubmit,
-    handleSearchChange,
-  } from "$lib/core/command.svelte";
   import { EMOTION_MAP } from "$lib/core/emotions.svelte";
 
   interface Props {
@@ -39,10 +35,7 @@
     <div
       class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-2"
     >
-      <CommandBar
-        onSearchChange={handleSearchChange}
-        onCommandSubmit={handleCommandSubmit}
-      />
+      <CommandBar />
       <div class="flex gap-2">
         {#if viewMode === "timeline"}
           <TimelineControls

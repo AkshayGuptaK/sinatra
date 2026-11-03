@@ -1,8 +1,14 @@
-from dataclasses import asdict, dataclass
-from typing import Any, Literal, Optional
+import subprocess
 import socket
+import time
+from dataclasses import asdict, dataclass, field
+from typing import Any, Literal, Optional, Iterator
 import urllib3.util.connection as urllib3_conn
+import urllib.request
+import numpy as np
+import torch
 from ytmusicapi import YTMusic
+import yt_dlp
 
 # Force urllib3 (used by requests inside ytmusicapi) to resolve strictly via IPv4.
 # Eliminates 60+ second OS TCP SYN hangs on broken IPv6 routes to Google CDNs.
@@ -82,11 +88,26 @@ class RemotePlaylist:
         return asdict(self)
 
 
+@dataclass
+class AudioStreamInfo:
+    video_id: str
+    stream_url: str
+    ext: str
+    acodec: str
+    abr: Optional[float]
+    duration: Optional[int]
+    http_headers: dict[str, str] = field(default_factory=dict)
+    expires_at: float = 0.0
+
+
 # =============================================================================
 # Core Explorer Service
 # =============================================================================
 class YoutubeExplorer:
-    """Unauthenticated YouTube Music catalog explorer powered by ytmusicapi."""
+    """Unauthenticated YouTube Music catalog explorer."""
+
+    STREAM_CACHE_TTL_SEC = 3.5 * 3600
+    _stream_cache: dict[str, AudioStreamInfo] = {}
 
     def __init__(self, language: str = "en"):
         self.yt = YTMusic(language=language)
@@ -114,8 +135,6 @@ class YoutubeExplorer:
             limit=limit,
             ignore_spelling=ignore_spelling,
         )
-
-        print("res", raw_results)
 
         items: list[dict[str, Any]] = []
         for item in raw_results:
@@ -367,6 +386,174 @@ class YoutubeExplorer:
             "videos": videos,
             "artists": artists,
         }
+
+    # -------------------------------------------------------------------------
+    #  Music Playback
+    # -------------------------------------------------------------------------
+
+    @classmethod
+    def get_stream_info(
+        cls, video_id: str, force_refresh: bool = False
+    ) -> AudioStreamInfo:
+        """
+        Uses yt-dlp to decipher and resolve the direct audio-only stream URL.
+        Strictly requests audio-only formats (Opus/M4A) with no video track.
+        """
+        now = time.time()
+        cached = cls._stream_cache.get(video_id)
+        if cached and not force_refresh and cached.expires_at > now:
+            return cached
+
+        url = f"https://music.youtube.com/watch?v={video_id}"
+        ydl_opts = {
+            # Strictly select audio-only streams (preferring Opus, then M4A)
+            "format": "bestaudio[acodec=opus]/bestaudio[ext=m4a]/bestaudio",
+            "quiet": True,
+            "no_warnings": True,
+            "noplaylist": True,
+            "extract_flat": False,
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+
+        stream_info = AudioStreamInfo(
+            video_id=video_id,
+            stream_url=info["url"],
+            ext=info.get("ext", "webm"),
+            acodec=info.get("acodec", "opus"),
+            abr=info.get("abr"),
+            duration=info.get("duration"),
+            http_headers=info.get("http_headers", {}),
+            expires_at=now + cls.STREAM_CACHE_TTL_SEC,
+        )
+        cls._stream_cache[video_id] = stream_info
+        return stream_info
+
+    @classmethod
+    def read_stream(
+        cls, video_id: str, target_sr: int = 44100, channels: int = 2
+    ) -> Optional[torch.Tensor]:
+        """
+        Streams and decodes a YouTube Music track by video_id into a PyTorch tensor
+        using system FFmpeg. Matches the exact interface of FileSystemSource.read_file().
+        - channels: 1 for Mono, 2 for Stereo
+        """
+        try:
+            stream_info = cls.get_stream_info(video_id)
+
+            # Format yt-dlp's HTTP headers for FFmpeg's -headers flag (CRLF separated)
+            header_lines = "".join(
+                f"{k}: {v}\r\n" for k, v in stream_info.http_headers.items()
+            )
+
+            cmd = [
+                "ffmpeg",
+                "-v",
+                "error",
+                # Automatic reconnect flags in case Google's CDN drops mid-stream
+                "-reconnect",
+                "1",
+                "-reconnect_streamed",
+                "1",
+                "-reconnect_delay_max",
+                "5",
+            ]
+
+            if header_lines:
+                cmd.extend(["-headers", header_lines])
+
+            cmd.extend(
+                [
+                    "-i",
+                    stream_info.stream_url,
+                    "-vn",  # Explicitly disable any video stream
+                    "-f",
+                    "f32le",  # PCM Float32
+                    "-ac",
+                    str(channels),
+                    "-ar",
+                    str(target_sr),
+                    "-",  # Pipe to stdout
+                ]
+            )
+
+            process = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            stdout, stderr = process.communicate()
+
+            if process.returncode != 0 or len(stdout) == 0:
+                if len(stdout) == 0:
+                    print(f"FFmpeg failed for video_id {video_id}: {stderr.decode()}")
+                    return None
+
+            # 1. Read raw bytes to numpy
+            audio_np = np.frombuffer(stdout, dtype=np.float32).copy()
+
+            # 2. Reshape to (Channels, Time)
+            # FFmpeg outputs interleaved data: [L, R, L, R...]
+            if channels > 1:
+                audio_np = audio_np.reshape(-1, channels).T  # -> (2, Samples)
+            else:
+                audio_np = audio_np.reshape(1, -1)  # -> (1, Samples)
+
+            return torch.from_numpy(audio_np)
+
+        except Exception as e:
+            print(f"YouTube Stream Load Error ({video_id}): {e}")
+            return None
+
+    @classmethod
+    def iter_audio_chunks(
+        cls,
+        video_id: str,
+        range_header: Optional[str] = None,
+        chunk_size: int = 65536,
+    ) -> tuple[Iterator[bytes], int, dict[str, str]]:
+        """
+        Streams raw compressed audio chunks (Opus/M4A) with HTTP Range support
+        for FastAPI's StreamingResponse (browser playback & scrubbing).
+        """
+        stream_info = cls.get_stream_info(video_id)
+        req_headers = dict(stream_info.http_headers)
+        if range_header:
+            req_headers["Range"] = range_header
+
+        req = urllib.request.Request(stream_info.stream_url, headers=req_headers)
+        resp = urllib.request.urlopen(req, timeout=15)
+
+        status_code = resp.getcode() or 200
+        mime_map = {
+            "webm": "audio/webm",
+            "m4a": "audio/mp4",
+            "mp4": "audio/mp4",
+            "opus": "audio/ogg",
+        }
+        content_type = resp.headers.get(
+            "Content-Type", mime_map.get(stream_info.ext, "audio/webm")
+        )
+
+        resp_headers: dict[str, str] = {
+            "Content-Type": content_type,
+            "Accept-Ranges": "bytes",
+        }
+        for key in ("Content-Length", "Content-Range"):
+            val = resp.headers.get(key)
+            if val:
+                resp_headers[key] = val
+
+        def _chunk_generator() -> Iterator[bytes]:
+            try:
+                while True:
+                    chunk = resp.read(chunk_size)
+                    if not chunk:
+                        break
+                    yield chunk
+            finally:
+                resp.close()
+
+        return _chunk_generator(), status_code, resp_headers
 
     # =========================================================================
     # Internal Normalization Helpers

@@ -1,6 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getStorageAdapter } from "$lib/stores/localStorage";
-import type { Track } from "$lib/types/track";
+import type { LibraryTrack } from "$lib/types/track";
 import type { FilterIntent } from "$lib/utils/commandParser";
 import type { MusicPlayer } from "./player.svelte";
 
@@ -70,13 +70,13 @@ class PlayerSessionManager {
   /**
    * Matches stored track IDs against the freshly fetched catalog and restores state.
    */
-  rehydrate(player: MusicPlayer, catalog: Track[], session: PlayerSessionData) {
+  rehydrate(player: MusicPlayer, catalog: LibraryTrack[], session: PlayerSessionData) {
     if (!session || session.queueIds.length === 0) return;
 
     const trackMap = new Map(catalog.map((t) => [t.id, t]));
     const matchedQueue = session.queueIds
       .map((id) => trackMap.get(id))
-      .filter((t): t is Track => t !== undefined);
+      .filter((t): t is LibraryTrack => t !== undefined);
 
     if (matchedQueue.length === 0) return;
 
@@ -92,8 +92,8 @@ class PlayerSessionManager {
     );
     player.currentIndex = targetIdx !== -1 ? targetIdx : 0;
 
-    if (player.currentTrackId) {
-      player.engine.loadTrack(player.currentTrackId, false);
+    if (player.currentTrack) {
+      player.engine.loadTrack(player.currentTrack, false);
     }
   }
 }

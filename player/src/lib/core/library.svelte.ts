@@ -1,5 +1,5 @@
 import { sinatraApi } from "$lib/api/main";
-import type { Track } from "$lib/types/track";
+import type { LibraryTrack } from "$lib/types/track";
 import type {
   MetadataFields,
   SortableField,
@@ -14,7 +14,7 @@ export interface TagRecommendation {
 }
 
 export class MusicLibrary {
-  tracks = $state<Track[]>([]);
+  tracks = $state<LibraryTrack[]>([]);
   isLoading = $state(false);
   error = $state<string | null>(null);
 
@@ -108,7 +108,7 @@ export class MusicLibrary {
     }
   }
 
-  getCombinedSearchableString(track: Track): string {
+  getCombinedSearchableString(track: LibraryTrack): string {
     return [
       track.title,
       track.artist,
@@ -152,7 +152,7 @@ export class MusicLibrary {
    * Returns the matched emotion name and raw score (0.0 - 1.0) for a track if an emotion filter is active.
    */
   getTrackEmotionMatch(
-    track: Track
+    track: LibraryTrack
   ): { emotion: string; level: number } | null {
     const emotion = this.activeEmotionQuery;
     if (!emotion) return null;
@@ -181,7 +181,7 @@ export class MusicLibrary {
    * Helper that evaluates whether a track matches a FilterIntent recursively.
    */
   private matchesFilter(
-    track: Track,
+    track: LibraryTrack,
     filter: FilterIntent,
     queuedIds: Set<string>
   ): boolean {
@@ -254,21 +254,21 @@ export class MusicLibrary {
     });
   }
 
-  getFilteredTracks(filter: FilterIntent): Track[] {
+  getFilteredTracks(filter: FilterIntent): LibraryTrack[] {
     const queuedIds = new Set(player.queue.map((t) => t.id));
     return this.tracks.filter((track) =>
       this.matchesFilter(track, filter, queuedIds)
     );
   }
 
-  filterTracks(): Track[] {
+  filterTracks(): LibraryTrack[] {
     if (!this.activeFilter) {
       return [...this.tracks];
     }
     return this.getFilteredTracks(this.activeFilter);
   }
 
-  sortTracks(tracks: Track[]) {
+  sortTracks(tracks: LibraryTrack[]) {
     if (this.sortColumn && this.sortDirection) {
       const sortColumn = this.sortColumn;
       const dirMultiplier = this.sortDirection === "asc" ? 1 : -1;

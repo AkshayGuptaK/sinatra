@@ -50,20 +50,20 @@
     onClearQueue,
   }: Props = $props();
 
-  let isModePopoverOpen = $state(false);
-
   function getConstraintLabel(filter: FilterIntent): string {
     switch (filter.type) {
       case "column_filter":
         return `:${filter.column} ${filter.query}`;
       case "duration_filter":
-        return `:duration ${filter.operator} ${formatTime(filter.seconds)}`;
+        return `:dur ${filter.operator} ${formatTime(filter.seconds)}`;
       case "lyrics_filter":
-        return `:lyrics ${filter.query}`;
+        return `:lyric ${filter.query}`;
       case "text_search":
         return `"${filter.query}"`;
       case "queued_filter":
         return `:q ${getConstraintLabel(filter.filter)}`;
+      case "emotion_filter":
+        return `:emot ${filter.query}`;
     }
   }
 </script>

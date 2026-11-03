@@ -2,7 +2,7 @@ import {
   COWEN_EMOTION_COLORS,
   LYRIC_EMOTION_COLORS,
 } from "$lib/constants/emotions";
-import type { Track } from "$lib/types/track";
+import type { LibraryTrack } from "$lib/types/track";
 
 export type EmotionMode = "audio_emotion" | "lyrics_emotion";
 
@@ -15,8 +15,8 @@ export interface MapViewDefinition {
   id: EmotionMode;
   label: string;
   description: string;
-  getEmotions: (track: Track) => Record<string, number> | null;
-  getCoordinates: (track: Track) => MapCoordinates | null;
+  getEmotions: (track: LibraryTrack) => Record<string, number> | null;
+  getCoordinates: (track: LibraryTrack) => MapCoordinates | null;
   getColor: (emotion: string) => string;
 }
 
@@ -41,7 +41,7 @@ export const EMOTION_MAP: Record<EmotionMode, MapViewDefinition> = {
 };
 
 /** Extract acoustic emotion coordinates (coord_x, coord_y) */
-function getAudioEmotionCoords(track: Track): MapCoordinates | null {
+function getAudioEmotionCoords(track: LibraryTrack): MapCoordinates | null {
   if (
     track.coord_x != null &&
     track.coord_y != null &&
@@ -54,7 +54,7 @@ function getAudioEmotionCoords(track: Track): MapCoordinates | null {
 }
 
 /** Extract lyrical emotion coordinates from [x, y] tuple */
-function getLyricsEmotionCoords(track: Track): MapCoordinates | null {
+function getLyricsEmotionCoords(track: LibraryTrack): MapCoordinates | null {
   const raw = track.lyrics_emotions_coords;
   if (
     Array.isArray(raw) &&

@@ -1,7 +1,7 @@
 import { AudioEngine } from "./engine.svelte";
 import { sinatraApi, type SimilarityMode } from "$lib/api/main";
 import { settings } from "$lib/core/settings.svelte";
-import { type Track } from "$lib/types/track";
+import { type QueuedTrack, type LibraryTrack } from "$lib/types/track";
 import type { FilterIntent } from "$lib/utils/commandParser";
 
 export type LoopMode = "none" | "one" | "all";
@@ -17,9 +17,8 @@ export class MusicPlayer {
   );
   autoDjBatchSize = $derived(Number(settings.get("autodj.batchSize") ?? 3));
 
-  // Reactive Queue State
-  originalQueue: Track[] = [];
-  queue = $state<Track[]>([]);
+  originalQueue: QueuedTrack[] = [];
+  queue = $state<QueuedTrack[]>([]);
   currentIndex = $state<number>(-1);
   isAutoDj = $state(false);
   isFetchingAutoDj = $state(false);
@@ -93,7 +92,7 @@ export class MusicPlayer {
     }
   }
 
-  setQueue(tracks: Track[], startIndex = 0, autoPlay = true) {
+  setQueue(tracks: QueuedTrack[], startIndex = 0, autoPlay = true) {
     this.originalQueue = [...tracks];
     this.queue = [...tracks];
     this.currentIndex = startIndex;
@@ -120,7 +119,7 @@ export class MusicPlayer {
    * Immutably syncs updated track metadata into all matching queue entries.
    * Triggers re-derivation of currentTrack and reactive queue items.
    */
-  syncTrackMetadata(trackId: string, fields: Partial<Track>) {
+  syncTrackMetadata(trackId: string, fields: Partial<LibraryTrack>) {
     this.queue = this.queue.map((t) =>
       t.id === trackId ? { ...t, ...fields } : t
     );
@@ -191,7 +190,7 @@ export class MusicPlayer {
     }
   }
 
-  enqueue(track: Track) {
+  enqueue(track: QueuedTrack) {
     this.originalQueue.push(track);
     this.queue.push(track);
 
@@ -409,5 +408,4 @@ export class MusicPlayer {
   }
 }
 
-// Global player singleton instance
 export const player = new MusicPlayer();

@@ -1,4 +1,3 @@
-<!-- src/lib/components/molecules/CommandBar.svelte -->
 <script lang="ts">
   import { Search, Sparkles, Funnel, X, CornerDownLeft } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";

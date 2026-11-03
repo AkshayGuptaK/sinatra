@@ -15,7 +15,7 @@ export interface NextTrack {
   id: string;
   start: number;
   end: number;
-  rms_env: number[];
+  rms_env?: number[];
 }
 
 const FADE_PLAY_SEC = 0.7;
@@ -260,7 +260,7 @@ export class AudioEngine {
     this.currentTrackId = next.id;
     this.currentMusicStart = next.start;
     this.currentMusicEnd = next.end;
-    this.currentRmsEnv = next.rms_env;
+    this.currentRmsEnv = next.rms_env || null;
     this.currentTime = active.audio.currentTime;
     this.duration = Number.isFinite(active.audio.duration)
       ? active.audio.duration
@@ -447,7 +447,7 @@ export class AudioEngine {
     this.currentTrackId = track.id;
     this.currentMusicStart = track.start;
     this.currentMusicEnd = track.end;
-    this.currentRmsEnv = track.rms_env;
+    this.currentRmsEnv = track.rms_env || null;
 
     this.preloadDeck(deck, track, this.transitionMode === "gapless");
     this.dsp.setGainImmediate(deck.gainNode, 1);

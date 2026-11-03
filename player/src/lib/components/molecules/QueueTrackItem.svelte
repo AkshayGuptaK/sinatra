@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { type Track } from "$lib/types/track";
+  import { type QueuedTrack } from "$lib/types/track";
   import { formatTime } from "$lib/utils/time";
   import { Volume2, X, GripVertical } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
@@ -10,7 +10,7 @@
   } from "$lib/utils/display";
 
   interface Props {
-    track: Track;
+    track: QueuedTrack;
     index: number;
     onHover: (trackId: string) => void;
     onHoverEnd: (trackId: string) => void;

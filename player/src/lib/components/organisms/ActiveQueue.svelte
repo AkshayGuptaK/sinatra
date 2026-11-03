@@ -136,7 +136,6 @@
   <!-- Queue Controls Footer -->
   <QueueControls
     isAutoDj={player.isAutoDj}
-    autoDjMode={player.autoDjMode}
     autoDjConstraint={player.autoDjConstraint}
     isShuffle={player.isShuffle}
     isRepeatAll={player.loopMode === "all"}
@@ -146,7 +145,6 @@
     onPrevious={() => player.previous()}
     onNext={() => player.next()}
     onAutoDjToggle={() => player.toggleAutoDj()}
-    onAutoDjModeSelect={(mode) => player.setAutoDjMode(mode)}
     onClearAutoDjConstraint={() => player.clearAutoDjConstraint()}
     onShuffleToggle={() => player.toggleShuffle()}
     onRepeatAllToggle={handleRepeatAllToggle}

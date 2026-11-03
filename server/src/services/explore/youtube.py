@@ -1,6 +1,12 @@
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from typing import Any, Literal, Optional
+import socket
+import urllib3.util.connection as urllib3_conn
 from ytmusicapi import YTMusic
+
+# Force urllib3 (used by requests inside ytmusicapi) to resolve strictly via IPv4.
+# Eliminates 60+ second OS TCP SYN hangs on broken IPv6 routes to Google CDNs.
+urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
 
 SearchFilterType = Literal[
     "songs",
@@ -83,16 +89,15 @@ class YoutubeExplorer:
     """Unauthenticated YouTube Music catalog explorer powered by ytmusicapi."""
 
     def __init__(self, language: str = "en"):
-        # Unauthenticated guest mode: zero user cookies or account data required
         self.yt = YTMusic(language=language)
 
     # -------------------------------------------------------------------------
-    # 1. Search & Suggestions
+    # Search & Suggestions
     # -------------------------------------------------------------------------
     def search(
         self,
         query: str,
-        filter_type: Optional[SearchFilterType] = "songs",
+        filter_type: Optional[SearchFilterType],
         limit: int = 20,
         ignore_spelling: bool = False,
     ) -> list[dict[str, Any]]:
@@ -101,12 +106,16 @@ class YoutubeExplorer:
         if not cleaned:
             return []
 
+        print(query, filter_type, limit)
+
         raw_results = self.yt.search(
             query=cleaned,
             filter=filter_type,
             limit=limit,
             ignore_spelling=ignore_spelling,
         )
+
+        print("res", raw_results)
 
         items: list[dict[str, Any]] = []
         for item in raw_results:
@@ -131,7 +140,7 @@ class YoutubeExplorer:
             return []
 
     # -------------------------------------------------------------------------
-    # 2. Artist Information & Releases (Songs, Albums, Singles, Related)
+    # Artist Information & Releases (Songs, Albums, Singles, Related)
     # -------------------------------------------------------------------------
     def get_artist(self, channel_id: str) -> dict[str, Any]:
         """Fetches artist overview, top songs, albums, singles, and related artists."""
@@ -212,7 +221,7 @@ class YoutubeExplorer:
         ]
 
     # -------------------------------------------------------------------------
-    # 3. Albums
+    # Albums
     # -------------------------------------------------------------------------
     def get_album(self, browse_id: str) -> dict[str, Any]:
         """Fetches album metadata and its complete ordered tracklist."""
@@ -251,7 +260,7 @@ class YoutubeExplorer:
         }
 
     # -------------------------------------------------------------------------
-    # 4. Song Metadata
+    # Song Metadata
     # -------------------------------------------------------------------------
     def get_song_metadata(self, video_id: str) -> dict[str, Any]:
         """Fetches rich track metadata (including album, artist IDs, and lyrics browse ID).
@@ -288,7 +297,7 @@ class YoutubeExplorer:
         ).to_dict()
 
     # -------------------------------------------------------------------------
-    # 5. Exploring Music: Moods & Genres + Playlists
+    # Exploring Music: Moods & Genres + Playlists
     # -------------------------------------------------------------------------
     def get_mood_categories(self) -> dict[str, list[dict[str, str]]]:
         """Returns mood & genre sections (e.g., 'Moods & moments', 'Genres')
@@ -334,7 +343,7 @@ class YoutubeExplorer:
         }
 
     # -------------------------------------------------------------------------
-    # 6. Exploring Music: Latest Charts (Global & Per-Country)
+    # Exploring Music: Latest Charts (Global & Per-Country)
     # -------------------------------------------------------------------------
     def get_charts(self, country: str = "ZZ") -> dict[str, Any]:
         """Fetches latest charts for a country (ISO 3166-1 Alpha-2, e.g. 'US', 'IN', 'GB',
@@ -342,46 +351,21 @@ class YoutubeExplorer:
         """
         data = self.yt.get_charts(country=country.upper())
 
-        songs: list[dict[str, Any]] = []
-        for item in data.get("songs", {}).get("items", []):
-            if item.get("videoId"):
-                songs.append(self._parse_track(item).to_dict())
+        videos: list[dict[str, Any]] = [
+            {"title": item.get("title"), "id": item.get("playlistId")}
+            for item in data.get("videos", [])
+        ]
 
-        videos: list[dict[str, Any]] = []
-        for item in data.get("videos", {}).get("items", []):
-            if item.get("videoId"):
-                videos.append(self._parse_track(item).to_dict())
-
-        artists: list[dict[str, Any]] = []
-        for item in data.get("artists", {}).get("items", []):
-            if item.get("browseId"):
-                artists.append(
-                    RemoteArtist(
-                        browse_id=item["browseId"],
-                        name=item.get("title", "Unknown Artist"),
-                        subscribers=item.get("subscribers"),
-                        thumbnail=self._best_thumbnail(item.get("thumbnails")),
-                    ).to_dict()
-                )
-
-        trending: list[dict[str, Any]] = []
-        for item in data.get("trending", {}).get("items", []):
-            if item.get("videoId"):
-                trending.append(self._parse_track(item).to_dict())
-
-        genres: list[dict[str, Any]] = []
-        for item in data.get("genres", []):
-            if item.get("playlistId"):
-                genres.append(self._parse_playlist_summary(item).to_dict())
+        artists: list[dict[str, Any]] = [
+            {"title": item.get("title"), "id": item.get("browseId")}
+            for item in data.get("artists", [])
+        ]
 
         return {
             "country": country.upper(),
             "countries": data.get("countries", {}).get("options", []),
-            "songs": songs,
             "videos": videos,
-            "trending": trending,
             "artists": artists,
-            "genres": genres,
         }
 
     # =========================================================================

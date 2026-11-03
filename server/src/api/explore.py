@@ -16,17 +16,17 @@ def resolve_explorer(
 
 
 @router.get("/sources")
-async def list_explore_sources():
+def list_explore_sources():
     """Returns all registered external music exploration sources."""
     return {"sources": get_supported_sources()}
 
 
 @router.get("/{source}/search")
-async def search_catalog(
+def search_catalog(
     q: str = Query(..., min_length=1, description="Search query"),
     filter: Optional[str] = Query(
-        default="songs",
-        description="Entity filter: 'songs', 'videos', 'albums', 'artists', 'playlists', etc.",
+        default=None,
+        description="Entity filter: 'song', 'album', 'artist' etc.",
     ),
     limit: int = Query(default=20, ge=1, le=100),
     ignore_spelling: bool = Query(default=False),
@@ -34,9 +34,10 @@ async def search_catalog(
 ):
     """Searches the specified remote source catalog."""
     try:
+        filter_type = filter + "s" if filter else None
         results = explorer.search(
             query=q,
-            filter_type=filter,
+            filter_type=filter_type,
             limit=limit,
             ignore_spelling=ignore_spelling,
         )
@@ -46,7 +47,7 @@ async def search_catalog(
 
 
 @router.get("/{source}/suggestions")
-async def get_search_suggestions(
+def get_search_suggestions(
     q: str = Query(..., min_length=1, description="Partial query for autocomplete"),
     detailed: bool = Query(default=False),
     explorer: MusicExplorer = Depends(resolve_explorer),
@@ -60,7 +61,7 @@ async def get_search_suggestions(
 
 
 @router.get("/{source}/artists/{artist_id}")
-async def get_artist_details(
+def get_artist_details(
     artist_id: str,
     explorer: MusicExplorer = Depends(resolve_explorer),
 ):
@@ -73,7 +74,7 @@ async def get_artist_details(
 
 
 @router.get("/{source}/artists/{artist_id}/albums")
-async def get_artist_albums(
+def get_artist_albums(
     artist_id: str,
     params: str = Query(..., description="Pagination/continuation params token"),
     limit: int = Query(default=100, ge=1, le=500),
@@ -88,7 +89,7 @@ async def get_artist_albums(
 
 
 @router.get("/{source}/albums/{album_id}")
-async def get_album_details(
+def get_album_details(
     album_id: str,
     explorer: MusicExplorer = Depends(resolve_explorer),
 ):
@@ -101,7 +102,7 @@ async def get_album_details(
 
 
 @router.get("/{source}/songs/{track_id}")
-async def get_song_metadata(
+def get_song_metadata(
     track_id: str,
     explorer: MusicExplorer = Depends(resolve_explorer),
 ):
@@ -114,19 +115,20 @@ async def get_song_metadata(
 
 
 @router.get("/{source}/moods")
-async def get_mood_categories(
+def get_mood_categories(
     explorer: MusicExplorer = Depends(resolve_explorer),
 ):
     """Returns mood and genre categories for browsing."""
     try:
         categories = explorer.get_mood_categories()
+        categories = [item for sublist in categories.values() for item in sublist]
         return JSONResponse(content=categories)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{source}/moods/playlists")
-async def get_mood_playlists(
+def get_mood_playlists(
     params: str = Query(..., description="Category params token from /moods"),
     explorer: MusicExplorer = Depends(resolve_explorer),
 ):
@@ -139,7 +141,7 @@ async def get_mood_playlists(
 
 
 @router.get("/{source}/playlists/{playlist_id}")
-async def get_playlist_details(
+def get_playlist_details(
     playlist_id: str,
     limit: int = Query(default=100, ge=1, le=500),
     explorer: MusicExplorer = Depends(resolve_explorer),
@@ -153,7 +155,7 @@ async def get_playlist_details(
 
 
 @router.get("/{source}/charts")
-async def get_charts(
+def get_charts(
     country: str = Query(
         default="ZZ",
         min_length=2,
@@ -162,7 +164,7 @@ async def get_charts(
     ),
     explorer: MusicExplorer = Depends(resolve_explorer),
 ):
-    """Fetches latest charts (top songs, trending, artists) globally or per country."""
+    """Fetches latest charts globally or per country."""
     try:
         charts = explorer.get_charts(country=country)
         return JSONResponse(content=charts)

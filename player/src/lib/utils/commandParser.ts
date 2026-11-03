@@ -1,6 +1,5 @@
 import type { FilterableField } from "$lib/types/metadata";
 import { parseDurationToSeconds } from "./time";
-import type { ExploreSearchFilter } from "$lib/api/explore";
 
 export type ComparisonOperator = ">" | "<" | ">=" | "<=";
 
@@ -16,48 +15,53 @@ export type FilterIntent =
   | { type: "queued_filter"; filter: FilterIntent }
   | { type: "text_search"; query: string };
 
+export type SearchType = "song" | "artist" | "album" | "mood"
+
+export type SearchIntent = {
+  type: SearchType;
+  query: string;
+};
+
 export type ParsedIntent =
   | { type: "agent_action"; action: "play" | "queue"; prompt: string }
   | { type: "filter_action"; action: "play" | "queue"; filter: FilterIntent }
+  | { type: "search_action"; action: "search"; filter: SearchIntent }
   | { type: "autodj_constraint"; filter: FilterIntent }
   | { type: "setting_assignment"; key: string; value: string }
   | FilterIntent;
 
 const nullCommand: FilterIntent = { type: "text_search", query: "" };
 
-export type SearchIntent =
-  | {
-      type: "catalog_search";
-      query: string;
-      filter?: ExploreSearchFilter;
-      limit?: number;
-    }
-  | {
-      type: "artist_detail";
-      artistId: string;
-    }
-  | {
-      type: "artist_albums";
-      artistId: string;
-      params: string;
-    }
-  | {
-      type: "album_detail";
-      albumId: string;
-    }
-  | {
-      type: "mood_playlists";
-      title?: string;
-      params: string;
-    }
-  | {
-      type: "playlist_detail";
-      playlistId: string;
-    }
-  | {
-      type: "charts";
-      country?: string;
-    };
+/**
+ * Parses search commands starting with '/s' (or '/search').
+ * Supports:
+ *   - Direct query: "/s Comfortably Numb" -> { type: "song", query: "Comfortably Numb" }
+ *   - Explicit prefix: "/s :artist Pink Floyd" -> { type: "artist", query: "Pink Floyd" }
+ *   - Entity targets: :song, :artist, :album, :mood
+ */
+export function parseSearchCommand(input: string): SearchIntent | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  let target = trimmed;
+  if (trimmed.startsWith("/")) {
+    const cmdMatch = trimmed.match(/^\/s(?:earch)?(?:\s+(.*)|$)/i);
+    if (!cmdMatch) return null;
+    target = cmdMatch[1]?.trim() || "";
+  }
+
+  const prefixMatch = target.match(/^:(song|artist|album|mood)(?:\s+(.*)|$)/i);
+  if (prefixMatch) {
+    const type = prefixMatch[1].toLowerCase() as SearchIntent["type"];
+    const query = prefixMatch[2]?.trim() || "";
+    return { type, query };
+  }
+
+  return {
+    type: "song",
+    query: target,
+  };
+}
 
 /**
  * Recursively parses a filter expression.
@@ -165,6 +169,15 @@ export function parseActionCommand(input: string): ParsedIntent {
 
   if (cmd === "q" || cmd === "queue") {
     action = "queue";
+  }
+
+  if (cmd === "s" || cmd === "search") {
+    const filter = parseSearchCommand(rest)
+    return filter ? {
+      type: "search_action",
+      action: "search",
+      filter,
+    } : nullCommand;
   }
 
   if (action === "play" || action === "queue") {

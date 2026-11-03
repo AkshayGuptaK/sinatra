@@ -1,15 +1,5 @@
+import type { SearchType } from "$lib/utils/commandParser";
 import { API_BASE_URL } from "./main";
-
-export type ExploreSearchFilter =
-  | "songs"
-  | "videos"
-  | "albums"
-  | "artists"
-  | "playlists"
-  | "community_playlists"
-  | "featured_playlists"
-  | "uploads"
-  | string;
 
 export interface RemoteTrack {
   video_id: string;
@@ -116,8 +106,6 @@ export interface MoodCategoryItem {
   params: string;
 }
 
-export type MoodCategoriesResponse = Record<string, MoodCategoryItem[]>;
-
 export interface RemoteCharts {
   country: string;
   countries: Array<{ text: string; value: string }>;
@@ -129,8 +117,8 @@ export interface RemoteCharts {
 }
 
 export interface SearchExploreParams {
+  filter: SearchType;
   query: string;
-  filter?: ExploreSearchFilter;
   limit?: number;
   ignoreSpelling?: boolean;
 }
@@ -292,7 +280,7 @@ export const explorerApi = {
   /**
    * Fetches mood, genre, and activity categories.
    */
-  async getExploreMoods(source: string): Promise<MoodCategoriesResponse> {
+  async getExploreMoods(source: string): Promise<MoodCategoryItem[]> {
     const res = await fetch(
       `${API_BASE_URL}/api/explore/${encodeURIComponent(source)}/moods`
     );

@@ -1,14 +1,16 @@
 import { library } from "$lib/core/library.svelte";
 import { player } from "$lib/core/player.svelte";
+import { explorer } from "$lib/core/explorer.svelte";
 import { settings } from "$lib/core/settings.svelte";
 import type { ParsedIntent } from "$lib/utils/commandParser";
 
-export function handleSearchChange(intent: ParsedIntent) {
+export function handleFilterChange(intent: ParsedIntent) {
   if (
     intent.type === "agent_action" ||
     intent.type === "filter_action" ||
     intent.type === "autodj_constraint" ||
-    intent.type === "setting_assignment"
+    intent.type === "setting_assignment" ||
+    intent.type === "search_action"
   ) {
     // potentially clear library filter?
     return;
@@ -33,6 +35,9 @@ export function handleCommandSubmit(intent: ParsedIntent) {
 
     settings.set(intent.key, val);
     return;
+  }
+  if (intent.type === "search_action") {
+    return explorer.executeIntent(intent.filter);
   }
   if (intent.type === "filter_action") {
     const matchingTracks = library.getFilteredTracks(intent.filter);

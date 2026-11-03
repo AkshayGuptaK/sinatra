@@ -2,7 +2,7 @@
   import type { Track } from "$lib/types/track";
   import type { MetadataFields } from "$lib/types/metadata";
   import { formatTime } from "$lib/utils/time";
-  import { Volume2, Plus } from "@lucide/svelte";
+  import { Volume2, ListPlus } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import InlineEditableCell from "$lib/components/atoms/InlineEditableCell.svelte";
   import EditableTagList from "$lib/components/molecules/EditableTagList.svelte";
@@ -167,7 +167,7 @@
         onclick={handleEnqueue}
         class="size-7 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
       >
-        <Plus class="size-4" />
+        <ListPlus class="size-4" />
       </Button>
     </div>
   </div>

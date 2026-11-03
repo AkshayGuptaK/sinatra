@@ -6,6 +6,7 @@
   import { explorer } from "$lib/core/explorer.svelte";
   import { player } from "$lib/core/player.svelte";
   import { cn } from "$lib/utils";
+  import ExplorerTrackItem from "../molecules/ExplorerTrackItem.svelte";
 
   interface Props {
     class?: string;
@@ -34,6 +35,10 @@
         <!-- controls go here -->
       </div>
     </div>
-    <div></div>
+    <div>
+      {#each explorer.tracks as track}
+        <ExplorerTrackItem track={track} />
+    {/each}
+    </div>
   </div>
 </div>

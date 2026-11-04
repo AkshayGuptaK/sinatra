@@ -383,11 +383,11 @@ class PostgresStore:
                music_end,
                duration,
                rms_envelope,
-               emotions,
+               acoustic_emotions,
                coord_x,
                coord_y,
-               lyrics_emotions,
-               ARRAY[lyrics_emotions_coords[0], lyrics_emotions_coords[1]]::float[]
+               lyrical_emotions,
+               ARRAY[lyrical_emotions_coords[0], lyrical_emotions_coords[1]]::float[]
         FROM tracks
         ORDER BY title ASC
         """
@@ -407,11 +407,11 @@ class PostgresStore:
                         "end": float(r[7] or r[8]),
                         "duration": float(r[8]),
                         "rms_env": r[9] or [],
-                        "emotions": r[10] or {},
+                        "acoustic_emotions": r[10] or {},
                         "coord_x": r[11] or 0,
                         "coord_y": r[12] or 0,
-                        "lyrics_emotions": r[13] or {},
-                        "lyrics_emotions_coords": r[14] or [0, 0],
+                        "lyrical_emotions": r[13] or {},
+                        "lyrical_emotions_coords": r[14] or [0, 0],
                     }
                     for r in result
                 ]

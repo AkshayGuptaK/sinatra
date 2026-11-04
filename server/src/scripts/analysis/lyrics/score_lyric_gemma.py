@@ -157,9 +157,9 @@ def print_track_scores(title: str, artists: str | None, scores: dict[str, float]
 # MAIN ORCHESTRATOR
 # =============================================================================
 def ensure_db_column(db):
-    """Ensures tracks table has the lyrics_emotions jsonb column."""
+    """Ensures tracks table has the lyrical_emotions jsonb column."""
     with db.conn.cursor() as cur:
-        cur.execute("ALTER TABLE tracks ADD COLUMN IF NOT EXISTS lyrics_emotions JSONB;")
+        cur.execute("ALTER TABLE tracks ADD COLUMN IF NOT EXISTS lyrical_emotions JSONB;")
     db.conn.commit()
 
 
@@ -175,7 +175,7 @@ def run(all_tracks: bool, model: str, host: str, log: str | None = None):
             FROM tracks
             WHERE lyrics IS NOT NULL 
               AND TRIM(lyrics) != ''
-              AND lyrics_emotions IS NULL
+              AND lyrical_emotions IS NULL
             ORDER BY title ASC;
         """
         params = ()
@@ -214,7 +214,7 @@ def run(all_tracks: bool, model: str, host: str, log: str | None = None):
 
     update_query = """
         UPDATE tracks
-        SET lyrics_emotions = %s::jsonb,
+        SET lyrical_emotions = %s::jsonb,
             updated_at = NOW()
         WHERE id = %s;
     """
@@ -287,7 +287,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Process ALL un-scored library tracks and save results to 'lyrics_emotions' in DB.",
+        help="Process ALL un-scored library tracks and save results to 'lyrical_emotions' in DB.",
     )
     parser.add_argument(
         "--log",

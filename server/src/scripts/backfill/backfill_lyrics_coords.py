@@ -80,10 +80,10 @@ def compute_track_coordinates(
 
 
 def setup_column(db):
-    """Ensures tracks table has the lyrics_emotions_coords point column."""
+    """Ensures tracks table has the lyrical_emotions_coords point column."""
     with db.conn.cursor() as cur:
         cur.execute(
-            "ALTER TABLE tracks ADD COLUMN IF NOT EXISTS lyrics_emotions_coords point;"
+            "ALTER TABLE tracks ADD COLUMN IF NOT EXISTS lyrical_emotions_coords point;"
         )
         cur.execute(
             """
@@ -92,7 +92,7 @@ def setup_column(db):
                 IF NOT EXISTS (
                     SELECT 1 FROM pg_indexes WHERE indexname = 'idx_tracks_lyrics_coords'
                 ) THEN
-                    CREATE INDEX idx_tracks_lyrics_coords ON tracks USING gist (lyrics_emotions_coords);
+                    CREATE INDEX idx_tracks_lyrics_coords ON tracks USING gist (lyrical_emotions_coords);
                 END IF;
             END $$;
             """
@@ -109,9 +109,9 @@ def run_projection():
     setup_column(db)
 
     query = """
-        SELECT id, title, artist, lyrics_emotions
+        SELECT id, title, artist, lyrical_emotions
         FROM tracks
-        WHERE lyrics_emotions IS NOT NULL;
+        WHERE lyrical_emotions IS NOT NULL;
     """
     with db.conn.cursor() as cur:
         cur.execute(query)
@@ -119,7 +119,7 @@ def run_projection():
 
     if not rows:
         print(
-            "❌ No tracks found with 'lyrics_emotions'. Run score_lyrics_gemma.py --all first."
+            "❌ No tracks found with 'lyrical_emotions'. Run score_lyrics_gemma.py --all first."
         )
         return
 
@@ -156,7 +156,7 @@ def run_projection():
     print(f"💾 Updating coordinates for {len(update_records)} tracks...")
     update_query = """
         UPDATE tracks
-        SET lyrics_emotions_coords = point(%s, %s),
+        SET lyrical_emotions_coords = point(%s, %s),
             updated_at = NOW()
         WHERE id = %s;
     """
@@ -165,7 +165,7 @@ def run_projection():
     db.conn.commit()
 
     print(
-        f"✅ Successfully wrote coordinates to 'tracks.lyrics_emotions_coords' (point type)."
+        f"✅ Successfully wrote coordinates to 'tracks.lyrical_emotions_coords' (point type)."
     )
 
 

@@ -26,7 +26,7 @@ export const EMOTION_MAP: Record<EmotionMode, MapViewDefinition> = {
     id: "audio_emotion",
     label: "Audio Mood",
     description: "Acoustic emotion manifold projected via MERT and UMAP",
-    getEmotions: (track) => track.emotions,
+    getEmotions: (track) => track.acoustic_emotions,
     getCoordinates: getAudioEmotionCoords,
     getColor: (emotion) => COWEN_EMOTION_COLORS[emotion],
   },
@@ -34,7 +34,7 @@ export const EMOTION_MAP: Record<EmotionMode, MapViewDefinition> = {
     id: "lyrics_emotion",
     label: "Lyrics Mood",
     description: "Affective text manifold derived from lyrical content",
-    getEmotions: (track) => track.lyrics_emotions,
+    getEmotions: (track) => track.lyrical_emotions,
     getCoordinates: getLyricsEmotionCoords,
     getColor: (emotion) => LYRIC_EMOTION_COLORS[emotion],
   },
@@ -55,7 +55,7 @@ function getAudioEmotionCoords(track: LibraryTrack): MapCoordinates | null {
 
 /** Extract lyrical emotion coordinates from [x, y] tuple */
 function getLyricsEmotionCoords(track: LibraryTrack): MapCoordinates | null {
-  const raw = track.lyrics_emotions_coords;
+  const raw = track.lyrical_emotions_coords;
   if (
     Array.isArray(raw) &&
     raw.length >= 2 &&

@@ -12,11 +12,11 @@ export interface LibraryTrack {
   start: number;
   end: number;
   rms_env?: number[];
-  emotions: Record<string, number> | null;
+  acoustic_emotions: Record<string, number> | null;
   coord_x: number | null;
   coord_y: number | null;
-  lyrics_emotions: Record<string, number> | null;
-  lyrics_emotions_coords: [number, number] | null;
+  lyrical_emotions: Record<string, number> | null;
+  lyrical_emotions_coords: [number, number] | null;
 }
 
 export type ProjectableTrack = MakeNonNullable<LibraryTrack, "coord_x" | "coord_y">;

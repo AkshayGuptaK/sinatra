@@ -153,7 +153,7 @@ def backfill_lyrics(
     """
     if not overwrite:
         query += " AND (lyrics IS NULL OR trim(lyrics) = '')"
-    query += " ORDER BY id ASC;"
+    query += " ORDER BY created_at DESC;"
 
     mode_str = (
         "ALL tagged non-instrumental tracks (OVERWRITE enabled)"

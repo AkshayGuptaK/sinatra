@@ -189,7 +189,6 @@ def download_explore_track(
         saved_file = explorer.download_track(
             video_id=track_id, destination_dir=music_dir
         )
-        print("saved")
         return JSONResponse(
             status_code=200,
             content={

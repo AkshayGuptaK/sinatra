@@ -69,8 +69,7 @@ def _process_single_file(path):
             acoustic_embedding=global_acoustic_embedding.tolist(),
             acoustic_emotions=global_emotions,
             acoustic_emotion_vector=global_emot_vec,
-            coord_x=coord_x,
-            coord_y=coord_y,
+            acoustic_emotion_coords=[coord_x, coord_y],
             music_start=music_start,
             music_end=music_end,
             rms_env=rms_env

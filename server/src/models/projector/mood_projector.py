@@ -91,7 +91,7 @@ class MoodProjector:
         return sparse
 
     def project_track(self, emotions: Dict[str, float]) -> Tuple[float, float]:
-        """Projects a single track's emotions into 2D coordinates (coord_x, coord_y)."""
+        """Projects a single track's emotions into 2D coordinates."""
         sparse_vector = self._prepare_sparse_vector(emotions)
         X = np.expand_dims(sparse_vector, axis=0)
         coords = self._project_fn(X)[0]

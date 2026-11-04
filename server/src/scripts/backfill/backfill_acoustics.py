@@ -68,8 +68,7 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
         SET acoustic_embedding = %s::vector,
             acoustic_emotions = %s::jsonb,
             acoustic_emotion_vector = %s::vector,
-            coord_x = %s,
-            coord_y = %s,
+            acoustic_emotion_coords = %s,
             music_start = %s,
             music_end = %s,
             updated_at = NOW()
@@ -90,7 +89,6 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
             continue
 
         try:
-            # 1. Structural Chunking & Boundary Identification
             chunked_track = chunker.chunk(filepath)
             if not chunked_track.chunks:
                 print(
@@ -102,10 +100,8 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
             music_start = float(chunked_track.chunks[0].start_sec)
             music_end = float(chunked_track.chunks[-1].end_sec)
 
-            # 2. Batched MERT Inference
             embedded_chunks = embedder.extract(chunked_track.chunks)
 
-            # 3. Score Each Chunk
             chunk_embs = []
             for c in embedded_chunks:
                 emotion_dict, emotion_vec = scorer.score(c["acoustic_embedding"])
@@ -113,7 +109,6 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
                 c["acoustic_emotion_vector"] = emotion_vec
                 chunk_embs.append(c["acoustic_embedding"])
 
-            # 4. Duration-Weighted Global Vectors
             durations = np.array(
                 [float(c["duration"]) for c in embedded_chunks], dtype=np.float32
             )
@@ -129,21 +124,17 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
                 chunk_embs_mat * weights[:, np.newaxis], axis=0
             )
 
-            # 5. Global Affective Scoring
             (
                 global_emotions,
                 global_emotion_vec,
             ) = scorer.score(global_acoustic_embedding)
 
-            # 6. Coordinate Projection (coord_x, coord_y)
             coord_x, coord_y = projector.project_track(global_emotions)
 
-            # 7. Serialize Types for PostgreSQL
             musical_emb_str = db._format_vector_str(global_acoustic_embedding)
             emotions_json = json.dumps(global_emotions)
             emotion_vec_str = db._format_vector_str(global_emotion_vec)
 
-            # 8. Update 'tracks' and atomically replace 'track_chunks'
             with db.conn.transaction():
                 with db.conn.cursor() as cur:
                     cur.execute(
@@ -152,8 +143,7 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
                             musical_emb_str,
                             emotions_json,
                             emotion_vec_str,
-                            coord_x,
-                            coord_y,
+                            [coord_x, coord_y],
                             music_start,
                             music_end,
                             track_id,

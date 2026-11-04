@@ -140,8 +140,7 @@ class PostgresStore:
         acoustic_embedding: List[float],
         acoustic_emotions: Optional[Dict[str, float]] = None,
         acoustic_emotion_vector: Optional[List[float]] = None,
-        coord_x: Optional[float] = 0,
-        coord_y: Optional[float] = 0,
+        acoustic_emotion_coords: Optional[number, number] = [0,0],
         music_start: Optional[float] = 0.0,
         music_end: Optional[float] = None,
         rms_env: Optional[list[float]] | None = None,
@@ -173,8 +172,7 @@ class PostgresStore:
                     acoustic_embedding, 
                     acoustic_emotions, 
                     acoustic_emotion_vector,
-                    coord_x,
-                    coord_y,
+                    acoustic_emotion_coords,
                     music_start,
                     music_end,
                     rms_envelope,
@@ -189,8 +187,7 @@ class PostgresStore:
                     %s::vector,     -- acoustic_embedding
                     %s::jsonb,      -- acoustic_emotions
                     %s::vector,     -- acoustic_emotion_vector
-                    %s,             -- coord_x
-                    %s,             -- coord_y
+                    %s,             -- acoustic_emotion_coords
                     %s,             -- music_start
                     %s,             -- music_end
                     %s,             -- rms_env
@@ -200,8 +197,7 @@ class PostgresStore:
                     acoustic_embedding = EXCLUDED.acoustic_embedding,
                     acoustic_emotions = EXCLUDED.acoustic_emotions,
                     acoustic_emotion_vector = EXCLUDED.acoustic_emotion_vector,
-                    coord_x = EXCLUDED.coord_x,
-                    coord_y = EXCLUDED.coord_y,
+                    acoustic_emotion_coords = EXCLUDED.acoustic_emotion_coords,
                     music_start = EXCLUDED.music_start,
                     music_end = EXCLUDED.music_end,
                     rms_envelope = EXCLUDED.rms_envelope,
@@ -217,8 +213,7 @@ class PostgresStore:
                     acoustic_embedding,
                     emotions_json,
                     emotion_vec_str,
-                    coord_x,
-                    coord_y,
+                    acoustic_emotion_coords,
                     music_start,
                     music_end if music_end is not None else duration,
                     rms_env,
@@ -384,8 +379,7 @@ class PostgresStore:
                duration,
                rms_envelope,
                acoustic_emotions,
-               coord_x,
-               coord_y,
+               acoustic_emotion_coords,
                lyrical_emotions,
                ARRAY[lyrical_emotions_coords[0], lyrical_emotions_coords[1]]::float[]
         FROM tracks
@@ -408,8 +402,7 @@ class PostgresStore:
                         "duration": float(r[8]),
                         "rms_env": r[9] or [],
                         "acoustic_emotions": r[10] or {},
-                        "coord_x": r[11] or 0,
-                        "coord_y": r[12] or 0,
+                        "acoustic_emotion_coords": r[11] or [0,0],
                         "lyrical_emotions": r[13] or {},
                         "lyrical_emotions_coords": r[14] or [0, 0],
                     }

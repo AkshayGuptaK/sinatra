@@ -13,13 +13,12 @@ export interface LibraryTrack {
   end: number;
   rms_env?: number[];
   acoustic_emotions: Record<string, number> | null;
-  coord_x: number | null;
-  coord_y: number | null;
+  acoustic_emotion_coords: [number, number] | null;
   lyrical_emotions: Record<string, number> | null;
   lyrical_emotions_coords: [number, number] | null;
 }
 
-export type ProjectableTrack = MakeNonNullable<LibraryTrack, "coord_x" | "coord_y">;
+export type ProjectableTrack = MakeNonNullable<LibraryTrack, "acoustic_emotion_coords">;
 
 export type QueuedTrack = Pick<LibraryTrack, "id" | "title" | "artist" | "album" | "start" | "end" | "duration" | "rms_env"> & {
   source?: string
@@ -34,5 +33,5 @@ export interface TrackSegment {
 export function isTrackWithCoordinates(
   track: LibraryTrack
 ): track is ProjectableTrack {
-  return track.coord_x !== null && track.coord_y !== null;
+  return track.acoustic_emotion_coords !== null;
 }

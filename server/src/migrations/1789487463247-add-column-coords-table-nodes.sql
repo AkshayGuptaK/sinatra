@@ -1,3 +1,2 @@
 ALTER TABLE tracks
-ADD COLUMN IF NOT EXISTS coord_x FLOAT8,
-ADD COLUMN IF NOT EXISTS coord_y FLOAT8;
+ADD COLUMN IF NOT EXISTS acoustic_emotion_coords point NULL;

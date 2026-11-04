@@ -87,7 +87,7 @@ PostgreSQL is the single source of truth for audio metadata, affective projectio
 | `lyrical_embedding` | `halfvec(2560)` | Semantic text embedding from `qwen3-embedding:4b`.
 
 |
-| `coord_x`, `coord_y` | `float8` | 2D projection coordinates for affective scatter canvas.
+| `acoustic_emotion_coords` | `point` | 2D projection coordinates for affective scatter canvas.
 
 |
 | `created_at` | `timestamptz` | Track insertion timestamp.
@@ -127,7 +127,7 @@ acoustic_embedding [1024-D]
 acoustic_emotion_vector [24-D]
        │
        ▼ (UMAP Model fitted on Cowen 2020 Manifold)
-2D Coordinates (coord_x, coord_y)
+2D Coordinates (acoustic_emotion_coords)
 
 ```
 
@@ -136,7 +136,7 @@ acoustic_emotion_vector [24-D]
 
 3. **Affective Scoring (`acoustic_emotion_vector`):** Ridge regression heads fit on the Cowen dataset project 1024-D embeddings into Cowen's retained 24 dimensions (excluding non-generalizable somatic noise like _goose bumps_, _nauseating_, _painful_, and _entrancing_).
 
-4. **Coordinate Manifold (`coord_x`, `coord_y`):** A pre-fitted parametric UMAP model maps the 24D emotion vectors into 2D display coordinates.
+4. **Coordinate Manifold (`acoustic_emotion_coords`):** A pre-fitted parametric UMAP model maps the 24D emotion vectors into 2D display coordinates.
 
 5. **Lyrical Processing (`lyrical_embedding`):** Lyrical text retrieved by `syncedlyrics` is passed to local Ollama via `qwen3-embedding:4b` to yield a 2560-dimensional dense representation stored as `halfvec`.
 
@@ -175,4 +175,4 @@ acoustic_emotion_vector [24-D]
 
 - **Command Bar AST:** A recursive parser evaluates Omnibar commands (e.g., `:artist`, `:tag`, `:d > 3m`, `:lyrics`, `/dj`, `/q`, `/p`, and `/set <key> <val>`). Autocomplete hints and setting assignments derive dynamically from the centralized settings registry.
 
-- **Interactive Map (`LibraryMapView.svelte`):** An HTML5 2D `<canvas>` controlled with `d3-zoom` renders library tracks based on `coord_x` and `coord_y`, color-coded by primary emotion cluster.
+- **Interactive Map (`LibraryMapView.svelte`):** An HTML5 2D `<canvas>` controlled with `d3-zoom` renders library tracks based on `acoustic_emotion_coords`, color-coded by primary emotion cluster.

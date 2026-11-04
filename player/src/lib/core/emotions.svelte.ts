@@ -40,20 +40,16 @@ export const EMOTION_MAP: Record<EmotionMode, MapViewDefinition> = {
   },
 };
 
-/** Extract acoustic emotion coordinates (coord_x, coord_y) */
 function getAudioEmotionCoords(track: LibraryTrack): MapCoordinates | null {
-  if (
-    track.coord_x != null &&
-    track.coord_y != null &&
-    !Number.isNaN(track.coord_x) &&
-    !Number.isNaN(track.coord_y)
-  ) {
-    return { x: track.coord_x, y: track.coord_y };
+  if (track.acoustic_emotion_coords != null) {
+    return {
+      x: track.acoustic_emotion_coords[0],
+      y: track.acoustic_emotion_coords[1],
+    };
   }
   return null;
 }
 
-/** Extract lyrical emotion coordinates from [x, y] tuple */
 function getLyricsEmotionCoords(track: LibraryTrack): MapCoordinates | null {
   const raw = track.lyrical_emotions_coords;
   if (
@@ -70,7 +66,7 @@ function getLyricsEmotionCoords(track: LibraryTrack): MapCoordinates | null {
 }
 
 export function sortEmotions(emotions: Record<string, number> | null) {
-  if (!emotions) return []
+  if (!emotions) return [];
   return Object.entries(emotions)
     .map(([name, score]) => ({
       name,

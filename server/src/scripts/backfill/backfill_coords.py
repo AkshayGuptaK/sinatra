@@ -20,11 +20,11 @@ def generate_library_coords(method: str = "kr", k: int = 5):
         emotions_input = [r[1] for r in batch]
         coords = projector.project_batch(emotions_input)
 
-        update_payloads = [(x, y, r[0]) for (x, y), r in zip(coords, batch)]
+        update_payloads = [([x, y], r[0]) for (x, y), r in zip(coords, batch)]
 
         with db.conn.cursor() as cur:
             cur.executemany(
-                "UPDATE tracks SET coord_x = %s, coord_y = %s, updated_at = NOW() WHERE filepath = %s;",
+                "UPDATE tracks SET acoustic_emotion_coords = %s, updated_at = NOW() WHERE filepath = %s;",
                 update_payloads,
             )
         db.conn.commit()

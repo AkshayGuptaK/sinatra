@@ -11,5 +11,7 @@ CREATE TABLE tracks (
     acoustic_embedding vector(1024),
 
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT tracks_source_key UNIQUE (source_type, source_id);
 );

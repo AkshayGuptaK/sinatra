@@ -18,6 +18,7 @@ EMOTION_KEYS = [
     ("uplifting", ["uplifting_positive", "uplifting"]),
     ("loving", ["romance", "loving"]),
     ("infatuated", ["infatuation_crush", "infatuated"]),
+    ("lustful", ["lustful_suggestive", "lustful"]),
     ("hedonistic", ["party_hedonism", "hedonistic"]),
     ("funny", ["comedic_funny", "funny"]),
 ]

@@ -28,6 +28,7 @@ EMOTION_TAXONOMY: dict[str, str] = {
     "uplifting": "Optimism, hope, joyous celebration, resilience, and radiant motivation.",
     "loving": "Grounded, enduring devotion, weathered partnership, deep sanctuary, and lifelong commitment.",
     "infatuated": "Infatuation, youthful yearning, nervous butterflies, playful pursuit, daydreaming, and unrequited puppy love.",
+    "lustful": "Physical attraction or physical longing, physical beauty.",
     "hedonistic": "High-energy dancing, partying, carefree revelry, and celebratory escapism.",
     "funny": "Satire, parody, tongue-in-cheek irony, playful silliness, absurdist puns, and humor.",
 }

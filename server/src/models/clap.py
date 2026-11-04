@@ -2,19 +2,15 @@ from pathlib import Path
 from typing import List, Optional, Union
 import numpy as np
 import torch
-import torchaudio.functional as F
 from transformers import AutoProcessor, ClapModel
 
 from src.sources import FileSystemSource
 
 
 class ClapEmbedder:
-    """Extracts 512-dim joint audio-text embeddings using LAION-CLAP
+    """Extracts 512-dim joint audio-text embeddings using LAION-CLAP."""
 
-    (laion/larger_clap_music).
-    """
-
-    MODEL_ID = "laion/larger_clap_music"
+    MODEL_ID = "laion/clap-htsat-unfused"
 
     def __init__(self, device: Optional[str] = None):
         self.device = device or self._detect_device()
@@ -22,8 +18,21 @@ class ClapEmbedder:
 
         print(f"Loading CLAP ({self.MODEL_ID}) on {self.device}...")
 
-        self.processor = AutoProcessor.from_pretrained(self.MODEL_ID)
-        self.model = ClapModel.from_pretrained(self.MODEL_ID).to(self.device)
+        # Prefer local cache; download once if missing
+        try:
+            self.processor = AutoProcessor.from_pretrained(
+                self.MODEL_ID, local_files_only=True
+            )
+            self.model = ClapModel.from_pretrained(
+                self.MODEL_ID, local_files_only=True
+            ).to(self.device)
+        except Exception:
+            print(
+                f"CLAP checkpoint miss in local cache. Downloading {self.MODEL_ID}..."
+            )
+            self.processor = AutoProcessor.from_pretrained(self.MODEL_ID)
+            self.model = ClapModel.from_pretrained(self.MODEL_ID).to(self.device)
+
         self.model.eval()
 
     def _detect_device(self) -> str:
@@ -38,15 +47,13 @@ class ClapEmbedder:
     @staticmethod
     def _l2_normalize(vector: np.ndarray) -> np.ndarray:
         """Projects vector to unit length (norm = 1.0)."""
-        norm = np.linalg.norm(vector)
-        if norm > 1e-12:
-            return (vector / norm).astype(np.float32)
-        return vector.astype(np.float32)
+        norm = np.linalg.norm(vector, axis=-1, keepdims=True)
+        return (vector / (norm + 1e-12)).astype(np.float32)
 
     def extract(self, filepath: str) -> np.ndarray:
         """Extracts a 512-dimensional CLAP embedding from an audio file.
 
-        Takes a central slice (up to 30-45 seconds) to prevent VRAM spikes.
+        Takes a central slice (up to 30 seconds) to prevent VRAM spikes.
         """
         # Read mono audio at 48kHz via FileSystemSource (FFmpeg)
         waveform = FileSystemSource.read_file(filepath, self.target_sampling_rate, 1)
@@ -69,23 +76,21 @@ class ClapEmbedder:
             end = start + MAX_SAMPLES
             waveform = waveform[start:end]
 
-        # Processor expects raw 1D float array and 48kHz sample rate
         inputs = self.processor(
             audio=waveform,
             sampling_rate=self.target_sampling_rate,
             return_tensors="pt",
         )
 
-        input_features = inputs["input_features"].to(self.device)
-
-        is_longer = inputs.get("is_longer")
-        if is_longer is not None:
-            is_longer = is_longer.to(self.device)
+        model_inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         with torch.no_grad():
-            audio_embeds = self.model.get_audio_features(input_features=input_features)
-            # If get_audio_features returns BaseModelOutputWithPooling or a dict/tuple:
-            if hasattr(audio_embeds, "pooler_output"):
+            audio_embeds = self.model.get_audio_features(**model_inputs)
+
+            if (
+                hasattr(audio_embeds, "pooler_output")
+                and audio_embeds.pooler_output is not None
+            ):
                 tensor = audio_embeds.pooler_output
             elif hasattr(audio_embeds, "last_hidden_state"):
                 tensor = audio_embeds.last_hidden_state.mean(dim=1)
@@ -98,42 +103,48 @@ class ClapEmbedder:
             if tensor.shape[-1] != 512 and hasattr(self.model, "audio_projection"):
                 tensor = self.model.audio_projection(tensor)
 
-            vector = tensor.squeeze().cpu().numpy()
+            # L2 normalize in torch before moving to numpy
+            tensor = tensor / (tensor.norm(dim=-1, keepdim=True) + 1e-12)
+            vector = tensor.squeeze(0).cpu().numpy().astype(np.float32)
 
-        return self._l2_normalize(vector)
+        return vector
 
     def extract_text(self, text: Union[str, List[str]]) -> np.ndarray:
         """Extracts 512-dim embedding for natural language search queries."""
         texts = [text] if isinstance(text, str) else text
-        inputs = self.processor(text=texts, return_tensors="pt", padding=True)
-        input_ids = inputs["input_ids"].to(self.device)
-        attention_mask = inputs["attention_mask"].to(self.device)
+
+        # FIX 3: Enforce truncation and max_length=77 for CLAP RoBERTa backbone
+        inputs = self.processor(
+            text=texts,
+            padding=True,
+            truncation=True,
+            max_length=77,
+            return_tensors="pt",
+        )
+        model_inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         with torch.no_grad():
-            outputs = self.model.get_text_features(
-                input_ids=input_ids, attention_mask=attention_mask
-            )
+            outputs = self.model.get_text_features(**model_inputs)
 
-            if isinstance(outputs, torch.Tensor):
-                embed = outputs
-            elif (
-                hasattr(outputs, "pooler_output") and outputs.pooler_output is not None
-            ):
+            if hasattr(outputs, "pooler_output") and outputs.pooler_output is not None:
                 embed = outputs.pooler_output
             elif hasattr(outputs, "last_hidden_state"):
                 embed = outputs.last_hidden_state.mean(dim=1)
+            elif isinstance(outputs, torch.Tensor):
+                embed = outputs
             else:
                 embed = outputs[0]
 
             if embed.shape[-1] != 512 and hasattr(self.model, "text_projection"):
                 embed = self.model.text_projection(embed)
 
-            vectors = embed.cpu().numpy()
+            # Unit normalize
+            embed = embed / (embed.norm(dim=-1, keepdim=True) + 1e-12)
+            vectors = embed.cpu().numpy().astype(np.float32)
 
-            if isinstance(text, str):
-                print("normalizing text")
-                return self._l2_normalize(vectors.squeeze(0))
-            return np.array([self._l2_normalize(v) for v in vectors])
+        if isinstance(text, str):
+            return vectors[0]
+        return vectors
 
 
 # Singleton helper

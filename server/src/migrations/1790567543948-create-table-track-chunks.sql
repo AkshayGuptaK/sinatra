@@ -5,10 +5,10 @@ CREATE TABLE track_chunks (
     start_sec FLOAT8 NOT NULL,
     end_sec FLOAT8 NOT NULL,
     
-    musical_embedding vector(1024) NOT NULL,
+    acoustic_embedding vector(1024) NOT NULL,
     
-    emotions JSONB,
-    emotion_vector vector(24),
+    acoustic_emotions JSONB,
+    acoustic_emotion_vector vector(24),
     
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

@@ -88,7 +88,7 @@ def find_largest_safe_threshold(
 def discover_clusters(
     min_cluster_size: int = 6,
     max_cluster_size: int = 15,
-    vector_column: str = "musical_embedding",
+    vector_column: str = "acoustic_embedding",
     min_degree: int = 1,
     search_iterations: int = 15,
 ):
@@ -221,7 +221,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--vector-col",
         type=str,
-        default="musical_embedding",
+        default="acoustic_embedding",
         help="Column to pull embeddings from.",
     )
     parser.add_argument(

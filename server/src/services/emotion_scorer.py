@@ -74,20 +74,20 @@ class EmotionScorer:
 
         Returns:
             A tuple of 2 items:
-                1. emotions_dict: {emotion_name: score} (floats)
-                2. emotion_vector: continuous 24-dim vector as list[float]
+                1. acoustic_emotion_dict: {emotion_name: score} (floats)
+                2. acoustic_emotion_vector: continuous 24-dim vector as list[float]
         """
         x = np.asarray(embedding, dtype=np.float32)
         if x.ndim != 1 or x.shape[0] != 1024:
             raise ValueError(f"Expected 1024-dim embedding vector, got shape {x.shape}")
 
         emotion_scores = np.dot(x, self.weights) + self.biases
-        emotion_dict: Dict[str, float] = {
+        acoustic_emotion_dict: Dict[str, float] = {
             emotion: round(float(val), 6) for emotion, val in zip(self.emotion_names, emotion_scores)
         }
-        emotion_vector = [float(v) for v in emotion_scores]
+        acoustic_emotion_vector = [float(v) for v in emotion_scores]
 
-        return emotion_dict, emotion_vector
+        return acoustic_emotion_dict, acoustic_emotion_vector
 
 _scorer_instance: EmotionScorer | None = None
 

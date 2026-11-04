@@ -26,9 +26,9 @@ def _extract_chunk_features(
     )
 
     return {
-        "musical_embedding": musical_vector,
-        "emotions": emotions,
-        "emotion_vector": emotion_vec,
+        "acoustic_embedding": musical_vector,
+        "acoustic_emotions": emotions,
+        "acoustic_emotion_vector": emotion_vec,
     }
 
 

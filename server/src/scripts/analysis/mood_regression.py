@@ -81,10 +81,10 @@ def run_mood_regression(
             id::text,
             COALESCE(title, filepath) AS title,
             mood,
-            musical_embedding,
+            acoustic_embedding,
             tags
         FROM tracks
-        WHERE musical_embedding IS NOT NULL
+        WHERE acoustic_embedding IS NOT NULL
           AND mood IS NOT NULL
           AND TRIM(mood) != '';
     """
@@ -95,7 +95,7 @@ def run_mood_regression(
         rows = cur.fetchall()
 
     if not rows:
-        print("❌ No labeled tracks with `musical_embedding` found in tracks.")
+        print("❌ No labeled tracks with `acoustic_embedding` found in tracks.")
         return
 
     print(f"Loaded {len(rows)} labeled songs.")

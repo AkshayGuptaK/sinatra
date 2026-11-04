@@ -36,7 +36,7 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
     if not overwrite:
         query += """
           AND (
-              musical_embedding IS NULL 
+              acoustic_embedding IS NULL 
               OR emotions IS NULL 
               OR music_start IS NULL
           )
@@ -65,9 +65,9 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
 
     update_sql = """
         UPDATE tracks
-        SET musical_embedding = %s::vector,
-            emotions = %s::jsonb,
-            emotion_vector = %s::vector,
+        SET acoustic_embedding = %s::vector,
+            acoustic_emotions = %s::jsonb,
+            acoustic_emotion_vector = %s::vector,
             coord_x = %s,
             coord_y = %s,
             music_start = %s,
@@ -109,8 +109,8 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
             chunk_embs = []
             for c in embedded_chunks:
                 emotion_dict, emotion_vec = scorer.score(c["acoustic_embedding"])
-                c["emotions"] = emotion_dict
-                c["emotion_vector"] = emotion_vec
+                c["acoustic_emotions"] = emotion_dict
+                c["acoustic_emotion_vector"] = emotion_vec
                 chunk_embs.append(c["acoustic_embedding"])
 
             # 4. Duration-Weighted Global Vectors
@@ -125,7 +125,7 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
             )
 
             chunk_embs_mat = np.array(chunk_embs, dtype=np.float32)
-            global_musical_embedding = np.sum(
+            global_acoustic_embedding = np.sum(
                 chunk_embs_mat * weights[:, np.newaxis], axis=0
             )
 
@@ -133,13 +133,13 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
             (
                 global_emotions,
                 global_emotion_vec,
-            ) = scorer.score(global_musical_embedding)
+            ) = scorer.score(global_acoustic_embedding)
 
             # 6. Coordinate Projection (coord_x, coord_y)
             coord_x, coord_y = projector.project_track(global_emotions)
 
             # 7. Serialize Types for PostgreSQL
-            musical_emb_str = db._format_vector_str(global_musical_embedding)
+            musical_emb_str = db._format_vector_str(global_acoustic_embedding)
             emotions_json = json.dumps(global_emotions)
             emotion_vec_str = db._format_vector_str(global_emotion_vec)
 

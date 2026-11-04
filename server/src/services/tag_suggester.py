@@ -56,10 +56,10 @@ class BalancedRidgeTagSuggester(BaseTagSuggester):
         query = """
             SELECT 
                 id::text,
-                musical_embedding,
+                acoustic_embedding,
                 tags
             FROM tracks
-            WHERE musical_embedding IS NOT NULL
+            WHERE acoustic_embedding IS NOT NULL
               AND tags IS NOT NULL
               AND cardinality(tags) > 0;
         """

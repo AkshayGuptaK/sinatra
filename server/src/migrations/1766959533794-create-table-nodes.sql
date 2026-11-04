@@ -7,9 +7,7 @@ CREATE TABLE tracks (
     album        TEXT,
     mood varchar(20),
 
-    musical_embedding vector(1024),
-    cluster_id INTEGER,
-    features jsonb,
+    acoustic_embedding vector(1024),
 
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()

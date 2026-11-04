@@ -20,7 +20,7 @@ def compare_fruits():
     with db.conn.cursor() as cur:
         for fruit, desc in fruits.items():
             cur.execute(
-                "SELECT musical_embedding FROM tracks WHERE mood = %s AND musical_embedding IS NOT NULL LIMIT 100", 
+                "SELECT acoustic_embedding FROM tracks WHERE mood = %s AND acoustic_embedding IS NOT NULL LIMIT 100", 
                 (fruit,)
             )
             rows = cur.fetchall()

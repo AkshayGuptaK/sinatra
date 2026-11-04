@@ -40,8 +40,8 @@ def _process_single_file(path):
 
         for c in embedded_chunks:
             emotion_dict, emotion_vect = scorer.score(c["acoustic_embedding"])
-            c["emotions"] = emotion_dict
-            c["emotion_vector"] = emotion_vect
+            c["acoustic_emotions"] = emotion_dict
+            c["acoustic_emotion_vector"] = emotion_vect
             chunk_emotion_vecs.append(emotion_vect)
 
         durations = np.array([float(c["duration"]) for c in embedded_chunks], dtype=np.float32)
@@ -49,8 +49,8 @@ def _process_single_file(path):
         weights = (durations / total_dur) if total_dur > 0 else (np.ones_like(durations) / len(durations))
 
         chunk_embs = np.array([c["acoustic_embedding"] for c in embedded_chunks], dtype=np.float32)
-        global_musical_embedding = np.sum(chunk_embs * weights[:, np.newaxis], axis=0)
-        (global_emotions, global_emot_vec) = scorer.score(global_musical_embedding)
+        global_acoustic_embedding = np.sum(chunk_embs * weights[:, np.newaxis], axis=0)
+        (global_emotions, global_emot_vec) = scorer.score(global_acoustic_embedding)
 
         projector = get_mood_projector()
         coord_x, coord_y = projector.project_track(global_emotions)
@@ -66,9 +66,9 @@ def _process_single_file(path):
             artist=meta.artist if meta else "",
             album=meta.album if meta else "",
             duration=track_duration,
-            musical_embedding=global_musical_embedding.tolist(),
-            emotions=global_emotions,
-            emotion_vector=global_emot_vec,
+            acoustic_embedding=global_acoustic_embedding.tolist(),
+            acoustic_emotions=global_emotions,
+            acoustic_emotion_vector=global_emot_vec,
             coord_x=coord_x,
             coord_y=coord_y,
             music_start=music_start,

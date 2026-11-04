@@ -1,3 +1,3 @@
 ALTER TABLE tracks 
-ADD COLUMN emotion_vector vector(24),
-ADD COLUMN emotions jsonb;
+ADD COLUMN acoustic_emotion_vector vector(24),
+ADD COLUMN acoustic_emotions jsonb;

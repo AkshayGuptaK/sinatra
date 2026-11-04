@@ -71,13 +71,13 @@ PostgreSQL is the single source of truth for audio metadata, affective projectio
 | `tags` | `text[]` | User tags and auto-suggested classification tags.
 
 |
-| `musical_embedding` | `vector(1024)` | Dense neural representation from `MERT-v2-30s`.
+| `acoustic_embedding` | `vector(1024)` | Dense neural representation from `MERT-v2-30s`.
 
 |
-| `emotion_vector` | `vector(24)` | Predicted Cowen emotional scores.
+| `acoustic_emotion_vector` | `vector(24)` | Predicted Cowen emotional scores.
 
 |
-| `emotions` | `jsonb` | Key-value dictionary of emotion probabilities.
+| `acoustic_emotions` | `jsonb` | Key-value dictionary of emotion probabilities.
 
 |
 | `semantic_embedding` | `vector(512)` | Dense multimodal audio embedding (LAION-CLAP). |
@@ -101,7 +101,7 @@ PostgreSQL is the single source of truth for audio metadata, affective projectio
 
 - **Lyrics Search:** Indexed via GIN trigram (`CREATE INDEX tracks_lyrics_trgm_idx ON tracks USING GIN (lyrics gin_trgm_ops);`). Enables sub-10ms substring and phrase lookups across the library without dictionary stopword interference.
 
-- **Embedding Lookups:** `musical_embedding` and `lyrical_embedding` perform exact sequential scans across current library sizes (~2,000 tracks take under 5 ms on Apple Silicon). HNSW indexing using `vector_cosine_ops` remains optional for scale.
+- **Embedding Lookups:** `acoustic_embedding` and `lyrical_embedding` perform exact sequential scans across current library sizes (~2,000 tracks take under 5 ms on Apple Silicon). HNSW indexing using `vector_cosine_ops` remains optional for scale.
 
 ---
 
@@ -117,14 +117,14 @@ Raw Audio Waveform (24kHz Mono / 44.1kHz Stereo)
 MERT-v2-30s Transformer (MPS / CUDA / CPU)
        │
        ▼
-musical_embedding [1024-D]
+acoustic_embedding [1024-D]
        │
        ├─────────────────────────────────────────┐
        ▼                                         ▼
 24 Ridge Probes (Trained on Cowen 2020)   Auto-Tag Suggester
        │                                  (Cosine / Linear Head)
        ▼
-emotion_vector [24-D]
+acoustic_emotion_vector [24-D]
        │
        ▼ (UMAP Model fitted on Cowen 2020 Manifold)
 2D Coordinates (coord_x, coord_y)
@@ -132,9 +132,9 @@ emotion_vector [24-D]
 ```
 
 1. **Hardware Detection:** Model inference prioritizes `mps` (Apple Silicon Metal), falls back to `cuda` if available, and defaults to `cpu`. Weights are read directly from the Hugging Face cache directory.
-2. **Audio Embedding (`musical_embedding`):** Extracted using `MERT-v2-30s` over 30-second clips, yielding a 1024-dimensional continuous acoustic vector.
+2. **Audio Embedding (`acoustic_embedding`):** Extracted using `MERT-v2-30s` over 30-second clips, yielding a 1024-dimensional continuous acoustic vector.
 
-3. **Affective Scoring (`emotion_vector`):** Ridge regression heads fit on the Cowen dataset project 1024-D embeddings into Cowen's retained 24 dimensions (excluding non-generalizable somatic noise like _goose bumps_, _nauseating_, _painful_, and _entrancing_).
+3. **Affective Scoring (`acoustic_emotion_vector`):** Ridge regression heads fit on the Cowen dataset project 1024-D embeddings into Cowen's retained 24 dimensions (excluding non-generalizable somatic noise like _goose bumps_, _nauseating_, _painful_, and _entrancing_).
 
 4. **Coordinate Manifold (`coord_x`, `coord_y`):** A pre-fitted parametric UMAP model maps the 24D emotion vectors into 2D display coordinates.
 
@@ -147,7 +147,7 @@ emotion_vector [24-D]
 - **Lifespan Hooks:** The FastAPI application lifespan (`@asynccontextmanager`) boots background tasks on startup.
 
 - **File Watcher & Poller:** An in-process file watcher monitors the audio directory for added or modified files, backed by a periodic polling loop that reconciles un-indexed filesystem differences.
-- **Full Synchronous Pipeline:** When a new file is detected, the background task reads tags via `mutagen`, computes duration, streams audio through FFmpeg, generates `musical_embedding`, scores emotions, projects UMAP coordinates, and upserts the track into PostgreSQL in a single pass.
+- **Full Synchronous Pipeline:** When a new file is detected, the background task reads tags via `mutagen`, computes duration, streams audio through FFmpeg, generates `acoustic_embedding`, scores emotions, projects UMAP coordinates, and upserts the track into PostgreSQL in a single pass.
 
 - **Backfill Tooling:** Batch backfills are isolated under `server/src/scripts/backfill/` to recalculate individual columns (e.g., re-running lyric fetches, UMAP projections, or embedding migrations).
 

@@ -16,8 +16,9 @@ class FileStat:
 
 
 SIMILARITY_COLUMN_MAP = {
-    "acoustics": "musical_embedding",
-    "emotion": "emotion_vector",
+    "acoustics": "acoustic_embedding",
+    "acoustic_emotion": "acoustic_emotion_vector",
+    "lyrical_emotion": "lyrics_emotion_coords",
 }
 
 
@@ -86,9 +87,9 @@ class PostgresStore:
             emotions = c.get("emotions")
             emotions_json = json.dumps(emotions) if emotions is not None else None
 
-            musical_emb = c.get("musical_embedding", c.get("acoustic_embedding"))
+            musical_emb = c.get("acoustic_embedding", c.get("acoustic_embedding"))
             musical_vec_str = self._format_vector_str(musical_emb)
-            emotion_vec_str = self._format_vector_str(c.get("emotion_vector"))
+            emotion_vec_str = self._format_vector_str(c.get("acoustic_emotion_vector"))
 
             batch_params.append(
                 (
@@ -113,9 +114,9 @@ class PostgresStore:
                     track_id,
                     start_sec,
                     end_sec,
-                    musical_embedding,
-                    emotions,
-                    emotion_vector
+                    acoustic_embedding,
+                    acoustic_emotions,
+                    acoustic_emotion_vector
                 )
                 VALUES (
                     %s::uuid,
@@ -136,9 +137,9 @@ class PostgresStore:
         artist: str,
         album: str,
         duration: float,
-        musical_embedding: List[float],
-        emotions: Optional[Dict[str, float]] = None,
-        emotion_vector: Optional[List[float]] = None,
+        acoustic_embedding: List[float],
+        acoustic_emotions: Optional[Dict[str, float]] = None,
+        acoustic_emotion_vector: Optional[List[float]] = None,
         coord_x: Optional[float] = 0,
         coord_y: Optional[float] = 0,
         music_start: Optional[float] = 0.0,
@@ -146,17 +147,17 @@ class PostgresStore:
         rms_env: Optional[list[float]] | None = None,
     ) -> None:
         # Format JSONB strings
-        emotions_json = json.dumps(emotions) if emotions is not None else None
+        emotions_json = json.dumps(emotions) if acoustic_emotions is not None else None
 
         # Format vector strings
         emotion_vec_str = (
-            f"[{','.join(f'{x:.6f}' for x in emotion_vector)}]"
-            if emotion_vector is not None
+            f"[{','.join(f'{x:.6f}' for x in acoustic_emotion_vector)}]"
+            if acoustic_emotion_vector is not None
             else None
         )
         musical_emb_str = (
-            f"[{','.join(f'{x:.6f}' for x in musical_embedding)}]"
-            if musical_embedding is not None
+            f"[{','.join(f'{x:.6f}' for x in acoustic_embedding)}]"
+            if acoustic_embedding is not None
             else None
         )
 
@@ -169,9 +170,9 @@ class PostgresStore:
                     artist,
                     album,
                     duration,
-                    musical_embedding, 
-                    emotions, 
-                    emotion_vector,
+                    acoustic_embedding, 
+                    acoustic_emotions, 
+                    acoustic_emotion_vector,
                     coord_x,
                     coord_y,
                     music_start,
@@ -185,9 +186,9 @@ class PostgresStore:
                     %s,             -- artist
                     %s,             -- album
                     %s,             -- duration
-                    %s::vector,     -- musical_embedding
-                    %s::jsonb,      -- emotions
-                    %s::vector,     -- emotion_vector
+                    %s::vector,     -- acoustic_embedding
+                    %s::jsonb,      -- acoustic_emotions
+                    %s::vector,     -- acoustic_emotion_vector
                     %s,             -- coord_x
                     %s,             -- coord_y
                     %s,             -- music_start
@@ -196,9 +197,9 @@ class PostgresStore:
                     NOW()           -- updated_at
                 )
                 ON CONFLICT (filepath) DO UPDATE SET
-                    musical_embedding = EXCLUDED.musical_embedding,
-                    emotions = EXCLUDED.emotions,
-                    emotion_vector = EXCLUDED.emotion_vector,
+                    acoustic_embedding = EXCLUDED.acoustic_embedding,
+                    acoustic_emotions = EXCLUDED.acoustic_emotions,
+                    acoustic_emotion_vector = EXCLUDED.acoustic_emotion_vector,
                     coord_x = EXCLUDED.coord_x,
                     coord_y = EXCLUDED.coord_y,
                     music_start = EXCLUDED.music_start,
@@ -213,7 +214,7 @@ class PostgresStore:
                     artist,
                     album,
                     duration,
-                    musical_embedding,
+                    acoustic_embedding,
                     emotions_json,
                     emotion_vec_str,
                     coord_x,
@@ -255,9 +256,9 @@ class PostgresStore:
                 update_sql = """
                     UPDATE track_chunks
                     SET end_sec = %s,
-                        musical_embedding = %s::vector,
-                        emotions = %s,
-                        emotion_vector = %s::vector,
+                        acoustic_embedding = %s::vector,
+                        acoustic_emotions = %s,
+                        acoustic_emotion_vector = %s::vector,
                         updated_at = NOW()
                     WHERE id = %s::uuid;
                 """
@@ -265,9 +266,9 @@ class PostgresStore:
                     update_sql,
                     (
                         chunk_a_end,
-                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['musical_embedding'])}]",
-                        json.dumps(chunk_a_features["emotions"]),
-                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['emotion_vector'])}]",
+                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['acoustic_embedding'])}]",
+                        json.dumps(chunk_a_features["acoustic_emotions"]),
+                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['acoustic_emotion_vector'])}]",
                         chunk_a_id,
                     ),
                 )
@@ -276,7 +277,7 @@ class PostgresStore:
                 insert_sql = """
                     INSERT INTO track_chunks (
                         track_id, start_sec, end_sec,
-                        musical_embedding, emotions, emotion_vector,
+                        acoustic_embedding, acoustic_emotions, acoustic_emotion_vector,
                         created_at, updated_at
                     ) VALUES (
                         %s::uuid, %s, %s,
@@ -290,9 +291,9 @@ class PostgresStore:
                         track_id,
                         chunk_b_start,
                         chunk_b_end,
-                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['musical_embedding'])}]",
-                        json.dumps(chunk_b_features["emotions"]),
-                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['emotion_vector'])}]",
+                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['acoustic_embedding'])}]",
+                        json.dumps(chunk_b_features["acoustic_emotions"]),
+                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['acoustic_emotion_vector'])}]",
                     ),
                 )
             self.conn.commit()
@@ -316,9 +317,9 @@ class PostgresStore:
                 update_a_sql = """
                     UPDATE track_chunks
                     SET end_sec = %s,
-                        musical_embedding = %s::vector,
-                        emotions = %s,
-                        emotion_vector = %s::vector,
+                        acoustic_embedding = %s::vector,
+                        acoustic_emotions = %s,
+                        acoustic_emotion_vector = %s::vector,
                         updated_at = NOW()
                     WHERE id = %s::uuid;
                 """
@@ -326,9 +327,9 @@ class PostgresStore:
                     update_a_sql,
                     (
                         chunk_a_new_end,
-                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['musical_embedding'])}]",
-                        json.dumps(chunk_a_features["emotions"]),
-                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['emotion_vector'])}]",
+                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['acoustic_embedding'])}]",
+                        json.dumps(chunk_a_features["acoustic_emotions"]),
+                        f"[{','.join(f'{x:.6f}' for x in chunk_a_features['acoustic_emotion_vector'])}]",
                         chunk_a_id,
                     ),
                 )
@@ -337,9 +338,9 @@ class PostgresStore:
                 update_b_sql = """
                     UPDATE track_chunks
                     SET start_sec = %s,
-                        musical_embedding = %s::vector,
-                        emotions = %s,
-                        emotion_vector = %s::vector,
+                        acoustic_embedding = %s::vector,
+                        acoustic_emotions = %s,
+                        acoustic_emotion_vector = %s::vector,
                         updated_at = NOW()
                     WHERE id = %s::uuid;
                 """
@@ -347,9 +348,9 @@ class PostgresStore:
                     update_b_sql,
                     (
                         chunk_b_new_start,
-                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['musical_embedding'])}]",
-                        json.dumps(chunk_b_features["emotions"]),
-                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['emotion_vector'])}]",
+                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['acoustic_embedding'])}]",
+                        json.dumps(chunk_b_features["acoustic_emotions"]),
+                        f"[{','.join(f'{x:.6f}' for x in chunk_b_features['acoustic_emotion_vector'])}]",
                         chunk_b_id,
                     ),
                 )
@@ -479,10 +480,10 @@ class PostgresStore:
 
     def get_track_by_id(self, track_id):
         query = """
-        SELECT id::text, tags, musical_embedding
+        SELECT id::text, tags, acoustic_embedding
         FROM tracks
         WHERE id::text = %s
-          AND musical_embedding IS NOT NULL;
+          AND acoustic_embedding IS NOT NULL;
         """
         try:
             with self.conn.cursor() as cur:
@@ -497,8 +498,8 @@ class PostgresStore:
         SELECT filepath 
         FROM tracks 
         WHERE filepath != %s
-        ORDER BY musical_embedding <=> (
-            SELECT musical_embedding FROM tracks WHERE filepath = %s
+        ORDER BY acoustic_embedding <=> (
+            SELECT acoustic_embedding FROM tracks WHERE filepath = %s
         ) ASC
         LIMIT 1;
         """

@@ -80,34 +80,12 @@ def compute_track_coordinates(
     return (round(x_cm, 4), round(y_cm, 4))
 
 
-def setup_column(db):
-    """Ensures tracks table has the lyrical_emotions_coords point column."""
-    with db.conn.cursor() as cur:
-        cur.execute(
-            "ALTER TABLE tracks ADD COLUMN IF NOT EXISTS lyrical_emotions_coords point;"
-        )
-        cur.execute(
-            """
-            DO $$
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 FROM pg_indexes WHERE indexname = 'idx_tracks_lyrics_coords'
-                ) THEN
-                    CREATE INDEX idx_tracks_lyrics_coords ON tracks USING gist (lyrical_emotions_coords);
-                END IF;
-            END $$;
-            """
-        )
-    db.conn.commit()
-
 
 def run_projection():
     db = get_pg()
     print("=" * 80)
     print("🪐 COMPUTING 2D LYRICAL EMOTION COORDINATES (CENTER OF MASS)")
     print("=" * 80)
-
-    setup_column(db)
 
     query = """
         SELECT id, title, artist, lyrical_emotions
@@ -157,7 +135,7 @@ def run_projection():
     print(f"💾 Updating coordinates for {len(update_records)} tracks...")
     update_query = """
         UPDATE tracks
-        SET lyrical_emotions_coords = point(%s, %s),
+        SET lyrical_emotion_coords = point(%s, %s),
             updated_at = NOW()
         WHERE id = %s;
     """
@@ -166,7 +144,7 @@ def run_projection():
     db.conn.commit()
 
     print(
-        f"✅ Successfully wrote coordinates to 'tracks.lyrical_emotions_coords' (point type)."
+        f"✅ Successfully wrote coordinates to 'tracks.lyrical_emotion_coords' (point type)."
     )
 
 

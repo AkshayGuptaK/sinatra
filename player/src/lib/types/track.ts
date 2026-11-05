@@ -15,7 +15,7 @@ export interface LibraryTrack {
   acoustic_emotions: Record<string, number> | null;
   acoustic_emotion_coords: [number, number] | null;
   lyrical_emotions: Record<string, number> | null;
-  lyrical_emotions_coords: [number, number] | null;
+  lyrical_emotion_coords: [number, number] | null;
 }
 
 export type ProjectableTrack = MakeNonNullable<LibraryTrack, "acoustic_emotion_coords">;
@@ -27,7 +27,7 @@ export type QueuedTrack = Pick<LibraryTrack, "id" | "title" | "artist" | "album"
 export interface TrackSegment {
   start_sec: number;
   end_sec: number;
-  emotions: Record<string, number>;
+  acoustic_emotions: Record<string, number>;
 }
 
 export function isTrackWithCoordinates(

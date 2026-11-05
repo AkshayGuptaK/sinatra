@@ -61,7 +61,7 @@ def _process_single_file(path):
 
         db = get_pg()
         track_id = db.upsert_track(
-            filepath=path,
+            source_id=path,
             title=meta.title if meta else "",
             artist=meta.artist if meta else "",
             album=meta.album if meta else "",

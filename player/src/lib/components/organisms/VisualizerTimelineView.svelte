@@ -105,8 +105,8 @@
 
   // Extract and format emotions for EmotionsDisplay
   const inspectorSortedEmotions = $derived.by(() => {
-    if (!displayedSegment?.emotions) return [];
-    return Object.entries(displayedSegment.emotions)
+    if (!displayedSegment?.acoustic_emotions) return [];
+    return Object.entries(displayedSegment.acoustic_emotions)
       .map(([name, score]) => ({
         name,
         pct: Math.round(score * 100),
@@ -126,7 +126,7 @@
    * under 3% stack cleanly without overlapping.
    */
   function getStackedSegmentEmotions(seg: TrackSegment) {
-    const emotions = seg.emotions ?? {};
+    const emotions = seg.acoustic_emotions ?? {};
     const minSpacing = BAR_HEIGHT + BAR_STACK_GAP;
 
     const validEmotions = Object.entries(emotions)

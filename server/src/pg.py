@@ -140,14 +140,14 @@ class PostgresStore:
         acoustic_embedding: List[float],
         acoustic_emotions: Optional[Dict[str, float]] = None,
         acoustic_emotion_vector: Optional[List[float]] = None,
-        acoustic_emotion_coords: Optional[number, number] = [0,0],
+        acoustic_emotion_coords: Optional[[float, float]] = [0.0,0.0],
         music_start: Optional[float] = 0.0,
         music_end: Optional[float] = None,
         rms_env: Optional[list[float]] | None = None,
-        source: str = "local",
+        source_type: str = "local",
     ) -> None:
         # Format JSONB strings
-        emotions_json = json.dumps(emotions) if acoustic_emotions is not None else None
+        emotions_json = json.dumps(acoustic_emotions) if acoustic_emotions is not None else None
 
         # Format vector strings
         emotion_vec_str = (
@@ -160,7 +160,6 @@ class PostgresStore:
             if acoustic_embedding is not None
             else None
         )
-
         with self.conn.cursor() as cur:
             cur.execute(
                 """
@@ -177,7 +176,7 @@ class PostgresStore:
                     music_start,
                     music_end,
                     rms_envelope,
-                    source,
+                    source_type,
                     updated_at
                 )
                 VALUES (
@@ -189,14 +188,14 @@ class PostgresStore:
                     %s::vector,     -- acoustic_embedding
                     %s::jsonb,      -- acoustic_emotions
                     %s::vector,     -- acoustic_emotion_vector
-                    %s,             -- acoustic_emotion_coords
+                    point(%s, %s),  -- acoustic_emotion_coords
                     %s,             -- music_start
                     %s,             -- music_end
                     %s,             -- rms_env
-                    %s,             -- source
+                    %s,             -- source_type
                     NOW()           -- updated_at
                 )
-                ON CONFLICT (source_id) DO UPDATE SET
+                ON CONFLICT (source_id, source_type) DO UPDATE SET
                     acoustic_embedding = EXCLUDED.acoustic_embedding,
                     acoustic_emotions = EXCLUDED.acoustic_emotions,
                     acoustic_emotion_vector = EXCLUDED.acoustic_emotion_vector,
@@ -216,11 +215,12 @@ class PostgresStore:
                     acoustic_embedding,
                     emotions_json,
                     emotion_vec_str,
-                    acoustic_emotion_coords,
+                    acoustic_emotion_coords[0],
+                    acoustic_emotion_coords[1],
                     music_start,
                     music_end if music_end is not None else duration,
                     rms_env,
-                    source
+                    source_type
                 ),
             )
             track_id = cur.fetchone()[0]
@@ -385,7 +385,7 @@ class PostgresStore:
                acoustic_emotions,
                acoustic_emotion_coords,
                lyrical_emotions,
-               ARRAY[lyrical_emotions_coords[0], lyrical_emotions_coords[1]]::float[]
+               ARRAY[lyrical_emotion_coords[0], lyrical_emotion_coords[1]]::float[]
         FROM tracks
         ORDER BY title ASC
         """
@@ -407,8 +407,8 @@ class PostgresStore:
                         "rms_env": r[9] or [],
                         "acoustic_emotions": r[10] or {},
                         "acoustic_emotion_coords": r[11] or [0,0],
-                        "lyrical_emotions": r[13] or {},
-                        "lyrical_emotions_coords": r[14] or [0, 0],
+                        "lyrical_emotions": r[12] or {},
+                        "lyrical_emotion_coords": r[13] or [0, 0],
                     }
                     for r in result
                 ]
@@ -427,7 +427,7 @@ class PostgresStore:
                 id::text,
                 start_sec,
                 end_sec,
-                emotions
+                acoustic_emotions
             FROM track_chunks
             WHERE track_id = %s::uuid
             ORDER BY start_sec ASC;
@@ -441,7 +441,7 @@ class PostgresStore:
                         "id": r[0],
                         "start_sec": float(r[1]),
                         "end_sec": float(r[2]),
-                        "emotions": r[3] or {},
+                        "acoustic_emotions": r[3] or {},
                     }
                     for r in rows
                 ]

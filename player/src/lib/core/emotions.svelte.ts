@@ -51,7 +51,7 @@ function getAudioEmotionCoords(track: LibraryTrack): MapCoordinates | null {
 }
 
 function getLyricsEmotionCoords(track: LibraryTrack): MapCoordinates | null {
-  const raw = track.lyrical_emotions_coords;
+  const raw = track.lyrical_emotion_coords;
   if (
     Array.isArray(raw) &&
     raw.length >= 2 &&

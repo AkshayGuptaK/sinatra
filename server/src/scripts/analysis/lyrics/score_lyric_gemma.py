@@ -214,11 +214,14 @@ def run(all_tracks: bool, model: str, host: str, log: str | None = None):
     log_fh = open(log, "w", encoding="utf-8") if log else None
 
     update_query = """
-        UPDATE tracks
-        SET lyrical_emotions = %s::jsonb,
-            updated_at = NOW()
-        WHERE id = %s;
+    UPDATE tracks
+    SET lyrical_emotions = %s::jsonb,
+        lyrical_emotion_vector = %s::vector(11),
+        updated_at = NOW()
+    WHERE id = %s;
     """
+
+    LYRICAL_EMOTION_KEYS = sorted(EMOTION_TAXONOMY.keys())
 
     # 2. Unified scoring and output loop
     try:
@@ -250,7 +253,9 @@ def run(all_tracks: bool, model: str, host: str, log: str | None = None):
 
                 # Persist to DB only when --all is enabled
                 if all_tracks:
-                    cur.execute(update_query, (json.dumps(scores), t_id))
+                    scores_json = json.dumps(scores)
+                    scores_vec_str = f"[{','.join(f'{scores.get(k, 0.0):.4f}' for k in LYRICAL_EMOTION_KEYS)}]"
+                    cur.execute(update_query, (scores_json, scores_vec_str, t_id))
                     if idx % 10 == 0 or idx == total:
                         db.conn.commit()
                         if not log_fh:

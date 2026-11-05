@@ -101,6 +101,11 @@ export const SETTINGS_DEFINITIONS: SettingDefinition[] = [
         label: "Composite Emotion",
         description: "Acoustic and lyrical mood matching",
       },
+      {
+        value: "semantics",
+        label: "Semantics",
+        description: "Caption based matching",
+      },
     ],
     defaultValue: "acoustics",
   },

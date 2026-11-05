@@ -8,7 +8,7 @@
   import { findNearestPoint } from "$lib/utils/math";
   import MapTooltip from "$lib/components/molecules/MapTooltip.svelte";
   import EmotionLegend from "$lib/components/molecules/EmotionLegend.svelte";
-  import type { Track } from "$lib/types/track";
+  import type { LibraryTrack } from "$lib/types/track";
   import { cn } from "$lib/utils";
   import { EMOTION_MAP, type EmotionMode } from "$lib/core/emotions.svelte";
   import { blendHexColors } from "$lib/utils/colors";
@@ -31,7 +31,7 @@
 
   export interface RenderPoint {
     id: string;
-    track: Track;
+    track: LibraryTrack;
     x: number;
     y: number;
     color: string | null;
@@ -119,7 +119,7 @@
   const renderPoints = $derived.by<RenderPoint[]>(() => {
     const extractor = activeViewConfig.getCoordinates;
     const points: RenderPoint[] = [];
-
+    
     for (const track of library.displayedTracks) {
       const coords = extractor(track);
       if (coords) {

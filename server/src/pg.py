@@ -17,6 +17,7 @@ class FileStat:
 
 SIMILARITY_COLUMN_MAP = {
     "acoustics": "acoustic_embedding",
+    "semantics": "semantic_embedding",
     "acoustic_emotion": "acoustic_emotion_vector",
     "composite_emotion": "combined_emotion_vector"
 }
@@ -383,7 +384,7 @@ class PostgresStore:
                duration,
                rms_envelope,
                acoustic_emotions,
-               acoustic_emotion_coords,
+               ARRAY[acoustic_emotion_coords[0], acoustic_emotion_coords[1]]::float[],
                lyrical_emotions,
                ARRAY[lyrical_emotion_coords[0], lyrical_emotion_coords[1]]::float[]
         FROM tracks
@@ -406,7 +407,7 @@ class PostgresStore:
                         "duration": float(r[8]),
                         "rms_env": r[9] or [],
                         "acoustic_emotions": r[10] or {},
-                        "acoustic_emotion_coords": r[11] or [0,0],
+                        "acoustic_emotion_coords": r[11] or [0, 0],
                         "lyrical_emotions": r[12] or {},
                         "lyrical_emotion_coords": r[13] or [0, 0],
                     }

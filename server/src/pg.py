@@ -18,7 +18,7 @@ class FileStat:
 SIMILARITY_COLUMN_MAP = {
     "acoustics": "acoustic_embedding",
     "acoustic_emotion": "acoustic_emotion_vector",
-    "lyrical_emotion": "lyrics_emotion_coords",
+    "composite_emotion": "combined_emotion_vector"
 }
 
 

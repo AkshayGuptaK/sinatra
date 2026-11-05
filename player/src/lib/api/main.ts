@@ -15,7 +15,7 @@ export interface TrackLyricMatch {
   matches: string[];
 }
 
-export type SimilarityMode = "acoustics" | "emotion";
+export type SimilarityMode = "acoustics" | "acoustic_emotion" | "composite_emotion";
 
 export type SegmentEditAction = "split" | "push" | "pull";
 

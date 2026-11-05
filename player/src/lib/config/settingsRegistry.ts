@@ -92,9 +92,14 @@ export const SETTINGS_DEFINITIONS: SettingDefinition[] = [
         description: "Timbre & texture matching",
       },
       {
-        value: "emotion",
-        label: "Emotion",
+        value: "acoustic_emotion",
+        label: "Acoustic Emotion",
         description: "Affective mood matching",
+      },
+      {
+        value: "composite_emotion",
+        label: "Composite Emotion",
+        description: "Acoustic and lyrical mood matching",
       },
     ],
     defaultValue: "acoustics",

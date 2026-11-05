@@ -132,7 +132,7 @@ class PostgresStore:
 
     def upsert_track(
         self,
-        filepath: str,
+        source_id: str,
         title: str,
         artist: str,
         album: str,
@@ -144,6 +144,7 @@ class PostgresStore:
         music_start: Optional[float] = 0.0,
         music_end: Optional[float] = None,
         rms_env: Optional[list[float]] | None = None,
+        source: str = "local",
     ) -> None:
         # Format JSONB strings
         emotions_json = json.dumps(emotions) if acoustic_emotions is not None else None
@@ -164,7 +165,7 @@ class PostgresStore:
             cur.execute(
                 """
                 INSERT INTO tracks (
-                    filepath,
+                    source_id,
                     title,
                     artist,
                     album,
@@ -176,10 +177,11 @@ class PostgresStore:
                     music_start,
                     music_end,
                     rms_envelope,
+                    source,
                     updated_at
                 )
                 VALUES (
-                    %s,             -- filepath
+                    %s,             -- source_id
                     %s,             -- title
                     %s,             -- artist
                     %s,             -- album
@@ -191,9 +193,10 @@ class PostgresStore:
                     %s,             -- music_start
                     %s,             -- music_end
                     %s,             -- rms_env
+                    %s,             -- source
                     NOW()           -- updated_at
                 )
-                ON CONFLICT (filepath) DO UPDATE SET
+                ON CONFLICT (source_id) DO UPDATE SET
                     acoustic_embedding = EXCLUDED.acoustic_embedding,
                     acoustic_emotions = EXCLUDED.acoustic_emotions,
                     acoustic_emotion_vector = EXCLUDED.acoustic_emotion_vector,
@@ -205,7 +208,7 @@ class PostgresStore:
                 RETURNING id::text;
                 """,
                 (
-                    filepath,
+                    source_id,
                     title,
                     artist,
                     album,
@@ -217,6 +220,7 @@ class PostgresStore:
                     music_start,
                     music_end if music_end is not None else duration,
                     rms_env,
+                    source
                 ),
             )
             track_id = cur.fetchone()[0]
@@ -227,7 +231,7 @@ class PostgresStore:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
-               DELETE FROM tracks WHERE filepath = ANY(%s)
+               DELETE FROM tracks WHERE source_id = ANY(%s)
                 """,
                 (list(filenames),),
             )
@@ -358,7 +362,7 @@ class PostgresStore:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
-               SELECT filepath, updated_at FROM tracks
+               SELECT source_id, updated_at FROM tracks
                 """,
             )
             return [
@@ -460,7 +464,7 @@ class PostgresStore:
 
     def get_track_path_by_id(self, track_id):
         query = """
-        SELECT filepath FROM tracks WHERE id = %s;
+        SELECT source_id FROM tracks WHERE id = %s;
         """
         try:
             with self.conn.cursor() as cur:
@@ -488,11 +492,11 @@ class PostgresStore:
 
     def get_similar_track(self, current_filepath):
         query = """
-        SELECT filepath 
+        SELECT source_id 
         FROM tracks 
-        WHERE filepath != %s
+        WHERE source_id != %s
         ORDER BY acoustic_embedding <=> (
-            SELECT acoustic_embedding FROM tracks WHERE filepath = %s
+            SELECT acoustic_embedding FROM tracks WHERE source_id = %s
         ) ASC
         LIMIT 1;
         """
@@ -636,13 +640,13 @@ class PostgresStore:
         with self.conn.cursor(row_factory=dict_row) as cur:
             cur.execute(
                 f"""
-            SELECT filepath
+            SELECT source_id
             FROM tracks
             WHERE {metadata_field} = %(val)s;
             """,
                 {"val": metadata_value},
             )
-            return [row["filepath"] for row in cur.fetchall()]
+            return [row["source_id"] for row in cur.fetchall()]
 
     def filter_by_lyrics(self, terms: List[str]) -> List[Dict[str, Any]]:
         """Finds tracks matching all terms/phrases in lyrics and returns

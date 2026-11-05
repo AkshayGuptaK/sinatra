@@ -1,6 +1,5 @@
 CREATE TABLE tracks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    filepath   TEXT UNIQUE NOT NULL,
     source_type varchar(20) DEFAULT 'local' NOT NULL,
     source_id text NOT NULL,
 
@@ -8,6 +7,8 @@ CREATE TABLE tracks (
     artist       TEXT,
     album        TEXT,
 
+    tags TEXT[] NOT NULL DEFAULT '{}',
+    duration DOUBLE PRECISION DEFAULT 0.0,
     acoustic_embedding vector(1024),
 
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),

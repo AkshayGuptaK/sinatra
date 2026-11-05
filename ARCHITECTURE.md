@@ -53,9 +53,6 @@ PostgreSQL is the single source of truth for audio metadata, affective projectio
 | `id`   | `uuid` (PK) | Primary track identifier (`gen_random_uuid()`). |
 
 |
-| `filepath` | `text` (Unique) | Absolute filesystem path on local disk.
-
-|
 | `title` | `text` | Track title.
 
 |

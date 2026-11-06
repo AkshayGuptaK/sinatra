@@ -13,34 +13,30 @@
     getTrackDisplayAttribution,
     getTrackDisplayTitle,
   } from "$lib/utils/display";
-  import NavigationRail, {
-    type AppDeck,
-  } from "$lib/components/molecules/NavigationRail.svelte";
+  import NavigationRail from "$lib/components/molecules/NavigationRail.svelte";
   import NowPlaying from "$lib/components/organisms/NowPlaying.svelte";
-
-  let activeDeck = $state<AppDeck>("curate");
+  import { ui } from "$lib/stores/ui.svelte";
 
   function handleKeyDown(event: KeyboardEvent) {
-    // Top-level shortcuts (Cmd+1..3, Cmd+,)
     if (event.metaKey || event.ctrlKey) {
       switch (event.key) {
         case "1": {
-          activeDeck = "explore";
+          ui.setDeck("explore");
           event.preventDefault();
           break;
         }
         case "2": {
-          activeDeck = "curate";
+          ui.setDeck("curate");
           event.preventDefault();
           break;
         }
         case "3": {
-          activeDeck = "vibe";
+          ui.setDeck("vibe");
           event.preventDefault();
           break;
         }
         case ",": {
-          activeDeck = "settings";
+          ui.setDeck("settings");
           event.preventDefault();
           break;
         }
@@ -81,28 +77,28 @@
 <div
   class="flex h-screen w-screen bg-background rounded-xl text-foreground overflow-hidden select-none"
 >
-  <NavigationRail {activeDeck} onSelectDeck={(deck) => (activeDeck = deck)} />
+  <NavigationRail/>
 
   <div class="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
     <main class="flex-1 min-h-0 w-full overflow-hidden relative">
-      <div class="h-full w-full" class:hidden={activeDeck !== "curate"}>
+      <div class="h-full w-full" class:hidden={ui.activeDeck !== "curate"}>
         <Curate />
       </div>
 
-      <div class="h-full w-full" class:hidden={activeDeck !== "vibe"}>
+      <div class="h-full w-full" class:hidden={ui.activeDeck !== "vibe"}>
         <Vibe />
       </div>
 
-      <div class="h-full w-full" class:hidden={activeDeck !== "explore"}>
+      <div class="h-full w-full" class:hidden={ui.activeDeck !== "explore"}>
         <Explore />
       </div>
 
-      <div class="h-full w-full" class:hidden={activeDeck !== "settings"}>
+      <div class="h-full w-full" class:hidden={ui.activeDeck !== "settings"}>
         <Settings />
       </div>
     </main>
     <footer class="w-full shrink-0">
-      <NowPlaying onTrackClick={() => (activeDeck = "vibe")} />
+      <NowPlaying onTrackClick={() => (ui.activeDeck = "vibe")} />
     </footer>
   </div>
 </div>

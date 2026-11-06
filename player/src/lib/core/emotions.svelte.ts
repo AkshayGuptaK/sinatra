@@ -2,7 +2,7 @@ import {
   COWEN_EMOTION_COLORS,
   LYRIC_EMOTION_COLORS,
 } from "$lib/constants/emotions";
-import type { LibraryTrack } from "$lib/types/track";
+import type { QueuedTrack } from "$lib/types/track";
 
 export type EmotionMode = "audio_emotion" | "lyrics_emotion";
 
@@ -15,8 +15,8 @@ export interface MapViewDefinition {
   id: EmotionMode;
   label: string;
   description: string;
-  getEmotions: (track: LibraryTrack) => Record<string, number> | null;
-  getCoordinates: (track: LibraryTrack) => MapCoordinates | null;
+  getEmotions: (track: QueuedTrack) => Record<string, number> | null;
+  getCoordinates: (track: QueuedTrack) => MapCoordinates | null;
   getColor: (emotion: string) => string;
 }
 
@@ -26,7 +26,7 @@ export const EMOTION_MAP: Record<EmotionMode, MapViewDefinition> = {
     id: "audio_emotion",
     label: "Audio Mood",
     description: "Acoustic emotion manifold projected via MERT and UMAP",
-    getEmotions: (track) => track.acoustic_emotions,
+    getEmotions: (track) => track.acoustic_emotions || null,
     getCoordinates: getAudioEmotionCoords,
     getColor: (emotion) => COWEN_EMOTION_COLORS[emotion],
   },
@@ -34,13 +34,13 @@ export const EMOTION_MAP: Record<EmotionMode, MapViewDefinition> = {
     id: "lyrics_emotion",
     label: "Lyrics Mood",
     description: "Affective text manifold derived from lyrical content",
-    getEmotions: (track) => track.lyrical_emotions,
+    getEmotions: (track) => track.lyrical_emotions || null,
     getCoordinates: getLyricsEmotionCoords,
     getColor: (emotion) => LYRIC_EMOTION_COLORS[emotion],
   },
 };
 
-function getAudioEmotionCoords(track: LibraryTrack): MapCoordinates | null {
+function getAudioEmotionCoords(track: QueuedTrack): MapCoordinates | null {
   if (track.acoustic_emotion_coords != null) {
     return {
       x: track.acoustic_emotion_coords[0],
@@ -50,7 +50,7 @@ function getAudioEmotionCoords(track: LibraryTrack): MapCoordinates | null {
   return null;
 }
 
-function getLyricsEmotionCoords(track: LibraryTrack): MapCoordinates | null {
+function getLyricsEmotionCoords(track: QueuedTrack): MapCoordinates | null {
   const raw = track.lyrical_emotion_coords;
   if (
     Array.isArray(raw) &&

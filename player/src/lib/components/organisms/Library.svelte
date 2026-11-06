@@ -2,9 +2,7 @@
 <script lang="ts">
   import HeaderBanner from "$lib/components/molecules/HeaderBanner.svelte";
   import CommandBar from "$lib/components/molecules/CommandBar.svelte";
-  import LibraryControls, {
-    type LibraryViewMode,
-  } from "$lib/components/molecules/LibraryControls.svelte";
+  import LibraryControls from "$lib/components/molecules/LibraryControls.svelte";
   import LibraryDurationSummary from "$lib/components/molecules/LibraryDurationSummary.svelte";
   import LibraryListView from "$lib/components/organisms/LibraryListView.svelte";
   import LibraryMapView from "$lib/components/organisms/LibraryMapView.svelte";
@@ -13,14 +11,13 @@
   import { player } from "$lib/core/player.svelte";
   import { handleEnqueueAll } from "$lib/core/command.svelte";
   import { cn } from "$lib/utils";
+  import { ui } from "$lib/stores/ui.svelte";
 
   interface Props {
     class?: string;
   }
 
   let { class: className = "" }: Props = $props();
-
-  let viewMode = $state<LibraryViewMode>("list");
 
   // Total duration of current filtered view
   let filteredDuration = $derived(
@@ -53,9 +50,9 @@
         class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end"
       >
         <LibraryControls
-          {viewMode}
+          viewMode={ui.libraryView}
           disabled={library.displayedTracks.length === 0}
-          onViewChange={(mode) => (viewMode = mode)}
+          onViewChange={ui.setLibraryView}
           onTagAll={handleTagAll}
           onEnqueueAll={handleEnqueueAll}
         />
@@ -65,7 +62,7 @@
 
   <!-- Canvas Body -->
   <div class="flex-1 min-h-0">
-    {#if viewMode === "list"}
+    {#if ui.libraryView === "list"}
       <LibraryListView {queuedTrackIds} />
     {:else}
       <LibraryMapView {queuedTrackIds} />

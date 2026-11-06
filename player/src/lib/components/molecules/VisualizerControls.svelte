@@ -3,8 +3,7 @@
   import ControlButton from "$lib/components/atoms/ControlButton.svelte";
   import { cn } from "$lib/utils";
   import ToggleButton from "../atoms/ToggleButton.svelte";
-
-  export type VisualizerViewMode = "timeline" | "fluid";
+  import type { VisualizerViewMode } from "$lib/stores/ui.svelte";
 
   interface Props {
     viewMode?: VisualizerViewMode;

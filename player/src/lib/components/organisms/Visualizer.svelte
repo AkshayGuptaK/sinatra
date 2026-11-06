@@ -4,24 +4,20 @@
   import CommandBar from "$lib/components/molecules/CommandBar.svelte";
   import VisualizerTimelineView from "$lib/components/organisms/VisualizerTimelineView.svelte";
   import VisualizerFluidView from "$lib/components/organisms/VisualizerFluidView.svelte";
-  import VisualizerControls, {
-    type VisualizerViewMode,
-  } from "$lib/components/molecules/VisualizerControls.svelte";
+  import VisualizerControls from "$lib/components/molecules/VisualizerControls.svelte";
   import TimelineControls from "$lib/components/molecules/TimelineControls.svelte";
   import { View } from "@lucide/svelte";
   import { player } from "$lib/core/player.svelte";
   import { settings } from "$lib/core/settings.svelte";
   import { EMOTION_MAP } from "$lib/core/emotions.svelte";
+  import { ui } from "$lib/stores/ui.svelte";
 
   interface Props {
     class?: string;
-    isLyricsOpen: boolean;
-    onToggleLyrics?: () => void;
   }
 
-  let { class: className = "", isLyricsOpen, onToggleLyrics }: Props = $props();
+  let { class: className = "" }: Props = $props();
 
-  let viewMode = $state<VisualizerViewMode>("timeline");
 </script>
 
 <div
@@ -37,7 +33,7 @@
     >
       <CommandBar />
       <div class="flex gap-2">
-        {#if viewMode === "timeline"}
+        {#if ui.visualizerView === "timeline"}
           <TimelineControls
             canSplit={player.engine.canSplitSegment}
             canPush={player.engine.canPushSegment}
@@ -50,10 +46,10 @@
         {/if}
 
         <VisualizerControls
-          {viewMode}
-          onViewChange={(mode) => (viewMode = mode)}
-          {isLyricsOpen}
-          {onToggleLyrics}
+          viewMode={ui.visualizerView}
+          onViewChange={ui.setVisualizerView}
+          isLyricsOpen={ui.isLyricsOpen}
+          onToggleLyrics={ui.toggleLyrics}
         />
       </div>
     </div>
@@ -61,7 +57,7 @@
 
   <!-- Stage Canvas Body -->
   <div class="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
-    {#if viewMode === "timeline"}
+    {#if ui.visualizerView === "timeline"}
       <div class="w-full h-full overflow-y-auto">
         <VisualizerTimelineView
           segments={player.engine.segments}

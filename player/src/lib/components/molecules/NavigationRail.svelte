@@ -9,8 +9,7 @@
   import { cn } from "$lib/utils";
   import type { Component } from "svelte";
   import SinatraIcon from "$lib/components/atoms/SinatraIcon.svelte";
-
-  export type AppDeck = "explore" | "curate" | "vibe" | "settings";
+  import { ui, type AppDeck } from "$lib/stores/ui.svelte";
 
   interface NavItem {
     id: AppDeck;
@@ -20,14 +19,10 @@
   }
 
   interface Props {
-    activeDeck: AppDeck;
-    onSelectDeck?: (deck: AppDeck) => void;
     class?: string;
   }
 
   let {
-    activeDeck = "curate",
-    onSelectDeck,
     class: className = "",
   }: Props = $props();
 
@@ -62,7 +57,7 @@
   ];
 
   function handleClick(deck: AppDeck) {
-    onSelectDeck?.(deck);
+    ui.setDeck(deck);
   }
 </script>
 
@@ -83,7 +78,7 @@
 
     <div class="flex flex-col items-center gap-1.5 w-full px-2">
       {#each WORKSPACE_ITEMS as item (item.id)}
-        {@const isActive = activeDeck === item.id}
+        {@const isActive = ui.activeDeck === item.id}
         <button
           type="button"
           onclick={() => handleClick(item.id)}
@@ -113,7 +108,7 @@
 
   <div class="flex flex-col items-center gap-1.5 w-full px-2">
     {#each SYSTEM_ITEMS as item (item.id)}
-      {@const isActive = activeDeck === item.id}
+      {@const isActive = ui.activeDeck === item.id}
       <button
         type="button"
         onclick={() => handleClick(item.id)}

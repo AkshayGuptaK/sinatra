@@ -5,8 +5,7 @@
   import ControlButton from "$lib/components/atoms/ControlButton.svelte";
   import { List, CirclePlus, MapPin, Tag, Check, X } from "@lucide/svelte";
   import { cn } from "$lib/utils";
-
-  export type LibraryViewMode = "list" | "map";
+  import type { LibraryViewMode } from "$lib/stores/ui.svelte";
 
   interface Props {
     viewMode?: LibraryViewMode;

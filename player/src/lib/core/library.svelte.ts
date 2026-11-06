@@ -24,24 +24,33 @@ export class MusicLibrary {
 
   highlightedTrackId = $state<string | null>(null);
 
-  lyricMatches = $state<Map<string, string[]>>(new Map());
+  lyricMatches = $state(new Map<string, string[]>());
+  private lyricQueryResults = $state(new Map<string, Map<string, string[]>>());
   isSearchingLyrics = $state(false);
   isLoadingLyrics = $state(false);
 
   /**
-   * The currently active emotion filter key (normalized to lowercase), or null if not filtering by emotion.
+   * All active positive emotion filter keys (normalized to lowercase) in the AST.
    */
-  activeEmotionQuery = $derived.by(() => {
-    const emotionFilter = this.findFilterByType(
+  activeEmotionQueries = $derived.by(() => {
+    const emotionFilters = this.findAllFiltersByType(
       this.activeFilter,
-      "emotion_filter"
+      "emotion_filter",
+      false // exclude negated `not :emotion ...` from positive badge/sort
     );
-    const q = emotionFilter?.query.trim().toLowerCase();
-    return q || null;
+    return Array.from(
+      new Set(
+        emotionFilters.map((f) => f.query.trim().toLowerCase()).filter(Boolean)
+      )
+    );
   });
 
+  /**
+   * Primary emotion query for backwards compatibility.
+   */
+  activeEmotionQuery = $derived(this.activeEmotionQueries[0] ?? null);
+
   private lyricSearchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-  private lastLyricQuery = "";
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -121,62 +130,138 @@ export class MusicLibrary {
       .toLowerCase();
   }
 
-  async performLyricSearch(query: string) {
-    const cleanQuery = query.trim();
-    if (!cleanQuery) {
+  async performLyricSearches(queries: string[]) {
+    const cleanQueries = Array.from(
+      new Set(queries.map((q) => q.trim()).filter(Boolean))
+    );
+
+    if (cleanQueries.length === 0) {
+      this.lyricQueryResults = new Map();
       this.lyricMatches = new Map();
-      this.lastLyricQuery = "";
       return;
     }
 
-    if (cleanQuery === this.lastLyricQuery) return;
-    this.lastLyricQuery = cleanQuery;
+    // Keep cached results for queries that haven't changed
+    const nextResults = new Map<string, Map<string, string[]>>();
+    const queriesToFetch: string[] = [];
 
-    this.isSearchingLyrics = true;
-    try {
-      const results = await sinatraApi.searchLyrics(cleanQuery);
-      const matchMap = new Map<string, string[]>();
-      for (const item of results) {
-        matchMap.set(item.id, item.matches);
+    for (const q of cleanQueries) {
+      const existing = this.lyricQueryResults.get(q);
+      if (existing) {
+        nextResults.set(q, existing);
+      } else {
+        queriesToFetch.push(q);
       }
-      this.lyricMatches = matchMap;
-    } catch (err) {
-      console.error("Failed to search lyrics:", err);
-      this.lyricMatches = new Map();
-    } finally {
-      this.isSearchingLyrics = false;
     }
+
+    if (queriesToFetch.length > 0) {
+      this.isSearchingLyrics = true;
+      try {
+        const fetched = await Promise.all(
+          queriesToFetch.map(async (q) => {
+            const results = await sinatraApi.searchLyrics(q);
+            const matchMap = new Map<string, string[]>();
+            for (const item of results) {
+              matchMap.set(item.id, item.matches);
+            }
+            return [q, matchMap] as const;
+          })
+        );
+
+        for (const [q, matchMap] of fetched) {
+          nextResults.set(q, matchMap);
+        }
+      } catch (err) {
+        console.error("Failed to search lyrics:", err);
+      } finally {
+        this.isSearchingLyrics = false;
+      }
+    }
+
+    this.lyricQueryResults = nextResults;
+
+    // Merge positive lyric matches into `this.lyricMatches` for UI snippet display
+    const mergedMatches = new Map<string, string[]>();
+    for (const matchMap of nextResults.values()) {
+      for (const [trackId, lines] of matchMap.entries()) {
+        const existingLines = mergedMatches.get(trackId);
+        if (existingLines) {
+          const combined = Array.from(new Set([...existingLines, ...lines]));
+          mergedMatches.set(trackId, combined);
+        } else {
+          mergedMatches.set(trackId, lines);
+        }
+      }
+    }
+    this.lyricMatches = mergedMatches;
   }
 
   /**
-   * Returns the matched emotion name and raw score (0.0 - 1.0) for a track if an emotion filter is active.
+   * Returns the highest-scoring matched emotion name and raw score (0.0 - 1.0)
+   * for a track among any active emotion filters.
    */
   getTrackEmotionMatch(
     track: LibraryTrack
   ): { emotion: string; level: number } | null {
-    const emotion = this.activeEmotionQuery;
-    if (!emotion) return null;
-    const level = track.emotions?.[emotion];
-    if (level === undefined || level <= 0.1) return null;
-    return { emotion, level };
+    if (this.activeEmotionQueries.length === 0) return null;
+
+    let bestMatch: { emotion: string; level: number } | null = null;
+    for (const emotion of this.activeEmotionQueries) {
+      const level = track.acoustic_emotions?.[emotion];
+      if (level !== undefined && level > 0.1) {
+        if (!bestMatch || level > bestMatch.level) {
+          bestMatch = { emotion, level };
+        }
+      }
+    }
+    return bestMatch;
   }
 
   /**
-   * Unwraps a FilterIntent (handling nested `queued_filter`) to find a specific filter type.
+   * Collects all filter nodes of a given type across the boolean AST.
+   * When `includeNegated` is false, skips branches inside a `not` operator.
+   */
+  private findAllFiltersByType<T extends FilterIntent["type"]>(
+    filter: FilterIntent | null,
+    type: T,
+    includeNegated: boolean = true
+  ): Extract<FilterIntent, { type: T }>[] {
+    if (!filter) return [];
+    if (filter.type === type) {
+      return [filter as Extract<FilterIntent, { type: T }>];
+    }
+
+    switch (filter.type) {
+      case "queued_filter":
+        return this.findAllFiltersByType(filter.filter, type, includeNegated);
+      case "not":
+        return includeNegated
+          ? this.findAllFiltersByType(filter.operand, type, includeNegated)
+          : [];
+      case "and":
+      case "or":
+        return [
+          ...this.findAllFiltersByType(filter.left, type, includeNegated),
+          ...this.findAllFiltersByType(filter.right, type, includeNegated),
+        ];
+      default:
+        return [];
+    }
+  }
+
+  /**
+   * Returns the first filter node matching `type` in the AST, or null.
    */
   private findFilterByType<T extends FilterIntent["type"]>(
     filter: FilterIntent | null,
     type: T
   ): Extract<FilterIntent, { type: T }> | null {
-    if (!filter) return null;
-    if (filter.type === type)
-      return filter as Extract<FilterIntent, { type: T }>;
-    if (filter.type === "queued_filter") {
-      return this.findFilterByType(filter.filter, type);
-    }
-    return null;
+    return this.findAllFiltersByType(filter, type)[0] ?? null;
   }
 
+  /**
+   * Helper that evaluates whether a track matches a FilterIntent recursively.
+   */
   /**
    * Helper that evaluates whether a track matches a FilterIntent recursively.
    */
@@ -186,6 +271,21 @@ export class MusicLibrary {
     queuedIds: Set<string>
   ): boolean {
     switch (filter.type) {
+      case "and":
+        return (
+          this.matchesFilter(track, filter.left, queuedIds) &&
+          this.matchesFilter(track, filter.right, queuedIds)
+        );
+
+      case "or":
+        return (
+          this.matchesFilter(track, filter.left, queuedIds) ||
+          this.matchesFilter(track, filter.right, queuedIds)
+        );
+
+      case "not":
+        return !this.matchesFilter(track, filter.operand, queuedIds);
+
       case "queued_filter": {
         if (!queuedIds.has(track.id)) return false;
         return this.matchesFilter(track, filter.filter, queuedIds);
@@ -220,14 +320,15 @@ export class MusicLibrary {
       case "emotion_filter": {
         const q = filter.query.trim().toLowerCase();
         if (!q) return true;
-        const emotionLevel = track.emotions?.[q];
+        const emotionLevel = track.acoustic_emotions?.[q];
         return !!emotionLevel && emotionLevel > 0.1;
       }
 
       case "lyrics_filter": {
         const q = filter.query.trim();
         if (!q) return true;
-        return this.lyricMatches.has(track.id);
+        const queryMap = this.lyricQueryResults.get(q);
+        return queryMap ? queryMap.has(track.id) : false;
       }
 
       case "text_search": {
@@ -290,11 +391,12 @@ export class MusicLibrary {
         const bVal = String(b[sortColumn] ?? "");
         return aVal.localeCompare(bVal) * dirMultiplier;
       });
-    } else if (this.activeEmotionQuery) {
-      const emo = this.activeEmotionQuery;
-      tracks.sort(
-        (a, b) => (b.emotions?.[emo] ?? 0) - (a.emotions?.[emo] ?? 0)
-      );
+    } else if (this.activeEmotionQueries.length > 0) {
+      const emotions = this.activeEmotionQueries;
+      const getMaxScore = (t: LibraryTrack) =>
+        Math.max(0, ...emotions.map((e) => t.acoustic_emotions?.[e] ?? 0));
+
+      tracks.sort((a, b) => getMaxScore(b) - getMaxScore(a));
     }
     return tracks;
   }
@@ -393,18 +495,25 @@ export class MusicLibrary {
       this.clearFilter();
       return;
     }
-    const lyricsFilter = this.findFilterByType(filter, "lyrics_filter");
-    if (lyricsFilter) {
+
+    const lyricsFilters = this.findAllFiltersByType(filter, "lyrics_filter");
+    if (lyricsFilters.length > 0) {
       if (this.lyricSearchDebounceTimer) {
         clearTimeout(this.lyricSearchDebounceTimer);
       }
+      const queries = lyricsFilters.map((f) => f.query);
       this.lyricSearchDebounceTimer = setTimeout(() => {
-        this.performLyricSearch(lyricsFilter.query);
+        this.performLyricSearches(queries);
       }, 300);
-    } else if (this.findFilterByType(this.activeFilter, "lyrics_filter")) {
+    } else if (this.lyricQueryResults.size > 0 || this.lyricMatches.size > 0) {
+      if (this.lyricSearchDebounceTimer) {
+        clearTimeout(this.lyricSearchDebounceTimer);
+        this.lyricSearchDebounceTimer = null;
+      }
+      this.lyricQueryResults = new Map();
       this.lyricMatches = new Map();
-      this.lastLyricQuery = "";
     }
+
     this.activeFilter = filter;
   }
 
@@ -413,8 +522,8 @@ export class MusicLibrary {
       clearTimeout(this.lyricSearchDebounceTimer);
       this.lyricSearchDebounceTimer = null;
     }
+    this.lyricQueryResults = new Map();
     this.lyricMatches = new Map();
-    this.lastLyricQuery = "";
     this.activeFilter = null;
   }
 

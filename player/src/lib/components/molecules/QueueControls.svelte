@@ -50,20 +50,39 @@
     onClearQueue,
   }: Props = $props();
 
-  function getConstraintLabel(filter: FilterIntent): string {
+  function getConstraintLabel(filter: FilterIntent, precedence = 0): string {
     switch (filter.type) {
+      case "or": {
+        const str = `${getConstraintLabel(filter.left, 1)} or ${getConstraintLabel(filter.right, 1)}`;
+        return precedence > 1 ? `(${str})` : str;
+      }
+
+      case "and": {
+        const str = `${getConstraintLabel(filter.left, 2)} and ${getConstraintLabel(filter.right, 2)}`;
+        return precedence > 2 ? `(${str})` : str;
+      }
+
+      case "not": {
+        return `not ${getConstraintLabel(filter.operand, 3)}`;
+      }
+
+      case "queued_filter":
+        return `:q ${getConstraintLabel(filter.filter, 3)}`;
+
       case "column_filter":
         return `:${filter.column} ${filter.query}`;
+
       case "duration_filter":
         return `:dur ${filter.operator} ${formatTime(filter.seconds)}`;
+
       case "lyrics_filter":
         return `:lyric ${filter.query}`;
-      case "text_search":
-        return `"${filter.query}"`;
-      case "queued_filter":
-        return `:q ${getConstraintLabel(filter.filter)}`;
+
       case "emotion_filter":
         return `:emot ${filter.query}`;
+
+      case "text_search":
+        return `"${filter.query}"`;
     }
   }
 </script>

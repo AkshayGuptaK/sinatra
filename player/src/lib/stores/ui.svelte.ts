@@ -10,21 +10,21 @@ class UIStore {
   isLyricsOpen = $state(false);
   isLyricsEditing = $state(false);
 
-  setDeck(deck: AppDeck) {
+  setDeck = (deck: AppDeck) => {
     this.activeDeck = deck;
   }
 
-  setLibraryView(view: LibraryViewMode) {
+  setLibraryView = (view: LibraryViewMode) => {
     this.activeDeck = "curate";
     this.libraryView = view;
   }
 
-  setVisualizerView(view: VisualizerViewMode) {
+  setVisualizerView = (view: VisualizerViewMode) => {
     this.activeDeck = "vibe";
     this.visualizerView = view;
   }
 
-  toggleLyrics() {
+  toggleLyrics = () => {
     this.activeDeck = "vibe";
     this.isLyricsOpen = !this.isLyricsOpen;
   }

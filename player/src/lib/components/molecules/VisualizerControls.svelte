@@ -62,7 +62,7 @@
     size="icon"
     iconClass="size-4"
     activeClass="size-8 text-primary font-medium bg-muted/60"
-    inactiveClass="size-8 text-muted-foreground hover:text-foreground"
-    onToggle={() => onToggleLyrics?.()}
+    inactiveClass="size-8 text-muted-foreground hover:text-secondary-foreground"
+    onToggle={onToggleLyrics}
   />
 </div>

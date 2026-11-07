@@ -2,15 +2,15 @@
   import { slide } from "svelte/transition";
   import { player } from "$lib/core/player.svelte";
   import { library } from "$lib/core/library.svelte";
+  import { ui } from "$lib/stores/ui.svelte";
+
   import LyricsSidebar from "../molecules/LyricsSidebar.svelte";
   import Visualizer from "../organisms/Visualizer.svelte";
-
-  let isLyricsOpen = $state(false);
 
   // Lazy-fetch lyrics into `library.tracks` only when sidebar is open
   $effect(() => {
     const trackId = player.currentTrack?.id;
-    if (isLyricsOpen && trackId) {
+    if (ui.isLyricsOpen && trackId) {
       library.ensureTrackLyrics(trackId);
     }
   });
@@ -21,15 +21,14 @@
     <main
       class="flex-1 min-w-0 h-full overflow-hidden transition-all duration-300"
     >
-      <Visualizer
-        {isLyricsOpen}
-        onToggleLyrics={() => (isLyricsOpen = !isLyricsOpen)}
-        class="h-full w-full"
-      />
+      {#if player.currentTrack}
+        <Visualizer class="h-full w-full" />
+      {:else}
+        <div class="flex items-center justify-center h-full text-sm">Play a track to see visualizations.</div>
+      {/if}
     </main>
 
-    <!-- Lyrics Sidebar -->
-    {#if isLyricsOpen}
+    {#if ui.isLyricsOpen}
       <aside
         transition:slide={{ axis: "x", duration: 250 }}
         class="w-80 lg:w-96 shrink-0 h-full flex flex-col overflow-hidden"
@@ -45,7 +44,7 @@
               });
             }
           }}
-          onClose={() => (isLyricsOpen = false)}
+          onClose={ui.toggleLyrics}
           class="h-full w-full"
         />
       </aside>

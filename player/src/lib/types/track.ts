@@ -37,6 +37,7 @@ export type QueuedTrack = Pick<
   | "lyrical_emotions"
   | "acoustic_emotion_coords"
   | "lyrical_emotion_coords"
+  | "lyrics"
 > & {
   source?: string;
 };

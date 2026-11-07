@@ -533,6 +533,29 @@ export class MusicLibrary {
     }
   }
 
+  /**
+   * Returns N randomly sampled tracks matching an optional filter.
+   * Uses a partial Fisher-Yates shuffle to sample without full array duplication.
+   */
+  getRandomTracks(count = 1, filter?: FilterIntent): LibraryTrack[] {
+    const pool = filter ? this.getFilteredTracks(filter) : [...this.tracks];
+    if (pool.length === 0) return [];
+
+    const sampleCount = Math.min(count, pool.length);
+    const result = [];
+    const takenIndices = new Set<number>();
+
+    while (result.length < sampleCount) {
+      const idx = Math.floor(Math.random() * pool.length);
+      if (!takenIndices.has(idx)) {
+        takenIndices.add(idx);
+        result.push(pool[idx]);
+      }
+    }
+
+    return result;
+  }
+
   setHighlightedTrack(id: string | null) {
     this.highlightedTrackId = id;
   }

@@ -19,6 +19,13 @@ export type FilterIntent =
   | { type: "queued_filter"; filter: FilterIntent }
   | { type: "text_search"; query: string };
 
+export interface RandomActionDirective {
+  isRandom: boolean;
+  count: number;
+  filter?: FilterIntent;
+  remainingText: string;
+}
+
 // Generic Command Invocation
 export interface ParsedCommand {
   type: "command";
@@ -336,6 +343,33 @@ export function isStructuredFilterExpression(text: string): boolean {
     trimmed.startsWith("(") ||
     /^not\s+[:(]/i.test(trimmed)
   );
+}
+
+/**
+ * Checks for a 'random' or 'rand' modifier in play/queue arguments.
+ * Syntax: "random [count] [:filter]"
+ */
+export function parseRandomDirective(rawArgs: string): RandomActionDirective {
+  const trimmed = rawArgs.trim();
+  const match = trimmed.match(/^(?:random|rand)(?:\s+(\d+))?(?:\s+(.*))?$/i);
+
+  if (!match) {
+    return {
+      isRandom: false,
+      count: 1,
+      remainingText: trimmed,
+    };
+  }
+
+  const count = match[1] ? Math.max(1, parseInt(match[1], 10)) : 1;
+  const trailing = match[2]?.trim() || "";
+
+  return {
+    isRandom: true,
+    count,
+    filter: trailing ? parseFilterCommand(trailing) : undefined,
+    remainingText: trailing,
+  };
 }
 
 /**

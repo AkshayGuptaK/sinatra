@@ -11,6 +11,7 @@ import { settings } from "$lib/core/settings.svelte";
 import { SETTINGS_DEFINITIONS } from "$lib/config/settingsRegistry";
 import {
   parseFilterCommand,
+  parseRandomDirective,
   type FilterIntent,
 } from "$lib/utils/commandParser";
 
@@ -254,8 +255,8 @@ export const COMMAND_REGISTRY: AppCommand[] = [
   {
     id: "queue.play",
     name: "play",
-    label: "/play <filter|prompt>",
-    desc: "Play matching tracks immediately, or prompt the MCP agent",
+    label: "/play [random <n>] <filter|prompt>",
+    desc: "Play matching tracks, optionally a random sample.",
     category: "Playback",
     shortcut: "Space",
     aliases: ["p"],
@@ -292,6 +293,11 @@ export const COMMAND_REGISTRY: AppCommand[] = [
           label: "/play :lyrics <phrase>",
           desc: "Play tracks matching lyrics",
         },
+        {
+          prefix: "/play random",
+          label: "/play random",
+          desc: "Play 1 random track from library",
+        },
       ];
       if (!trimmed) return options;
       return options.filter((o) =>
@@ -299,6 +305,17 @@ export const COMMAND_REGISTRY: AppCommand[] = [
       );
     },
     execute: ({ rawArgs, filter }) => {
+      const randomDirective = parseRandomDirective(rawArgs);
+      if (randomDirective.isRandom) {
+        const tracks = library.getRandomTracks(
+          randomDirective.count,
+          randomDirective.filter
+        );
+        if (tracks.length > 0) {
+          player.setQueue(tracks, 0, true);
+        }
+        return;
+      }
       if (filter) {
         const matching = library.getFilteredTracks(filter);
         if (matching.length > 0) {
@@ -349,6 +366,11 @@ export const COMMAND_REGISTRY: AppCommand[] = [
           label: "/queue :lyrics <phrase>",
           desc: "Enqueue tracks matching lyrics",
         },
+        {
+          prefix: "/queue random",
+          label: "/queue random",
+          desc: "Enqueue 1 random track from library",
+        },
       ];
       if (!trimmed) return options;
       return options.filter((o) =>
@@ -356,6 +378,17 @@ export const COMMAND_REGISTRY: AppCommand[] = [
       );
     },
     execute: ({ rawArgs, filter }) => {
+      const randomDirective = parseRandomDirective(rawArgs);
+      if (randomDirective.isRandom) {
+        const tracks = library.getRandomTracks(
+          randomDirective.count,
+          randomDirective.filter
+        );
+        for (const track of tracks) {
+          player.enqueue(track);
+        }
+        return;
+      }
       if (filter) {
         const matching = library.getFilteredTracks(filter);
         for (const track of matching) {

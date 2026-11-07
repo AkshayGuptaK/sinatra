@@ -9,7 +9,6 @@
   import { Library } from "@lucide/svelte";
   import { library } from "$lib/core/library.svelte";
   import { player } from "$lib/core/player.svelte";
-  import { handleEnqueueAll } from "$lib/core/command.svelte";
   import { cn } from "$lib/utils";
   import { ui } from "$lib/stores/ui.svelte";
 
@@ -54,7 +53,7 @@
           disabled={library.displayedTracks.length === 0}
           onViewChange={ui.setLibraryView}
           onTagAll={handleTagAll}
-          onEnqueueAll={handleEnqueueAll}
+          onEnqueueAll={library.enqueueAllFiltered}
         />
       </div>
     </div>

@@ -249,11 +249,7 @@ export const COMMAND_REGISTRY: AppCommand[] = [
     label: "/enqueue-all",
     desc: "Append all visible library tracks to active queue",
     category: "Queue",
-    execute: () => {
-      for (const track of library.displayedTracks) {
-        player.enqueue(track);
-      }
-    },
+    execute: library.enqueueAllFiltered,
   },
   {
     id: "queue.play",

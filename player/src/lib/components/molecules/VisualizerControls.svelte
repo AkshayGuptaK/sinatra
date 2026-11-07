@@ -1,7 +1,7 @@
 <script lang="ts">
+  import { cn } from "$lib/utils";
   import { Mic, Timeline, Bubbles } from "@lucide/svelte";
   import ControlButton from "$lib/components/atoms/ControlButton.svelte";
-  import { cn } from "$lib/utils";
   import ToggleButton from "../atoms/ToggleButton.svelte";
   import type { VisualizerViewMode } from "$lib/stores/ui.svelte";
 

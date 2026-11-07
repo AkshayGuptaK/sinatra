@@ -22,9 +22,9 @@ export type FilterIntent =
 // Generic Command Invocation
 export interface ParsedCommand {
   type: "command";
-  name: string; // e.g. "play", "set", "view", "dj"
-  rawArgs: string; // e.g. ":artist Queen", "appearance.theme dark"
-  filter?: FilterIntent; // Populated if rawArgs contains a valid filter AST
+  name: string;
+  rawArgs: string;
+  filter?: FilterIntent;
 }
 
 export type ParsedInput = ParsedCommand | FilterIntent;

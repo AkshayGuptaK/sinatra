@@ -26,11 +26,5 @@ export function handleCommandSubmit(input: ParsedInput) {
     player.setQueue(library.displayedTracks, 0, true);
     return;
   }
-  handleEnqueueAll();
-}
-
-export function handleEnqueueAll() {
-  for (const track of library.displayedTracks) {
-    player.enqueue(track);
-  }
+  library.enqueueAllFiltered();
 }

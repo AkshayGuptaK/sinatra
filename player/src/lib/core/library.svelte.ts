@@ -527,6 +527,12 @@ export class MusicLibrary {
     this.activeFilter = null;
   }
 
+  enqueueAllFiltered() {
+    for (const track of this.displayedTracks) {
+      player.enqueue(track);
+    }
+  }
+
   setHighlightedTrack(id: string | null) {
     this.highlightedTrackId = id;
   }

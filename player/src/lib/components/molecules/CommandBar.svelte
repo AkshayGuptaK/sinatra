@@ -1,10 +1,14 @@
+<!-- src/lib/components/molecules/CommandBar.svelte -->
 <script lang="ts">
   import { Search, Sparkles, Funnel, X, CornerDownLeft } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import TextInput from "$lib/components/atoms/TextInput.svelte";
   import { parseCommandInput } from "$lib/utils/commandParser";
   import { cn } from "$lib/utils";
-  import { getSettingSuggestions } from "$lib/utils/settingsSuggestions";
+  import {
+    getCommandSuggestions,
+    type CommandSuggestion,
+  } from "$lib/config/commandRegistry";
   import {
     handleCommandSubmit,
     handleFilterChange,
@@ -21,87 +25,8 @@
   let selectedIndex = $state(0);
   let inputEl = $state<HTMLInputElement | null>(null);
 
-  const COMMAND_SUGGESTIONS = [
-    {
-      prefix: "/p",
-      label: "/play <prompt>",
-      desc: "Replace queue with prompted music",
-    },
-    {
-      prefix: "/q",
-      label: "/queue <prompt>",
-      desc: "Add prompted music to queue",
-    },
-    {
-      prefix: "/s",
-      label: "/search <prompt>",
-      desc: "Explore music matching prompt",
-    },
-    {
-      prefix: "/dj",
-      label: "/dj <filter>",
-      desc: "Set AutoDJ hard boundary (:tag, :mood, :d)",
-    },
-    {
-      prefix: ":artist",
-      label: ":artist <name>",
-      desc: "Filter library strictly by artist",
-    },
-    {
-      prefix: ":album",
-      label: ":album <name>",
-      desc: "Filter library strictly by album",
-    },
-    {
-      prefix: ":mood",
-      label: ":mood <name>",
-      desc: "Filter library strictly by mood",
-    },
-    {
-      prefix: ":tag",
-      label: ":tag <name>",
-      desc: "Filter library strictly by tag",
-    },
-    {
-      prefix: ":d",
-      label: ":duration > 3m",
-      desc: "Filter by duration (>, <, >=, <=)",
-    },
-    {
-      prefix: ":lyric",
-      label: ':lyrics "phrase" or word',
-      desc: "Filter library strictly by lyrics",
-    },
-    {
-      prefix: ":q",
-      label: ":queued <filter>",
-      desc: "Filter within currently queued tracks",
-    },
-  ];
+  let matchingSuggestions = $derived(getCommandSuggestions(rawInput));
 
-  // Only suggest base commands while typing the first token, or delegate to /set
-  let matchingSuggestions = $derived.by(() => {
-    const trimmed = rawInput.trimStart();
-
-    if (trimmed.startsWith("/set")) {
-      return getSettingSuggestions(trimmed);
-    }
-
-    if (!trimmed.startsWith("/") && !trimmed.startsWith(":")) {
-      return [];
-    }
-
-    if (/\s/.test(trimmed)) {
-      return [];
-    }
-
-    const token = trimmed.toLowerCase();
-    return COMMAND_SUGGESTIONS.filter((s) =>
-      s.prefix.toLowerCase().startsWith(token)
-    );
-  });
-
-  // Keep selection bounded when matching suggestions change
   $effect(() => {
     if (selectedIndex >= matchingSuggestions.length) {
       selectedIndex = 0;
@@ -121,10 +46,33 @@
     inputEl?.focus();
   }
 
-  // Only complete "/set <key> <value>" suggestions are terminal commands that can submit directly from the menu
-  function isTerminalSuggestion(prefix: string): boolean {
-    const parts = prefix.trim().split(/\s+/);
-    return parts[0] === "/set" && parts.length >= 3;
+  /**
+   * Identifies whether a suggestion can be executed immediately as a terminal command,
+   * or if it requires additional user parameters (e.g. a search query or setting value).
+   */
+  function isTerminalSuggestion(sug: CommandSuggestion): boolean {
+    // If the label contains an argument placeholder like <name>, it needs parameters
+    if (sug.label.includes("<")) return false;
+
+    // Filter prefixes starting with ':' require a query argument
+    if (sug.prefix.startsWith(":")) return false;
+
+    // An incomplete /set without a value needs its value
+    const parts = sug.prefix.trim().split(/\s+/);
+    if (parts[0] === "/set" && parts.length < 3) return false;
+
+    return true;
+  }
+
+  function handleSelectSuggestion(sug: CommandSuggestion) {
+    if (isTerminalSuggestion(sug)) {
+      const parsed = parseCommandInput(sug.prefix);
+      handleCommandSubmit(parsed);
+      rawInput = "";
+      inputEl?.blur();
+    } else {
+      applySuggestion(sug.prefix);
+    }
   }
 
   function handleKeydown(e: KeyboardEvent) {
@@ -143,7 +91,10 @@
       }
       if (e.key === "Tab") {
         e.preventDefault();
-        applySuggestion(matchingSuggestions[selectedIndex].prefix);
+        const selectedSug = matchingSuggestions[selectedIndex];
+        if (selectedSug) {
+          applySuggestion(selectedSug.prefix);
+        }
         return;
       }
     }
@@ -151,24 +102,25 @@
     if (e.key === "Enter") {
       e.preventDefault();
 
-      const selectedPrefix = matchingSuggestions[selectedIndex]?.prefix;
+      const selectedSug = matchingSuggestions[selectedIndex];
 
-      // If suggestions are open, decide whether Enter autocompletes or submits
-      if (selectedPrefix) {
-        if (!isTerminalSuggestion(selectedPrefix)) {
+      // If the suggestion menu is open and an item is selected
+      if (selectedSug) {
+        if (!isTerminalSuggestion(selectedSug)) {
           // Intermediate prefix (e.g. "/s", ":artist", "/set appearance.theme") -> autocomplete it
-          applySuggestion(selectedPrefix);
+          applySuggestion(selectedSug.prefix);
           return;
         }
-        // Terminal suggestion (e.g. "/set appearance.theme dark") -> submit the selected suggestion
-        const parsed = parseCommandInput(selectedPrefix);
+
+        // Terminal suggestion (e.g. "/lyrics", "/next", "/set appearance.theme dark") -> execute
+        const parsed = parseCommandInput(selectedSug.prefix);
         handleCommandSubmit(parsed);
         rawInput = "";
         inputEl?.blur();
         return;
       }
 
-      // Otherwise, submit the user's rawInput directly (e.g. "/s turtles", "/p upbeat")
+      // Otherwise, submit user's rawInput directly (e.g. freeform search, /s query, /p prompt)
       const parsed = parseCommandInput(rawInput);
       handleCommandSubmit(parsed);
       rawInput = "";
@@ -247,7 +199,7 @@
         <div
           role="button"
           tabindex={-1}
-          onclick={() => applySuggestion(sug.prefix)}
+          onclick={() => handleSelectSuggestion(sug)}
           class={cn(
             "flex items-center justify-between px-2.5 py-1.5 rounded-md cursor-pointer transition-colors",
             idx === selectedIndex
@@ -262,14 +214,24 @@
             >
           </div>
 
-          {#if idx === selectedIndex}
-            <kbd
-              class="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground bg-background border border-border rounded shadow-2xs shrink-0"
-            >
-              <span>tab</span>
-              <CornerDownLeft class="size-2.5" />
-            </kbd>
-          {/if}
+          <div class="flex items-center gap-2 shrink-0">
+            {#if sug.shortcut && idx !== selectedIndex}
+              <kbd
+                class="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground/80 bg-muted/60 border border-border/50 rounded"
+              >
+                {sug.shortcut}
+              </kbd>
+            {/if}
+
+            {#if idx === selectedIndex}
+              <kbd
+                class="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground bg-background border border-border rounded shadow-2xs shrink-0"
+              >
+                <span>{isTerminalSuggestion(sug) ? "enter" : "tab"}</span>
+                <CornerDownLeft class="size-2.5" />
+              </kbd>
+            {/if}
+          </div>
         </div>
       {/each}
     </div>

@@ -89,7 +89,7 @@
             "group relative flex items-center justify-center size-9 rounded-lg transition-all duration-150 cursor-pointer",
             isActive
               ? "bg-primary text-primary-foreground shadow-xs font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              : "text-muted-foreground hover:text-secondary-foreground hover:bg-muted/60"
           )}
         >
           {#if isActive}

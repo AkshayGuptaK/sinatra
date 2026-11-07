@@ -1,60 +1,28 @@
 import { library } from "$lib/core/library.svelte";
 import { player } from "$lib/core/player.svelte";
-import { explorer } from "$lib/core/explorer.svelte";
-import { settings } from "$lib/core/settings.svelte";
-import type { ParsedIntent } from "$lib/utils/commandParser";
+import { executeCommand } from "$lib/config/commandRegistry";
+import type { ParsedInput } from "$lib/utils/commandParser";
 
-export function handleFilterChange(intent: ParsedIntent) {
-  if (
-    intent.type === "agent_action" ||
-    intent.type === "filter_action" ||
-    intent.type === "autodj_constraint" ||
-    intent.type === "setting_assignment" ||
-    intent.type === "search_action"
-  ) {
-    // potentially clear library filter?
+export function handleFilterChange(input: ParsedInput) {
+  if (input.type === "command") {
     return;
   }
-  library.setFilter(intent);
+  library.setFilter(input);
 }
 
-export function handleCommandSubmit(intent: ParsedIntent) {
-  if (intent.type === "agent_action") {
-    console.log(
-      "Dispatching agent intent to Sinatra MCP:",
-      intent.action,
-      intent.prompt
-    );
-    // TODO: Trigger local LLM / MCP action hook here
-    return;
-  }
-  if (intent.type === "setting_assignment") {
-    let val = intent.value;
-    if (val === "on") val = "true";
-    if (val === "off") val = "false";
-
-    settings.set(intent.key, val);
-    return;
-  }
-  if (intent.type === "search_action") {
-    return explorer.executeIntent(intent.filter);
-  }
-  if (intent.type === "filter_action") {
-    const matchingTracks = library.getFilteredTracks(intent.filter);
-    if (intent.action === "play") {
-      player.setQueue(matchingTracks, 0, true);
-    } else {
-      for (const track of matchingTracks) {
-        player.enqueue(track);
-      }
+export function handleCommandSubmit(input: ParsedInput) {
+  if (input.type === "command") {
+    const executed = executeCommand(input.name, {
+      rawArgs: input.rawArgs,
+      filter: input.filter,
+    });
+    if (!executed) {
+      console.warn(`Unknown command: /${input.name}`);
     }
     return;
   }
-  if (intent.type === "autodj_constraint") {
-    player.setAutoDjConstraint(intent.filter);
-    return;
-  }
-  if (library.displayedTracks.length == 0) {
+
+  if (library.displayedTracks.length === 0) {
     player.setQueue(library.displayedTracks, 0, true);
     return;
   }

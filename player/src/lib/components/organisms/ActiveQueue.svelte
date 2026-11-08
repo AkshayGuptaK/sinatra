@@ -1,4 +1,3 @@
-<!-- src/lib/components/organisms/ActiveQueue.svelte -->
 <script lang="ts">
   import HeaderBanner from "$lib/components/molecules/HeaderBanner.svelte";
   import QueueTrackItem from "$lib/components/molecules/QueueTrackItem.svelte";
@@ -8,6 +7,8 @@
   import { library } from "$lib/core/library.svelte";
   import { cn } from "$lib/utils";
   import { ListMusic } from "@lucide/svelte";
+  import { explorer } from "$lib/core/explorer.svelte";
+  import type { QueuedTrack } from "$lib/types/track";
 
   interface Props {
     class?: string;
@@ -76,6 +77,10 @@
     draggedIndex = null;
     dropTargetIndex = null;
   }
+
+  function handleDownload(track: QueuedTrack) {
+    explorer.download(track.id);
+  }
 </script>
 
 <div
@@ -121,6 +126,7 @@
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onDragEnd={handleDragEnd}
+          onDownload={handleDownload}
         />
       {/each}
     {/if}

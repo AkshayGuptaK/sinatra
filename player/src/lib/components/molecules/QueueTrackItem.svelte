@@ -1,7 +1,7 @@
 <script lang="ts">
   import { type QueuedTrack } from "$lib/types/track";
   import { formatTime } from "$lib/utils/time";
-  import { Volume2, X, GripVertical } from "@lucide/svelte";
+  import { Volume2, X, GripVertical, Download } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import { cn } from "$lib/utils";
   import {
@@ -23,6 +23,7 @@
     onDragOver?: (e: DragEvent, index: number) => void;
     onDrop?: (e: DragEvent, index: number) => void;
     onDragEnd?: () => void;
+    onDownload?: (track: QueuedTrack) => void;
   }
 
   let {
@@ -39,6 +40,7 @@
     onDragOver,
     onDrop,
     onDragEnd,
+    onDownload,
   }: Props = $props();
 
   let displayTitle = $derived(getTrackDisplayTitle(track));
@@ -47,6 +49,11 @@
   function handleRemove(event: MouseEvent) {
     event.stopPropagation();
     onRemove?.(index);
+  }
+
+  function handleDownload(event: MouseEvent) {
+    event.stopPropagation();
+    onDownload?.(track)
   }
 </script>
 
@@ -111,6 +118,20 @@
   </div>
 
   <div class="flex items-center justify-between gap-3 shrink-0">
+    {#if track.source}
+    <div class="hidden group-hover:flex items-center">
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={`Download ${displayTitle}`}
+        title="Download"
+        onclick={handleDownload}
+        class="size-4.5 p-0 text-muted-foreground hover:text-secondary-foreground hover:bg-destructive/10"
+      >
+        <Download class="size-3.5" />
+      </Button>
+    </div>
+    {/if}
     <span class="font-mono text-xs tabular-nums text-muted-foreground shrink-0">
       {formatTime(track.duration ?? 0)}
     </span>

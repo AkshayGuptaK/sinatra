@@ -85,7 +85,7 @@ class PostgresStore:
 
         batch_params = []
         for c in chunks:
-            emotions = c.get("emotions")
+            emotions = c.get("acoustic_emotions")
             emotions_json = json.dumps(emotions) if emotions is not None else None
 
             musical_emb = c.get("acoustic_embedding", c.get("acoustic_embedding"))

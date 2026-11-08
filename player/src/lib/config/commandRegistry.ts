@@ -482,6 +482,7 @@ export const COMMAND_REGISTRY: AppCommand[] = [
       );
     },
     execute: ({ rawArgs }) => {
+      ui.setDeck("explore")
       const match = rawArgs.match(/^:(song|artist|album|mood)(?:\s+(.*)|$)/i);
       if (match) {
         const type = match[1].toLowerCase() as

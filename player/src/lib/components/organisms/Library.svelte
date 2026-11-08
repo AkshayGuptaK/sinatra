@@ -43,7 +43,7 @@
     <div
       class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-2"
     >
-      <CommandBar />
+      <CommandBar deck="curate"/>
 
       <div
         class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end"

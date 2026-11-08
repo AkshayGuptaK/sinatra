@@ -31,7 +31,7 @@
     <div
       class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-2"
     >
-      <CommandBar />
+      <CommandBar deck="vibe"/>
       <div class="flex gap-2">
         {#if ui.visualizerView === "timeline"}
           <TimelineControls

@@ -376,8 +376,9 @@ export function parseRandomDirective(rawArgs: string): RandomActionDirective {
  * Top-level entry point. Decides only whether input is a command (`/`)
  * or a filter expression, parsing nested filters if present.
  */
-export function parseCommandInput(input: string): ParsedInput {
+export function parseCommandInput(input: string): ParsedInput | null {
   const trimmed = input.trim();
+  if (!trimmed) return null;
 
   if (trimmed.startsWith("/")) {
     const body = trimmed.slice(1);

@@ -1,16 +1,20 @@
 import { library } from "$lib/core/library.svelte";
 import { player } from "$lib/core/player.svelte";
+import { ui } from "$lib/stores/ui.svelte";
 import { executeCommand } from "$lib/config/commandRegistry";
 import type { ParsedInput } from "$lib/utils/commandParser";
 
-export function handleFilterChange(input: ParsedInput) {
+export function handleFilterChange(input: ParsedInput | null) {
+  if (!input) return;
   if (input.type === "command") {
     return;
   }
+  ui.setDeck("curate");
   library.setFilter(input);
 }
 
-export function handleCommandSubmit(input: ParsedInput) {
+export function handleCommandSubmit(input: ParsedInput | null) {
+  if (!input) return;
   if (input.type === "command") {
     const executed = executeCommand(input.name, {
       rawArgs: input.rawArgs,

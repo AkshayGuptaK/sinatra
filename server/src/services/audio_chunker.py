@@ -34,7 +34,7 @@ class AudioChunker:
         hop_length: int = 2048,
         min_seg_sec: float = 10.0,
         crop_sec: float = 15.0,
-        similarity_merge_threshold: float = 0.98,
+        similarity_merge_threshold: float = 0.99,
     ):
         self.sample_rate = sample_rate
         self.hop_length = hop_length
@@ -207,7 +207,7 @@ class AudioChunker:
         features = np.vstack([mfcc_norm, chroma_norm])
 
         # Dynamic cluster budget: ~1 split every 35-40s
-        max_candidates = int(np.clip(round(total_sec / 35.0), 3, 8))
+        max_candidates = int(np.clip(round(total_sec / 35.0), 3, 30))
 
         # Constrained Agglomerative Clustering
         bound_frames = librosa.segment.agglomerative(features, k=max_candidates)

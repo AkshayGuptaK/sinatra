@@ -12,6 +12,7 @@ from src.services.emotion_scorer import get_emotion_scorer
 from src.pg import get_pg
 from src.services.audio_chunker import get_audio_chunker
 import warnings
+from src.sources import FileSystemSource
 
 warnings.filterwarnings(
     "ignore",
@@ -29,9 +30,9 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
 
     # 1. Query target tracks
     query = """
-        SELECT id::text, filepath
+        SELECT id::text, source_id
         FROM tracks
-        WHERE filepath IS NOT NULL
+        WHERE source_id IS NOT NULL
     """
     if not overwrite:
         query += """
@@ -68,7 +69,7 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
         SET acoustic_embedding = %s::vector,
             acoustic_emotions = %s::jsonb,
             acoustic_emotion_vector = %s::vector,
-            acoustic_emotion_coords = %s,
+            acoustic_emotion_coords = point(%s, %s),
             music_start = %s,
             music_end = %s,
             updated_at = NOW()
@@ -80,19 +81,24 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
     skipped = 0
     t_start = time.perf_counter()
 
-    for idx, (track_id, filepath) in enumerate(rows, 1):
-        if not os.path.exists(filepath):
+    for idx, (track_id, source_id) in enumerate(rows, 1):
+        if not os.path.exists(source_id):
             print(
-                f"⚠️ [{idx}/{total_tracks}] File not found on disk, skipping: {filepath}"
+                f"⚠️ [{idx}/{total_tracks}] File not found on disk, skipping: {source_id}"
             )
             skipped += 1
             continue
 
         try:
-            chunked_track = chunker.chunk(filepath)
+            raw_audio = FileSystemSource.read_file(source_id, 24000, 2)
+            if hasattr(raw_audio, "numpy"):
+                raw_audio = raw_audio.numpy()
+            waveform = np.asarray(raw_audio, dtype=np.float32).squeeze()
+
+            chunked_track = chunker.chunk(waveform)
             if not chunked_track.chunks:
                 print(
-                    f"⚠️ [{idx}/{total_tracks}] No audio chunks produced for: {filepath}"
+                    f"⚠️ [{idx}/{total_tracks}] No audio chunks produced for: {source_id}"
                 )
                 skipped += 1
                 continue
@@ -143,7 +149,8 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
                             musical_emb_str,
                             emotions_json,
                             emotion_vec_str,
-                            [coord_x, coord_y],
+                            coord_x, 
+                            coord_y,
                             music_start,
                             music_end,
                             track_id,
@@ -155,7 +162,7 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
             processed += 1
 
             pct = (processed / total_tracks) * 100
-            track_name = os.path.basename(filepath)
+            track_name = os.path.basename(source_id)
             print(
                 f"[{processed}/{total_tracks}] ({pct:.1f}%) ✓ {track_name[:38]:<38} | {len(embedded_chunks)} chunks | {music_start:.1f}s-{music_end:.1f}s",
                 flush=True,
@@ -163,7 +170,7 @@ def backfill_acoustics(overwrite: bool = False, limit: Optional[int] = None):
 
         except Exception as e:
             print(
-                f"\n❌ [{idx}/{total_tracks}] Error backfilling {filepath}: {e}",
+                f"\n❌ [{idx}/{total_tracks}] Error backfilling {source_id}: {e}",
                 file=sys.stderr,
                 flush=True,
             )

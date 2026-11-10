@@ -82,7 +82,7 @@ export class MusicLibrary {
     }
   }
 
-  async fetchDelta() {
+  fetchDelta = async () => {
     try {
       const delta = await sinatraApi.getLibraryTracks(this.lastSyncTime);
       this.lastSyncTime = new Date().toISOString();

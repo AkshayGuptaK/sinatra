@@ -24,7 +24,7 @@
   onMount(() => {
     const timer = setInterval(() => {
       now = Date.now();
-    }, 15_000);
+    }, 10_000);
     return () => clearInterval(timer);
   });
 
@@ -73,6 +73,7 @@
           onViewChange={ui.setLibraryView}
           onTagAll={handleTagAll}
           onEnqueueAll={library.enqueueAllFiltered}
+          onSync={library.fetchDelta}
         />
       </div>
     </div>

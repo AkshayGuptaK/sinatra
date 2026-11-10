@@ -3,7 +3,7 @@
   import * as Popover from "$lib/components/ui/popover";
   import TextInput from "$lib/components/atoms/TextInput.svelte";
   import ControlButton from "$lib/components/atoms/ControlButton.svelte";
-  import { List, CirclePlus, MapPin, Tag, Check, X } from "@lucide/svelte";
+  import { List, CirclePlus, MapPin, Tag, Check, X, CloudSync } from "@lucide/svelte";
   import { cn } from "$lib/utils";
   import type { LibraryViewMode } from "$lib/stores/ui.svelte";
 
@@ -14,6 +14,7 @@
     onViewChange?: (mode: LibraryViewMode) => void;
     onTagAll?: (tag: string) => void;
     onEnqueueAll: () => void;
+    onSync: () => void;
   }
 
   let {
@@ -23,6 +24,7 @@
     onViewChange,
     onTagAll,
     onEnqueueAll,
+    onSync,
   }: Props = $props();
 
   let isOpen = $state(false);
@@ -62,6 +64,14 @@
 </script>
 
 <div class={cn("relative flex items-center gap-2 select-none", className)}>
+  <ControlButton
+    icon={CloudSync}
+    label="Sync library to server"
+    title="Sync"
+    onClick={onSync}
+    {disabled}
+  ></ControlButton>
+
   <ControlButton
     icon={CirclePlus}
     label="Enqueue all filtered tracks"

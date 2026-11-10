@@ -19,6 +19,7 @@ export type CommandCategory =
   | "Playback"
   | "Navigation"
   | "Queue"
+  | "Library"
   | "AutoDJ"
   | "Settings"
   | "Explore";
@@ -457,6 +458,16 @@ export const COMMAND_REGISTRY: AppCommand[] = [
       const activeFilter = filter ?? parseFilterCommand(rawArgs);
       player.setAutoDjConstraint(activeFilter);
     },
+  },
+
+  // --- Library ---
+  {
+    id: "library.sync",
+    name: "sync",
+    label: "/sync",
+    desc: "Check for library track updates from server",
+    category: "Library",
+    execute: library.fetchDelta,
   },
 
   // --- Explore & Search ---

@@ -38,6 +38,10 @@ export type ParsedInput = ParsedCommand | FilterIntent;
 
 const nullFilter: FilterIntent = { type: "text_search", query: "" };
 
+export function isNullFilter(filter: FilterIntent) {
+  return filter.type === 'text_search' && filter.query === ""
+}
+
 // ============================================================================
 // Boolean Filter Lexer & Recursive Descent Parser
 // ============================================================================
@@ -376,9 +380,8 @@ export function parseRandomDirective(rawArgs: string): RandomActionDirective {
  * Top-level entry point. Decides only whether input is a command (`/`)
  * or a filter expression, parsing nested filters if present.
  */
-export function parseCommandInput(input: string): ParsedInput | null {
+export function parseCommandInput(input: string): ParsedInput {
   const trimmed = input.trim();
-  if (!trimmed) return null;
 
   if (trimmed.startsWith("/")) {
     const body = trimmed.slice(1);

@@ -555,7 +555,7 @@ export class MusicLibrary {
     this.activeFilter = null;
   }
 
-  enqueueAllFiltered() {
+  enqueueAllFiltered = () => {
     for (const track of this.displayedTracks) {
       player.enqueue(track);
     }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Track } from "$lib/types/track";
+  import type { LibraryTrack } from "$lib/types/track";
   import type { MetadataFields } from "$lib/types/metadata";
   import { formatTime } from "$lib/utils/time";
   import { Volume2, ListPlus } from "@lucide/svelte";
@@ -14,19 +14,19 @@
   }
 
   interface Props {
-    track: Track;
+    track: LibraryTrack;
     matchedLyrics?: string[];
     matchedEmotion: MatchedEmotion | null;
     isActive?: boolean;
     isPlaying?: boolean;
     isQueued?: boolean;
     class?: string;
-    onPlay?: (track: Track) => void;
-    onEnqueue?: (track: Track) => void;
-    onDequeue?: (track: Track) => void;
+    onPlay?: (track: LibraryTrack) => void;
+    onEnqueue?: (track: LibraryTrack) => void;
+    onDequeue?: (track: LibraryTrack) => void;
     onUpdate?: (fields: MetadataFields) => void;
     activeTaggingTrackId?: string | null;
-    onOpenTagEditor?: (track: Track, triggerEl: HTMLElement) => void;
+    onOpenTagEditor?: (track: LibraryTrack, triggerEl: HTMLElement) => void;
   }
 
   let {
@@ -165,7 +165,7 @@
         aria-label="Add track to queue"
         title="Add to queue"
         onclick={handleEnqueue}
-        class="size-7 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+        class="size-7 p-0 text-muted-foreground hover:text-secondary-foreground opacity-0 group-hover:opacity-100 transition-opacity"
       >
         <ListPlus class="size-4" />
       </Button>

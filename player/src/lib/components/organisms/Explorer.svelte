@@ -8,6 +8,7 @@
   import { cn } from "$lib/utils";
   import type { RemoteTrack } from "$lib/api/explore";
   import ExplorerAlbumItem from "../molecules/ExplorerAlbumItem.svelte";
+  import ExplorerAlbumDetails from "../molecules/ExplorerAlbumDetails.svelte";
 
   interface Props {
     class?: string;
@@ -67,8 +68,20 @@
       </div>
     {/if}
 
+    {#if explorer.albums && explorer.albums.length > 0}
+    <div class="flex flex-col gap-0.5">
+      {#each explorer.albums as album (album.browse_id)}
+        <ExplorerAlbumItem
+          {album}
+          browseArtist={explorer.exploreArtist}
+          browseAlbum={explorer.exploreAlbum}
+        />
+      {/each}
+    </div>
+  {/if}
+
     {#if explorer.activeAlbum}
-      <ExplorerAlbumItem
+      <ExplorerAlbumDetails
         album={explorer.activeAlbum}
         browseArtist={explorer.exploreArtist}
         onEnqueueTrack={enqueueTrack}

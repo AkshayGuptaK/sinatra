@@ -207,7 +207,7 @@
       onclick={handleQueueToggle}
       title={isQueued ? "Remove from queue" : "Add to queue"}
       aria-label={isQueued ? "Remove from queue" : "Add to queue"}
-      class="p-1.5 rounded-md transition-all text-neutral-400 hover:text-white hover:bg-neutral-800 {isQueued
+      class="p-1.5 rounded-md transition-all text-neutral-400 hover:text-secondary-foreground hover:bg-neutral-800 {isQueued
         ? 'opacity-100 text-emerald-400 bg-neutral-800/80 hover:text-rose-400'
         : 'opacity-0 group-hover:opacity-100 focus:opacity-100'}"
     >
@@ -226,7 +226,7 @@
       onclick={() => onDownload?.(track)}
       title={"Download Track"}
       aria-label={"Download Track"}
-      class="p-1.5 rounded-md transition-all text-neutral-400 hover:text-white hover:bg-neutral-800 opacity-0 group-hover:opacity-100 focus:opacity-100"
+      class="p-1.5 rounded-md transition-all text-neutral-400 hover:text-secondary-foreground hover:bg-neutral-800 opacity-0 group-hover:opacity-100 focus:opacity-100"
     >
       <Download class="w-4 h-4" />
     </button>

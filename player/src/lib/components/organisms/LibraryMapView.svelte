@@ -504,7 +504,7 @@
 
 <div
   class={cn(
-    "relative flex flex-row w-full h-full min-h-0 overflow-hidden bg-card select-none p-1 gap-1",
+    "relative flex flex-row w-full h-full min-h-0 overflow-hidden bg-card select-none",
     className
   )}
 >
@@ -513,11 +513,11 @@
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div
     bind:this={containerEl}
-    class="relative flex-1 min-w-0 h-full overflow-hidden cursor-grab active:cursor-grabbing rounded-lg border bg-background"
+    class="relative flex-1 min-w-0 h-full overflow-hidden cursor-grab active:cursor-grabbing border bg-background"
   >
     <!-- Floating View Mode Switcher -->
     <div
-      class="absolute top-3 left-3 z-10 flex items-center p-0.5 rounded-lg bg-card/90 backdrop-blur-md border border-border/80 shadow-xs"
+      class="absolute top-3 left-3 z-10 flex items-center p-0.5 bg-card/90 backdrop-blur-md border border-border/80 shadow-xs"
     >
       {#each Object.values(EMOTION_MAP) as viewDef}
         <button

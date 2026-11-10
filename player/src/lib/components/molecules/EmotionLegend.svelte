@@ -37,7 +37,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class={cn(
-    "flex flex-col gap-2 px-3 py-2 rounded-lg border border-border/70 bg-card/85 text-card-foreground shadow-lg backdrop-blur-md select-none w-60 shrink-0",
+    "flex flex-col gap-2 px-3 py-2 border border-border/70 bg-card/85 text-card-foreground shadow-lg backdrop-blur-md select-none w-60 shrink-0",
     className
   )}
   onpointerleave={() => (hoveredEmotion = null)}

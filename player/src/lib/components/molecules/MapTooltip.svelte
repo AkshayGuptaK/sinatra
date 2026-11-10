@@ -36,7 +36,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class={cn(
-    "flex flex-col w-full h-full rounded-lg border border-border/80 bg-card/95 p-3 text-card-foreground backdrop-blur-md select-none",
+    "flex flex-col w-full h-full border border-border/80 bg-card/95 p-3 text-card-foreground backdrop-blur-md select-none",
     className
   )}
 >

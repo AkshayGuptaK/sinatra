@@ -453,7 +453,7 @@ export class AudioEngine {
     this.preloadDeck(deck, track, this.transitionMode === "gapless");
     this.dsp.setGainImmediate(deck.gainNode, 1);
 
-    this.segmentManager.loadForTrack(track.id);
+    if (!track.source) this.segmentManager.loadForTrack(track.id);
 
     if (autoPlay) {
       await this.play();

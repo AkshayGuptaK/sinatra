@@ -89,7 +89,7 @@
 
 <div
   class={cn(
-    "flex items-center justify-between p-2 border-t bg-muted/10 select-none",
+    "flex items-center justify-between p-1 border-t bg-muted/10 select-none",
     className
   )}
 >

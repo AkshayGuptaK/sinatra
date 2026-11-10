@@ -64,16 +64,16 @@
 <nav
   aria-label="Primary Navigation"
   class={cn(
-    "flex flex-col items-center justify-between w-12 sm:w-14 h-full py-3 border-r border-border/60 bg-card/40 backdrop-blur-md select-none shrink-0 z-20",
+    "flex flex-col items-center justify-between w-12 sm:w-14 h-full py-1 border-r border-border/60 bg-card/40 backdrop-blur-md select-none shrink-0 z-20",
     className
   )}
 >
   <div class="flex flex-col items-center gap-4 w-full">
     <div
-      class="flex items-center justify-center size-8 rounded-lg bg-primary/10 text-primary border border-primary/20 shadow-xs mb-1"
+      class="flex items-center justify-center size-9 rounded-lg bg-primary/10 text-primary border border-primary/20 shadow-xs mb-1"
       title="Sinatra"
     >
-      <SinatraIcon class="size-4" />
+      <SinatraIcon class="size-5" />
     </div>
 
     <div class="flex flex-col items-center gap-1.5 w-full px-2">

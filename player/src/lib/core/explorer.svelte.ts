@@ -128,7 +128,7 @@ export class MusicExplorer {
           results = await explorerApi.searchExplore(this.activeSource, {
             query: intent.query,
             filter: intent.type,
-            limit: 30,
+            limit: 12,
           });
         }
       }

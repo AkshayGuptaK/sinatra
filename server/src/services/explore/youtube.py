@@ -1,8 +1,10 @@
 import re
+import requests
 import shutil
 import socket
 import subprocess
 import tempfile
+import threading
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal, Optional, Iterator
@@ -114,9 +116,23 @@ class YoutubeExplorer:
 
     STREAM_CACHE_TTL_SEC = 3.5 * 3600
     _stream_cache: dict[str, AudioStreamInfo] = {}
+    _stream_locks: dict[str, threading.Lock] = {}
+    _lock_guard = threading.Lock()
+    _http_session: Optional[requests.Session] = None
 
     def __init__(self, language: str = "en"):
         self.yt = YTMusic(language=language)
+
+    @classmethod
+    def _get_http_session(cls) -> requests.Session:
+        if cls._http_session is None:
+            cls._http_session = requests.Session()
+            adapter = requests.adapters.HTTPAdapter(
+                pool_connections=10, pool_maxsize=20
+            )
+            cls._http_session.mount("https://", adapter)
+            cls._http_session.mount("http://", adapter)
+        return cls._http_session
 
     # -------------------------------------------------------------------------
     # Search & Suggestions
@@ -133,8 +149,6 @@ class YoutubeExplorer:
         if not cleaned:
             return []
 
-        print(query, filter_type, limit)
-
         raw_results = self.yt.search(
             query=cleaned,
             filter=filter_type,
@@ -142,13 +156,13 @@ class YoutubeExplorer:
             ignore_spelling=ignore_spelling,
         )
 
-        items: list[dict[str, Any]] = []
-        for item in raw_results:
-            parsed = self._normalize_search_item(item)
-            if parsed:
-                items.append(parsed)
+        results = [
+            normalized
+            for item in raw_results
+            if (normalized := self._normalize_search_item(item)) is not None
+        ]
 
-        return items
+        return results[:limit]
 
     def get_search_suggestions(
         self, query: str, detailed_runs: bool = False
@@ -443,32 +457,47 @@ class YoutubeExplorer:
         if cached and not force_refresh and cached.expires_at > now:
             return cached
 
-        url = f"https://music.youtube.com/watch?v={video_id}"
-        ydl_opts = {
-            "format": "bestaudio[acodec=opus]/bestaudio[ext=m4a]/bestaudio",
-            "quiet": True,
-            "no_warnings": True,
-            "noplaylist": True,
-            "extract_flat": False,
-        }
+        # Per-video lock prevents parallel range requests from spawning multiple yt-dlp runs
+        with cls._lock_guard:
+            if video_id not in cls._stream_locks:
+                cls._stream_locks[video_id] = threading.Lock()
+            video_lock = cls._stream_locks[video_id]
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+        with video_lock:
+            now = time.time()
+            cached = cls._stream_cache.get(video_id)
+            if cached and not force_refresh and cached.expires_at > now:
+                return cached
 
-        stream_info = AudioStreamInfo(
-            video_id=video_id,
-            stream_url=info["url"],
-            ext=info.get("ext", "webm"),
-            acodec=info.get("acodec", "opus"),
-            abr=info.get("abr"),
-            duration=info.get("duration"),
-            http_headers=info.get("http_headers", {}),
-            expires_at=now + cls.STREAM_CACHE_TTL_SEC,
-            title=info.get("title") or info.get("track"),
-            artist=info.get("artist") or info.get("uploader") or info.get("creator"),
-        )
-        cls._stream_cache[video_id] = stream_info
-        return stream_info
+            url = f"https://music.youtube.com/watch?v={video_id}"
+            ydl_opts = {
+                # Prefer WebM/Opus first: its header cues are at byte 0 (instant streaming)
+                "format": "bestaudio[ext=webm][acodec=opus]/bestaudio[acodec=opus]/bestaudio",
+                "quiet": True,
+                "no_warnings": True,
+                "noplaylist": True,
+                "extract_flat": False,
+            }
+
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+
+            stream_info = AudioStreamInfo(
+                video_id=video_id,
+                stream_url=info["url"],
+                ext=info.get("ext", "webm"),
+                acodec=info.get("acodec", "opus"),
+                abr=info.get("abr"),
+                duration=info.get("duration"),
+                http_headers=info.get("http_headers", {}),
+                expires_at=now + cls.STREAM_CACHE_TTL_SEC,
+                title=info.get("title") or info.get("track"),
+                artist=info.get("artist")
+                or info.get("uploader")
+                or info.get("creator"),
+            )
+            cls._stream_cache[video_id] = stream_info
+            return stream_info
 
     # -------------------------------------------------------------------------
     # In-Memory Stream Ingestion (PyTorch Tensor)
@@ -504,9 +533,7 @@ class YoutubeExplorer:
             stdout, stderr = process.communicate()
 
             if process.returncode != 0 or len(stdout) == 0:
-                print(
-                    f"FFmpeg stream decode failed for {video_id}: {stderr.decode()}"
-                )
+                print(f"FFmpeg stream decode failed for {video_id}: {stderr.decode()}")
                 return None
 
             audio_np = np.frombuffer(stdout, dtype=np.float32).copy()
@@ -529,20 +556,37 @@ class YoutubeExplorer:
         cls,
         video_id: str,
         range_header: Optional[str] = None,
-        chunk_size: int = 65536,
+        chunk_size: int = 32768,  # 32KB chunks for faster time-to-first-byte
     ) -> tuple[Iterator[bytes], int, dict[str, str]]:
         """Proxies compressed stream chunks supporting HTTP Range requests for browser playback."""
         stream_info = cls.get_stream_info(video_id)
-        req_headers = dict(stream_info.http_headers)
-        if range_header:
-            req_headers["Range"] = range_header
+        session = cls._get_http_session()
 
-        req = urllib.request.Request(
-            stream_info.stream_url, headers=req_headers
-        )
-        resp = urllib.request.urlopen(req, timeout=15)
+        # Always send a Range header so YouTube CDN returns 206 + Content-Range
+        # and never throttles the connection as an unbounded 200 OK download.
+        effective_range = range_header if range_header else "bytes=0-"
 
-        status_code = resp.getcode() or 200
+        def _open_upstream(info: AudioStreamInfo):
+            req_headers = dict(info.http_headers)
+            req_headers["Range"] = effective_range
+            return session.get(
+                info.stream_url,
+                headers=req_headers,
+                stream=True,
+                timeout=(5, 15),
+            )
+
+        resp = _open_upstream(stream_info)
+
+        # If the cached YouTube URL expired early or returned 403, refresh once
+        if resp.status_code in (401, 403):
+            resp.close()
+            stream_info = cls.get_stream_info(video_id, force_refresh=True)
+            resp = _open_upstream(stream_info)
+
+        resp.raise_for_status()
+
+        status_code = resp.status_code
         mime_map = {
             "webm": "audio/webm",
             "m4a": "audio/mp4",
@@ -556,6 +600,11 @@ class YoutubeExplorer:
         resp_headers: dict[str, str] = {
             "Content-Type": content_type,
             "Accept-Ranges": "bytes",
+            # Explicit CORS headers so <audio crossOrigin="anonymous"> + Web Audio AnalyserNode
+            # never get marked as CORS-tainted on 206 Partial Content responses
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Range",
+            "Access-Control-Expose-Headers": "Content-Range, Content-Length, Accept-Ranges",
         }
         for key in ("Content-Length", "Content-Range"):
             val = resp.headers.get(key)
@@ -564,11 +613,9 @@ class YoutubeExplorer:
 
         def _chunk_generator() -> Iterator[bytes]:
             try:
-                while True:
-                    chunk = resp.read(chunk_size)
-                    if not chunk:
-                        break
-                    yield chunk
+                for chunk in resp.iter_content(chunk_size=chunk_size):
+                    if chunk:
+                        yield chunk
             finally:
                 resp.close()
 
@@ -620,22 +667,16 @@ class YoutubeExplorer:
                 ]
             )
 
-            result = subprocess.run(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if (
                 result.returncode != 0
                 or not temp_file.exists()
                 or temp_file.stat().st_size == 0
             ):
                 err_msg = result.stderr.decode().strip()
-                raise RuntimeError(
-                    f"FFmpeg download failed for {video_id}: {err_msg}"
-                )
+                raise RuntimeError(f"FFmpeg download failed for {video_id}: {err_msg}")
 
-            final_destination = self._resolve_unique_path(
-                destination_dir, out_filename
-            )
+            final_destination = self._resolve_unique_path(destination_dir, out_filename)
 
             # Atomic move across filesystems
             shutil.move(str(temp_file), str(final_destination))

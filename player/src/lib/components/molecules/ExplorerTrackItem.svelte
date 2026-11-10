@@ -22,6 +22,8 @@
     onEnqueue?: (track: RemoteTrack) => void;
     onDequeue?: (track: RemoteTrack) => void;
     onDownload?: (track: RemoteTrack) => void;
+    browseArtist?: (artistId: string) => void;
+    browseAlbum?: (albumId: string) => void;
   }
 
   let {
@@ -34,6 +36,8 @@
     onEnqueue,
     onDequeue,
     onDownload,
+    browseArtist,
+    browseAlbum,
   }: Props = $props();
 
   let isImageLoaded = $state(false);
@@ -155,21 +159,44 @@
     <div
       class="flex items-center gap-1.5 text-xs text-neutral-400 truncate mt-0.5 leading-normal"
     >
-      <span
-        class="truncate hover:text-secondary-foreground transition-colors"
-        title={track.artist}
-      >
-        {track.artist || "Unknown Artist"}
-      </span>
+      {#if track.artist_id}
+        <button
+          type="button"
+          class="truncate text-left hover:text-secondary-foreground transition-colors"
+          title={track.artist}
+          onclick={(e) => {
+            e.stopPropagation();
+            browseArtist?.(track.artist_id!);
+          }}
+        >
+          {track.artist || "Unknown Artist"}
+        </button>
+      {:else}
+        <span class="truncate" title={track.artist}>
+          {track.artist || "Unknown Artist"}
+        </span>
+      {/if}
 
       {#if track.album}
         <span class="text-neutral-600 shrink-0">•</span>
-        <span
-          class="truncate text-neutral-500 hover:text-secondary-foreground transition-colors"
-          title={track.album}
-        >
-          {track.album}
-        </span>
+
+        {#if track.album_id}
+          <button
+            type="button"
+            class="truncate text-left text-neutral-500 hover:text-secondary-foreground transition-colors"
+            title={track.album}
+            onclick={(e) => {
+              e.stopPropagation();
+              browseAlbum?.(track.album_id!);
+            }}
+          >
+            {track.album}
+          </button>
+        {:else}
+          <span class="truncate text-neutral-500" title={track.album}>
+            {track.album}
+          </span>
+        {/if}
       {/if}
     </div>
   </div>

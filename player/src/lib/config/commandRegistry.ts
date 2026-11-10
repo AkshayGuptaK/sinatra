@@ -23,6 +23,17 @@ export type CommandCategory =
   | "Settings"
   | "Explore";
 
+export type SearchType = 
+| "song"
+| "artist"
+| "album"
+| "mood";
+
+export interface SearchIntent {
+  type: SearchType;
+  query: string;
+}
+
 export interface CommandContext {
   rawArgs: string;
   filter?: FilterIntent;
@@ -485,11 +496,7 @@ export const COMMAND_REGISTRY: AppCommand[] = [
       ui.setDeck("explore")
       const match = rawArgs.match(/^:(song|artist|album|mood)(?:\s+(.*)|$)/i);
       if (match) {
-        const type = match[1].toLowerCase() as
-          | "song"
-          | "artist"
-          | "album"
-          | "mood";
+        const type = match[1].toLowerCase() as SearchType
         const query = match[2]?.trim() || "";
         return explorer.executeIntent({ type, query });
       }

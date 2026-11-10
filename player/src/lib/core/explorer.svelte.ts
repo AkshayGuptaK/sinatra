@@ -10,7 +10,7 @@ import {
   type RemotePlaylistDetails,
   type RemoteTrack,
 } from "$lib/api/explore";
-import type { SearchIntent } from "$lib/utils/commandParser";
+import type { SearchIntent } from "$lib/config/commandRegistry";
 
 export class MusicExplorer {
   sources = $state<string[]>([]);
@@ -42,7 +42,7 @@ export class MusicExplorer {
 
   /**
    * Initializes the explorer by fetching available backend sources,
-   * loading mood categories, and running the default initial intent (Global Charts).
+   * loading mood categories.
    */
   async init(): Promise<void> {
     if (this.isInitialized) return;
@@ -58,10 +58,7 @@ export class MusicExplorer {
         this.activeSource = availableSources[0];
       }
 
-      await Promise.all([
-        this.loadMoodCategories(),
-        this.executeIntent(this.activeIntent),
-      ]);
+      await this.loadMoodCategories();
 
       this.isInitialized = true;
     } catch (err) {
@@ -72,7 +69,7 @@ export class MusicExplorer {
   }
 
   /**
-   * Switches the active exploration source (e.g., 'ytm' -> 'spotify')
+   * Switches the active exploration source
    * and refreshes mood categories and the current intent.
    */
   async setSource(source: string): Promise<void> {
@@ -128,7 +125,7 @@ export class MusicExplorer {
           results = await explorerApi.searchExplore(this.activeSource, {
             query: intent.query,
             filter: intent.type,
-            limit: 12,
+            limit: 30,
           });
         }
       }
@@ -170,6 +167,30 @@ export class MusicExplorer {
       console.error("Track download failed:", err);
     }
   }
+
+  exploreArtist = async (artistId: string) => {
+    try {
+      this.resetViewData();
+      this.activeArtist = await explorerApi.getExploreArtist(
+        this.activeSource,
+        artistId
+      );
+    } catch (err) {
+      console.error("Artist details couldn't be fetched", err);
+    }
+  };
+
+  exploreAlbum = async (albumId: string) => {
+    try {
+      this.resetViewData();
+      this.activeAlbum = await explorerApi.getExploreAlbum(
+        this.activeSource,
+        albumId
+      );
+    } catch (err) {
+      console.error("Album details couldn't be fetched", err);
+    }
+  };
 
   private resetViewData(): void {
     this.tracks = [];

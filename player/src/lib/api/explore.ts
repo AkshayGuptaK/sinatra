@@ -1,5 +1,5 @@
-import type { SearchType } from "$lib/utils/commandParser";
-import { API_BASE_URL } from "./main";
+import { API_BASE_URL } from "$lib/api/main";
+import type { SearchType } from "$lib/config/commandRegistry";
 
 export interface RemoteTrack {
   video_id: string;

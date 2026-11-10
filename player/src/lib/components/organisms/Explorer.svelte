@@ -7,6 +7,7 @@
   import { player } from "$lib/core/player.svelte";
   import { cn } from "$lib/utils";
   import type { RemoteTrack } from "$lib/api/explore";
+  import ExplorerAlbumItem from "../molecules/ExplorerAlbumItem.svelte";
 
   interface Props {
     class?: string;
@@ -26,6 +27,10 @@
     };
     player.enqueue(queueTrack);
   }
+
+  function downloadTrack(track: RemoteTrack) {
+    explorer.download(track.video_id);
+  }
 </script>
 
 <div
@@ -35,21 +40,40 @@
   )}
 >
   <HeaderBanner title="Explorer" icon={Compass} />
-  <div class="flex flex-col w-full gap-3 shrink-0">
+
+  <div
+    class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-2 bg-muted/10 shrink-0"
+  >
+    <CommandBar deck="explore" />
     <div
-      class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-2"
+      class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end"
     >
-      <CommandBar deck="explore"/>
-      <div
-        class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end"
-      >
-        <!-- controls go here -->
+      <!-- controls go here -->
+    </div>
+  </div>
+
+  <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
+    {#if explorer.tracks && explorer.tracks.length > 0}
+      <div class="flex flex-col gap-0.5">
+        {#each explorer.tracks as track (track.video_id)}
+          <ExplorerTrackItem
+            {track}
+            onEnqueue={enqueueTrack}
+            onDownload={downloadTrack}
+            browseArtist={explorer.exploreArtist}
+            browseAlbum={explorer.exploreAlbum}
+          />
+        {/each}
       </div>
-    </div>
-    <div>
-      {#each explorer.tracks as track}
-        <ExplorerTrackItem {track} onEnqueue={enqueueTrack} onDownload={track => explorer.download(track.video_id)}/>
-      {/each}
-    </div>
+    {/if}
+
+    {#if explorer.activeAlbum}
+      <ExplorerAlbumItem
+        album={explorer.activeAlbum}
+        browseArtist={explorer.exploreArtist}
+        onEnqueueTrack={enqueueTrack}
+        onDownloadTrack={downloadTrack}
+      />
+    {/if}
   </div>
 </div>

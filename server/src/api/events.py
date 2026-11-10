@@ -19,16 +19,13 @@ async def broadcast_event(event_type: str, data: dict):
 async def sse_event_stream():
     queue = asyncio.Queue()
     subscribers.add(queue)
-    print("subs length", len(subscribers))
 
     async def event_generator():
         try:
             while True:
                 data = await queue.get()
-                print("got data", data)
                 yield data
         except asyncio.CancelledError:
-            print("cancelled sub")
             subscribers.remove(queue)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

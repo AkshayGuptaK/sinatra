@@ -1,3 +1,13 @@
+const DIVISIONS: { amount: number; unit: Intl.RelativeTimeFormatUnit }[] = [
+  { amount: 60, unit: "second" },
+  { amount: 60, unit: "minute" },
+  { amount: 24, unit: "hour" },
+  { amount: 7, unit: "day" },
+  { amount: 4.34524, unit: "week" },
+  { amount: 12, unit: "month" },
+  { amount: Number.POSITIVE_INFINITY, unit: "year" },
+];
+
 export function formatTime(seconds: number): string {
   if (!isFinite(seconds) || isNaN(seconds) || seconds < 0) {
     return "0:00";
@@ -34,4 +44,24 @@ export function parseDurationToSeconds(time: string): number | null {
 
   const rawNum = Number(clean);
   return isNaN(rawNum) ? null : rawNum;
+}
+
+const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+
+export function formatTimeAgo(dateInput: string | number | Date): string {
+  const date = typeof dateInput === "object" ? dateInput : new Date(dateInput);
+  let duration = (date.getTime() - Date.now()) / 1000;
+
+  if (Math.abs(duration) < 10) {
+    return "just now";
+  }
+
+  for (const division of DIVISIONS) {
+    if (Math.abs(duration) < division.amount) {
+      return rtf.format(Math.round(duration), division.unit);
+    }
+    duration /= division.amount;
+  }
+
+  return "just now";
 }

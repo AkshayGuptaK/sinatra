@@ -1,5 +1,5 @@
-<!-- src/lib/components/organisms/Library.svelte -->
 <script lang="ts">
+  import { onMount } from "svelte";
   import HeaderBanner from "$lib/components/molecules/HeaderBanner.svelte";
   import CommandBar from "$lib/components/molecules/CommandBar.svelte";
   import LibraryControls from "$lib/components/molecules/LibraryControls.svelte";
@@ -11,12 +11,27 @@
   import { player } from "$lib/core/player.svelte";
   import { cn } from "$lib/utils";
   import { ui } from "$lib/stores/ui.svelte";
+  import { formatTimeAgo } from "$lib/utils/time";
 
   interface Props {
     class?: string;
   }
 
   let { class: className = "" }: Props = $props();
+
+  let now = $state(Date.now());
+
+  onMount(() => {
+    const timer = setInterval(() => {
+      now = Date.now();
+    }, 15_000);
+    return () => clearInterval(timer);
+  });
+
+  let relativeSyncLabel = $derived.by(() => {
+    if (!library.lastSyncTime || !now) return "Never synced";
+    return `Last updated ${formatTimeAgo(library.lastSyncTime)}`;
+  });
 
   // Total duration of current filtered view
   let filteredDuration = $derived(
@@ -48,6 +63,10 @@
       <div
         class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end"
       >
+        <div class="flex items-center gap-2 text-xs text-muted-foreground">
+          <span class="size-2 rounded-full bg-secondary-foreground animate-pulse"></span>
+          <span>{relativeSyncLabel}</span>
+        </div>
         <LibraryControls
           viewMode={ui.libraryView}
           disabled={library.displayedTracks.length === 0}

@@ -62,16 +62,10 @@ export class MusicLibrary {
   }
 
   initRealtimeSync() {
-    console.log("sync start")
-
     this.eventSource = new EventSource(`${API_BASE_URL}/api/events/stream`);
-
-    // Built-in reconnection is handled automatically by the browser EventSource
     this.eventSource.addEventListener("library:updated", async () => {
-      console.log("update library");
       await this.fetchDelta();
     });
-    console.log("done sync")
   }
 
   async fetchTracks() {

@@ -1,7 +1,7 @@
 [package]
-name = "player"
+name = "Sinatra"
 version = "0.1.0"
-description = "A Tauri App"
+description = "Sinatra Music Player"
 authors = ["you"]
 edition = "2021"
 

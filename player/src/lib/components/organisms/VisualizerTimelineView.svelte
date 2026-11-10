@@ -463,7 +463,7 @@
           <div class="font-semibold text-[14px] text-foreground">Full Song</div>
           <EmotionsDisplay {sortedEmotions} />
         </div>
-        <EmotionLegend viewMode="audio_emotion" />
+        <EmotionLegend class="rounded-xl" viewMode="audio_emotion" />
       </div>
     </div>
   {/if}

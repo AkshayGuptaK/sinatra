@@ -72,7 +72,7 @@
 
 <div
   class={cn(
-    "flex flex-col w-full h-full min-h-0 rounded-xl border bg-card text-card-foreground shadow-lg overflow-hidden select-none",
+    "flex flex-col w-full h-full min-h-0 border bg-card text-card-foreground shadow-lg overflow-hidden select-none",
     className
   )}
 >

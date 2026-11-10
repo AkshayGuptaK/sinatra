@@ -371,8 +371,11 @@ class PostgresStore:
                 for fname, ts in cur.fetchall()
             ]
 
-    def get_all_tracks(self):
-        query = """
+    def get_all_tracks(
+        self, since: Optional[datetime] = None
+    ) -> Optional[List[Dict[str, Any]]]:
+        where_clause = "WHERE updated_at > %s" if since is not None else ""
+        query = f"""
         SELECT id::text,
                title,
                artist,
@@ -388,11 +391,15 @@ class PostgresStore:
                lyrical_emotions,
                ARRAY[lyrical_emotion_coords[0], lyrical_emotion_coords[1]]::float[]
         FROM tracks
+        {where_clause}
         ORDER BY title ASC
         """
         try:
             with self.conn.cursor() as cur:
-                cur.execute(query)
+                if since is not None:
+                    cur.execute(query, (since,))
+                else:
+                    cur.execute(query)
                 result = cur.fetchall()
                 tracks = [
                     {

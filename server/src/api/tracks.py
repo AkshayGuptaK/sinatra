@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from src.pg import get_pg
 from src.services.segment_editor import edit_track_segments
+from datetime import datetime
 
 router = APIRouter(prefix="/api/library/tracks", tags=["tracks"])
 
@@ -39,11 +40,11 @@ def sanitize_tags(raw_tags: List[str]) -> List[str]:
 
 
 @router.get("")
-async def get_library_tracks():
+async def get_library_tracks(since: Optional[datetime] = None):
     """Returns all library tracks with metadata."""
     try:
         db = get_pg()
-        tracks = db.get_all_tracks()
+        tracks = db.get_all_tracks(since)
         return JSONResponse(content=tracks)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

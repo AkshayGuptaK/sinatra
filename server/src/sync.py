@@ -1,13 +1,14 @@
 # This module syncs store state to source state
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 import numpy as np
 from src.pg import get_pg
 from src.sources import *
 from src.models.mert import get_mert_embedder
 from src.models.projector.mood_projector import get_mood_projector
 from src.services import get_audio_chunker, get_emotion_scorer, get_metadata_extractor, compute_rms_envelope
-from src.sources import FileSystemSource
+from src.api.events import broadcast_event
 
 ai_executor = ThreadPoolExecutor(max_workers=1)
 
@@ -24,7 +25,7 @@ def _process_single_file(path):
         chunked_track = chunker.chunk(waveform)
 
         if not chunked_track.chunks:
-            print(f"⚠️ No audio chunks generated for {path}", flush=True)
+            print(f"⚠️ No audio chunks generated for {path}")
             return
 
         music_start = float(chunked_track.chunks[0].start_sec)
@@ -77,10 +78,12 @@ def _process_single_file(path):
 
         db.save_track_chunks(track_id=track_id, chunks=embedded_chunks)
 
-        print(f"✅ Ingested {meta.title if meta else path} ({len(embedded_chunks)} chunks ", flush=True)
+        print(f"✅ Ingested {meta.title if meta else path} ({len(embedded_chunks)} chunks ")
+        return True
 
     except Exception as e:
-        print(f"Failed to ingest {path}: {e}", flush=True)
+        print(f"Failed to ingest {path}: {e}")
+        return False
 
 
 async def _ingest_files(paths, store):
@@ -88,22 +91,26 @@ async def _ingest_files(paths, store):
         return
 
     valid_paths = [p for p in paths if FileSystemSource.is_audio_file(p)]
-
     if not valid_paths:
-        print("No valid audio files to ingest.", flush=True)
+        print("No valid audio files to ingest.")
         return
 
-    print(f"Starting ingestion for {len(valid_paths)} files...", flush=True)
-
+    print(f"Starting ingestion for {len(valid_paths)} files...")
     loop = asyncio.get_running_loop()
 
-    tasks = [
-        loop.run_in_executor(ai_executor, _process_single_file, fname)
-        for fname in valid_paths
-    ]
+    async def _ingest_single(path: str):
+        success = await loop.run_in_executor(
+            ai_executor, _process_single_file, path
+        )
+        if success:
+            await broadcast_event(
+                "library:updated",
+                {"count": 1, "timestamp": datetime.utcnow().isoformat()},
+            )
 
+    tasks = [_ingest_single(fname) for fname in valid_paths]
     await asyncio.gather(*tasks)
-    print("Ingestion batch complete.", flush=True)
+    print("Ingestion batch complete.")
 
 
 def _delete_orphaned_tracks(db_stats, local_stats, store):
@@ -112,7 +119,7 @@ def _delete_orphaned_tracks(db_stats, local_stats, store):
     orphaned = db_filenames - local_filenames
 
     if orphaned:
-        print(f"Deleting {len(orphaned)} tracks for missing files", flush=True)
+        print(f"Deleting {len(orphaned)} tracks for missing files")
         store.delete_by_filenames(orphaned)
 
 
@@ -127,7 +134,7 @@ async def _update_stale_tracks(db_stats, local_stats, store):
     }
 
     if stale:
-        print(f"Re-indexing {len(stale)} modified files", flush=True)
+        print(f"Re-indexing {len(stale)} modified files")
         store.delete_by_filenames(stale)
         await _ingest_files(stale, store)
         # could wrap in transaction
@@ -139,7 +146,7 @@ async def _ingest_new_files(db_stats, local_stats, store):
     new = local_filenames - db_filenames
 
     if new:
-        print(f"Ingesting {len(new)} files", flush=True)
+        print(f"Ingesting {len(new)} files")
         await _ingest_files(new, store)
 
 
@@ -159,8 +166,8 @@ async def sync_store():
     db_stats = pg.get_file_stats()
     local_stats = fs.get_source_stats()
 
-    print("Syncing...", flush=True)
+    print("Syncing...")
     _delete_orphaned_tracks(db_stats, local_stats, pg)
     await _update_stale_tracks(db_stats, local_stats, pg)
     await _ingest_new_files(db_stats, local_stats, pg)
-    print("Sync complete.", flush=True)
+    print("Sync complete.")

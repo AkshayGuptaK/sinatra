@@ -58,8 +58,10 @@ export const sinatraApi = {
     }
     return base;
   },
-  async getLibraryTracks(): Promise<LibraryTrack[]> {
-    const res = await fetch(`${API_BASE_URL}/api/library/tracks`);
+
+  async getLibraryTracks(since?: string): Promise<LibraryTrack[]> {
+    const query = since ? `?${new URLSearchParams({ since })}` : "";
+    const res = await fetch(`${API_BASE_URL}/api/library/tracks${query}`);
     if (!res.ok) {
       throw new Error(`Failed to fetch library tracks: ${res.statusText}`);
     }

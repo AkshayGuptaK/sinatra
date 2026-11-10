@@ -1,4 +1,5 @@
-from fastapi import Path
+from fastapi import Path, HTTPException
+
 from src.services.explore import MusicExplorer, get_explorer
 
 

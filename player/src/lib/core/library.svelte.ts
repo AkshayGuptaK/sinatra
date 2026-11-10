@@ -1,4 +1,4 @@
-import { sinatraApi } from "$lib/api/main";
+import { sinatraApi, API_BASE_URL } from "$lib/api/main";
 import type { LibraryTrack } from "$lib/types/track";
 import type {
   MetadataFields,
@@ -14,6 +14,8 @@ export interface TagRecommendation {
 }
 
 export class MusicLibrary {
+  private eventSource: EventSource | null = null;
+  lastSyncTime: string = new Date().toISOString();
   tracks = $state<LibraryTrack[]>([]);
   isLoading = $state(false);
   error = $state<string | null>(null);
@@ -55,7 +57,21 @@ export class MusicLibrary {
   constructor() {
     if (typeof window !== "undefined") {
       this.fetchTracks();
+      this.initRealtimeSync();
     }
+  }
+
+  initRealtimeSync() {
+    console.log("sync start")
+
+    this.eventSource = new EventSource(`${API_BASE_URL}/api/events/stream`);
+
+    // Built-in reconnection is handled automatically by the browser EventSource
+    this.eventSource.addEventListener("library:updated", async () => {
+      console.log("update library");
+      await this.fetchDelta();
+    });
+    console.log("done sync")
   }
 
   async fetchTracks() {
@@ -69,6 +85,24 @@ export class MusicLibrary {
       this.error = e?.message || "Failed to fetch tracks";
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  async fetchDelta() {
+    try {
+      const delta = await sinatraApi.getLibraryTracks(this.lastSyncTime);
+      this.lastSyncTime = new Date().toISOString();
+
+      if (!delta || delta.length === 0) return;
+
+      // Immutably merge into tracks map/array
+      const trackMap = new Map(this.tracks.map((t) => [t.id, t]));
+      for (const track of delta) {
+        trackMap.set(track.id, track);
+      }
+      this.tracks = Array.from(trackMap.values());
+    } catch (err) {
+      console.error("Failed to fetch library delta updates:", err);
     }
   }
 

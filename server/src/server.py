@@ -10,6 +10,7 @@ from src.api import (
     lyrics_router,
     suggestions_router,
     tracks_router,
+    events_router,
 )
 from src.config import config
 from src.sync import sync_store
@@ -54,3 +55,4 @@ app.include_router(lyrics_router)
 app.include_router(suggestions_router)
 app.include_router(audio_router)
 app.include_router(explore_router)
+app.include_router(events_router)

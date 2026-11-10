@@ -1,13 +1,13 @@
 <script lang="ts">
+  import { cn } from "$lib/utils";
   import HeaderBanner from "$lib/components/molecules/HeaderBanner.svelte";
   import QueueTrackItem from "$lib/components/molecules/QueueTrackItem.svelte";
   import QueueDurationSummary from "$lib/components/molecules/QueueDurationSummary.svelte";
   import QueueControls from "$lib/components/molecules/QueueControls.svelte";
   import { player } from "$lib/core/player.svelte";
   import { library } from "$lib/core/library.svelte";
-  import { cn } from "$lib/utils";
-  import { ListMusic } from "@lucide/svelte";
   import { explorer } from "$lib/core/explorer.svelte";
+  import { ListMusic } from "@lucide/svelte";
   import type { QueuedTrack } from "$lib/types/track";
 
   interface Props {
@@ -105,6 +105,7 @@
           {index}
           isActive={index === player.currentIndex}
           isPlaying={index === player.currentIndex && player.engine.isPlaying}
+          isAutoDjAnchor={player.isAutoDj && track.id === player.autoDjReferenceTrackId}
           class={cn(
             draggedIndex === index && "opacity-40",
             draggedIndex !== null &&

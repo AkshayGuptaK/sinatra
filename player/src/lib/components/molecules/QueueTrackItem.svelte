@@ -1,7 +1,7 @@
 <script lang="ts">
   import { type QueuedTrack } from "$lib/types/track";
   import { formatTime } from "$lib/utils/time";
-  import { Volume2, X, GripVertical, Download } from "@lucide/svelte";
+  import { Volume2, X, GripVertical, Download, Disc3 } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import { cn } from "$lib/utils";
   import {
@@ -16,6 +16,7 @@
     onHoverEnd: (trackId: string) => void;
     isActive?: boolean;
     isPlaying?: boolean;
+    isAutoDjAnchor?: boolean;
     class?: string;
     onSelect?: (index: number) => void;
     onRemove?: (index: number) => void;
@@ -31,6 +32,7 @@
     index,
     isActive = false,
     isPlaying = false,
+    isAutoDjAnchor = false,
     class: className = "",
     onHover,
     onHoverEnd,
@@ -53,7 +55,7 @@
 
   function handleDownload(event: MouseEvent) {
     event.stopPropagation();
-    onDownload?.(track)
+    onDownload?.(track);
   }
 </script>
 
@@ -108,9 +110,24 @@
     </div>
 
     <div class="flex flex-col min-w-0">
-      <span class={cn("truncate font-medium", isActive && "text-primary")}>
-        {displayTitle}
-      </span>
+      <div class="flex items-center gap-1.5 min-w-0">
+        <span class={cn("truncate font-medium", isActive && "text-primary")}>
+          {displayTitle}
+        </span>
+        {#if isAutoDjAnchor}
+          <span
+            title="AutoDJ Anchor Track"
+            class="shrink-0 flex items-center text-primary/70"
+          >
+            <Disc3
+              class={cn(
+                "size-3.5",
+                isPlaying && isActive ? "animate-spin-slow text-primary" : ""
+              )}
+            />
+          </span>
+        {/if}
+      </div>
       <span class="truncate min-h-3 text-xs text-muted-foreground">
         {displayArtist}
       </span>
@@ -119,18 +136,18 @@
 
   <div class="flex items-center justify-between gap-3 shrink-0">
     {#if track.source}
-    <div class="hidden group-hover:flex items-center">
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={`Download ${displayTitle}`}
-        title="Download"
-        onclick={handleDownload}
-        class="size-4.5 p-0 text-muted-foreground hover:text-secondary-foreground hover:bg-destructive/10"
-      >
-        <Download class="size-3.5" />
-      </Button>
-    </div>
+      <div class="hidden group-hover:flex items-center">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Download ${displayTitle}`}
+          title="Download"
+          onclick={handleDownload}
+          class="size-4.5 p-0 text-muted-foreground hover:text-secondary-foreground hover:bg-destructive/10"
+        >
+          <Download class="size-3.5" />
+        </Button>
+      </div>
     {/if}
     <span class="font-mono text-xs tabular-nums text-muted-foreground shrink-0">
       {formatTime(track.duration ?? 0)}

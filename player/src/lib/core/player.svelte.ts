@@ -43,6 +43,12 @@ export class MusicPlayer {
     this.loopMode === "all" ? this.queue.length > 0 : this.currentIndex > 0
   );
 
+  autoDjReferenceTrackId = $derived(
+    this.queue[
+      this.referenceTrackSetting === "last" ? this.queue.length - 1 : 0
+    ].id
+  );
+
   constructor() {
     this.engine = new AudioEngine();
     this.engine.onTrackEnded = () => this.handleTrackEnded();
@@ -161,18 +167,15 @@ export class MusicPlayer {
 
       const currentQueueIds = this.queue.map((t) => t.id);
 
-      const referenceTrackId =
-        this.referenceTrackSetting === "last"
-          ? this.currentTrackId
-          : this.queue[0].id;
-
-      const similarTracks = await sinatraApi.getSimilarTracks(
-        referenceTrackId,
-        currentQueueIds,
-        this.autoDjBatchSize,
-        this.autoDjConstraint,
-        this.autoDjMode
-      );
+      const similarTracks =
+        this.autoDjReferenceTrackId &&
+        (await sinatraApi.getSimilarTracks(
+          this.autoDjReferenceTrackId,
+          currentQueueIds,
+          this.autoDjBatchSize,
+          this.autoDjConstraint,
+          this.autoDjMode
+        ));
 
       if (similarTracks && similarTracks.length > 0) {
         for (const track of similarTracks) {

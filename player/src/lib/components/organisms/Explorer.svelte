@@ -9,6 +9,8 @@
   import type { RemoteTrack } from "$lib/api/explore";
   import ExplorerAlbumItem from "../molecules/ExplorerAlbumItem.svelte";
   import ExplorerAlbumDetails from "../molecules/ExplorerAlbumDetails.svelte";
+  import ExplorerArtistItem from "../molecules/ExplorerArtistItem.svelte";
+  import ExplorerArtistDetails from "../molecules/ExplorerArtistDetails.svelte";
 
   interface Props {
     class?: string;
@@ -43,6 +45,26 @@
   </div>
 
   <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
+    {#if explorer.artists && explorer.artists.length > 0}
+      <div class="flex flex-col gap-0.5">
+        {#each explorer.artists as artist, index (artist.browse_id + index)}
+          <ExplorerArtistItem {artist} browseArtist={explorer.exploreArtist} />
+        {/each}
+      </div>
+    {/if}
+
+    {#if explorer.albums && explorer.albums.length > 0}
+      <div class="flex flex-col gap-0.5">
+        {#each explorer.albums as album, index (album.browse_id + index)}
+          <ExplorerAlbumItem
+            {album}
+            browseArtist={explorer.exploreArtist}
+            browseAlbum={explorer.exploreAlbum}
+          />
+        {/each}
+      </div>
+    {/if}
+
     {#if explorer.tracks && explorer.tracks.length > 0}
       <div class="flex flex-col gap-0.5">
         {#each explorer.tracks as track, index (track.video_id + index)}
@@ -57,17 +79,14 @@
       </div>
     {/if}
 
-    {#if explorer.albums && explorer.albums.length > 0}
-    <div class="flex flex-col gap-0.5">
-      {#each explorer.albums as album, index (album.browse_id + index)}
-        <ExplorerAlbumItem
-          {album}
-          browseArtist={explorer.exploreArtist}
-          browseAlbum={explorer.exploreAlbum}
-        />
-      {/each}
-    </div>
-  {/if}
+    {#if explorer.activeArtist}
+      <ExplorerArtistDetails
+        artist={explorer.activeArtist}
+        browseAlbum={explorer.exploreAlbum}
+        onEnqueueTrack={player.enqueue}
+        onDownloadTrack={downloadTrack}
+      />
+    {/if}
 
     {#if explorer.activeAlbum}
       <ExplorerAlbumDetails

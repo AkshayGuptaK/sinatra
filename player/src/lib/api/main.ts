@@ -1,6 +1,7 @@
 import type { LibraryTrack, TrackSegment } from "$lib/types/track";
 import type { MetadataFields } from "$lib/types/metadata";
 import type { FilterIntent } from "$lib/utils/commandParser";
+import type { RemoteTrack } from "./explore";
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -15,7 +16,11 @@ export interface TrackLyricMatch {
   matches: string[];
 }
 
-export type SimilarityMode = "acoustics" | "acoustic_emotion" | "composite_emotion" | "semantics";
+export type SimilarityMode =
+  | "acoustics"
+  | "acoustic_emotion"
+  | "composite_emotion"
+  | "semantics";
 
 export type SegmentEditAction = "split" | "push" | "pull";
 
@@ -53,7 +58,7 @@ function appendConstraintToParams(
 export const sinatraApi = {
   getStreamUrl(trackId: string, source?: string): string {
     const base = `${API_BASE_URL}/api/audio/${encodeURIComponent(trackId)}`;
-    if (source && source !== 'local') {
+    if (source && source !== "local") {
       return `${base}?source=${encodeURIComponent(source)}`;
     }
     return base;
@@ -70,7 +75,9 @@ export const sinatraApi = {
 
   async getTrackSegments(trackId: string): Promise<TrackSegment[]> {
     const res = await fetch(
-      `${API_BASE_URL}/api/library/tracks/${encodeURIComponent(trackId)}/segments`
+      `${API_BASE_URL}/api/library/tracks/${encodeURIComponent(
+        trackId
+      )}/segments`
     );
 
     if (!res.ok) {
@@ -112,8 +119,9 @@ export const sinatraApi = {
     excludeIds: string[] = [],
     limit: number = 3,
     constraint: FilterIntent | null = null,
-    mode: SimilarityMode = "acoustics"
-  ): Promise<LibraryTrack[]> {
+    mode: SimilarityMode = "acoustics",
+    source: string = "local"
+  ): Promise<Array<LibraryTrack | RemoteTrack>> {
     const params = new URLSearchParams({
       limit: limit.toString(),
       mode: mode,
@@ -128,7 +136,7 @@ export const sinatraApi = {
     }
 
     const res = await fetch(
-      `${API_BASE_URL}/api/library/tracks/similar/${encodeURIComponent(
+      `${API_BASE_URL}/api/library/tracks/${source}/similar/${encodeURIComponent(
         trackId
       )}?${params.toString()}`
     );
@@ -182,20 +190,23 @@ export const sinatraApi = {
     timestamp: number
   ): Promise<TrackSegment[]> {
     const res = await fetch(
-      `${API_BASE_URL}/api/library/tracks/${encodeURIComponent(trackId)}/segments`,
+      `${API_BASE_URL}/api/library/tracks/${encodeURIComponent(
+        trackId
+      )}/segments`,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, timestamp }),
       }
     );
-  
+
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.detail || `Failed to edit segments: ${res.statusText}`);
+      throw new Error(
+        errData.detail || `Failed to edit segments: ${res.statusText}`
+      );
     }
-  
-    return res.json();
-  }
-};
 
+    return res.json();
+  },
+};

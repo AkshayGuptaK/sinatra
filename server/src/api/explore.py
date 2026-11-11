@@ -94,20 +94,6 @@ def get_album_details(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.get("/{source}/songs/{track_id}")
-def get_song_metadata(
-    track_id: str,
-    explorer: MusicExplorer = Depends(resolve_explorer),
-):
-    """Fetches rich track metadata for a single remote song."""
-    try:
-        song = explorer.get_song_metadata(track_id)
-        return JSONResponse(content=song)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.get("/{source}/moods")
 def get_mood_categories(
     explorer: MusicExplorer = Depends(resolve_explorer),

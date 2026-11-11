@@ -18,17 +18,6 @@
 
   const queuedTrackIds = $derived(new Set(player.queue.map((t) => t.id)));
 
-  function enqueueTrack(track: RemoteTrack) {
-    const queueTrack = {
-      ...track,
-      id: track.video_id,
-      album: track.album || "",
-      start: 0,
-      end: track.duration,
-    };
-    player.enqueue(queueTrack);
-  }
-
   function downloadTrack(track: RemoteTrack) {
     explorer.download(track.video_id);
   }
@@ -56,10 +45,10 @@
   <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
     {#if explorer.tracks && explorer.tracks.length > 0}
       <div class="flex flex-col gap-0.5">
-        {#each explorer.tracks as track (track.video_id)}
+        {#each explorer.tracks as track, index (track.video_id + index)}
           <ExplorerTrackItem
             {track}
-            onEnqueue={enqueueTrack}
+            onEnqueue={player.enqueue}
             onDownload={downloadTrack}
             browseArtist={explorer.exploreArtist}
             browseAlbum={explorer.exploreAlbum}
@@ -70,7 +59,7 @@
 
     {#if explorer.albums && explorer.albums.length > 0}
     <div class="flex flex-col gap-0.5">
-      {#each explorer.albums as album (album.browse_id)}
+      {#each explorer.albums as album, index (album.browse_id + index)}
         <ExplorerAlbumItem
           {album}
           browseArtist={explorer.exploreArtist}
@@ -84,7 +73,7 @@
       <ExplorerAlbumDetails
         album={explorer.activeAlbum}
         browseArtist={explorer.exploreArtist}
-        onEnqueueTrack={enqueueTrack}
+        onEnqueueTrack={player.enqueue}
         onDownloadTrack={downloadTrack}
       />
     {/if}

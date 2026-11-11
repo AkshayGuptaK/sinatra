@@ -1,10 +1,13 @@
 from typing import List, Literal, Optional
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.responses import JSONResponse
+from dataclasses import asdict, is_dataclass
+from datetime import datetime
 from pydantic import BaseModel, Field
 from src.pg import get_pg
 from src.services.segment_editor import edit_track_segments
-from datetime import datetime
+from src.services.explore import MusicExplorer
+from src.api.utils import resolve_explorer
 
 router = APIRouter(prefix="/api/library/tracks", tags=["tracks"])
 
@@ -77,7 +80,9 @@ async def get_track_segments(track_id: str):
         db = get_pg()
         segments = db.get_track_segments(track_id)
         if len(segments) == 0:
-            raise HTTPException(status_code=404, detail=f"Segments not found for track {track_id}")
+            raise HTTPException(
+                status_code=404, detail=f"Segments not found for track {track_id}"
+            )
         return JSONResponse(content=segments)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -101,8 +106,9 @@ async def patch_track_segments(track_id: str, payload: SegmentEditPayload):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/similar/{track_id}")
+@router.get("/{source}/similar/{track_id}")
 async def get_similar_library_tracks(
+    source: str,
     track_id: str,
     mode: str = Query(
         default="acoustics",
@@ -130,15 +136,54 @@ async def get_similar_library_tracks(
     ),
     filter_operator: Optional[str] = Query(default=None),
     filter_seconds: Optional[float] = Query(default=None),
+    explorer: MusicExplorer = Depends(resolve_explorer),
 ):
-    """Returns requested number of library tracks similar to the given track,
-    excluding those stoplisted, constrained by an optional AutoDJ filter.
+    """Returns requested number of tracks similar to the given track.
+
+    Dispatches to YouTube Music radio when source='ytm', or the local PostgreSQL
+    vector similarity engine when source='local'.
     """
     try:
-        excluded_ids = []
+        excluded_ids: list[str] = []
         if stoplist:
             excluded_ids = [tid.strip() for tid in stoplist.split(",") if tid.strip()]
 
+        # ---------------------------------------------------------------------
+        # 1. YouTube Music Recommendations
+        # ---------------------------------------------------------------------
+        if source.strip().lower() == "ytm":
+            # Request extra tracks if a stoplist is present to guarantee fulfilling 'limit'
+            fetch_limit = limit + len(excluded_ids)
+            remote_tracks: list[RemoteTrack] = explorer.get_song_recommendations(
+                video_id=track_id, limit=fetch_limit
+            )
+
+            stop_set = set(excluded_ids)
+            stop_set.add(track_id)
+
+            filtered_recs: list[dict] = []
+            for t in remote_tracks:
+                vid = getattr(t, "video_id", None) or (
+                    t.get("video_id") if isinstance(t, dict) else None
+                )
+                if vid and vid in stop_set:
+                    continue
+
+                if hasattr(t, "to_dict"):
+                    filtered_recs.append(t.to_dict())
+                elif is_dataclass(t):
+                    filtered_recs.append(asdict(t))
+                elif isinstance(t, dict):
+                    filtered_recs.append(t)
+
+                if len(filtered_recs) == limit:
+                    break
+
+            return JSONResponse(content=filtered_recs)
+
+        # ---------------------------------------------------------------------
+        # 2. Local Library (PostgreSQL + pgvector)
+        # ---------------------------------------------------------------------
         db = get_pg()
         tracks = db.get_similar_tracks_except_excluded(
             track_id=track_id,
@@ -154,7 +199,9 @@ async def get_similar_library_tracks(
         )
 
         return JSONResponse(content=tracks)
+
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
+        print("erorr is", e)
         raise HTTPException(status_code=500, detail=str(e))

@@ -270,22 +270,6 @@ export const explorerApi = {
   },
 
   /**
-   * Fetches rich relational metadata for a single remote song.
-   */
-  async getExploreSong(source: string, trackId: string): Promise<RemoteTrack> {
-    const res = await fetch(
-      `${API_BASE_URL}/api/explore/${encodeURIComponent(
-        source
-      )}/songs/${encodeURIComponent(trackId)}`
-    );
-
-    if (!res.ok) {
-      throw new Error(`Failed to fetch song metadata: ${res.statusText}`);
-    }
-    return res.json();
-  },
-
-  /**
    * Fetches mood, genre, and activity categories.
    */
   async getExploreMoods(source: string): Promise<MoodCategoryItem[]> {

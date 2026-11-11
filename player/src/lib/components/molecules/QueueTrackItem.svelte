@@ -119,12 +119,7 @@
             title="AutoDJ Anchor Track"
             class="shrink-0 flex items-center text-primary/70"
           >
-            <Disc3
-              class={cn(
-                "size-3.5",
-                isPlaying && isActive ? "animate-spin-slow text-primary" : ""
-              )}
-            />
+            <Disc3 class="size-3.5" />
           </span>
         {/if}
       </div>

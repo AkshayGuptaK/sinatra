@@ -105,7 +105,7 @@
           {index}
           isActive={index === player.currentIndex}
           isPlaying={index === player.currentIndex && player.engine.isPlaying}
-          isAutoDjAnchor={player.isAutoDj && track.id === player.autoDjReferenceTrackId}
+          isAutoDjAnchor={player.isAutoDj && track.id === player.autoDjReferenceTrack.id}
           class={cn(
             draggedIndex === index && "opacity-40",
             draggedIndex !== null &&

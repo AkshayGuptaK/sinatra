@@ -299,41 +299,12 @@ class YoutubeExplorer:
         }
 
     # -------------------------------------------------------------------------
-    # Song Metadata
+    # Song Recommendations
     # -------------------------------------------------------------------------
-    def get_song_metadata(self, video_id: str) -> dict[str, Any]:
-        """Fetches rich track metadata (including album, artist IDs, and lyrics browse ID).
-        Uses get_watch_playlist for rich YTM relational metadata, falling back to get_song.
-        """
-        watch = self.yt.get_watch_playlist(videoId=video_id, limit=1)
-        watch_tracks = watch.get("tracks", [])
-        lyrics_browse_id = watch.get("lyrics")
-
-        if watch_tracks:
-            track = self._parse_track(watch_tracks[0])
-            track.lyrics_browse_id = lyrics_browse_id
-            return track.to_dict()
-
-        # Fallback to /player videoDetails if watch playlist is unavailable
-        raw_song = self.yt.get_song(video_id)
-        details = raw_song.get("videoDetails", {})
-        duration_str = details.get("lengthSeconds")
-
-        return RemoteTrack(
-            video_id=video_id,
-            title=details.get("title", "Unknown Title"),
-            artist=details.get("author", "Unknown Artist"),
-            artist_id=details.get("channelId"),
-            duration=(
-                int(duration_str)
-                if duration_str and str(duration_str).isdigit()
-                else None
-            ),
-            thumbnail=self._best_thumbnail(
-                details.get("thumbnail", {}).get("thumbnails")
-            ),
-            lyrics_browse_id=lyrics_browse_id,
-        ).to_dict()
+    def get_song_recommendations(self, video_id: str, limit: int) -> dict[str, Any]:
+        """Fetches related tracks."""
+        watch = self.yt.get_watch_playlist(videoId=video_id, limit=limit + 1)
+        return [self._parse_track(t).to_dict() for t in watch.get("tracks", [])]
 
     # -------------------------------------------------------------------------
     # Exploring Music: Moods & Genres + Playlists

@@ -3,6 +3,7 @@ import { sinatraApi, type SimilarityMode } from "$lib/api/main";
 import { settings } from "$lib/core/settings.svelte";
 import { type QueuedTrack, type LibraryTrack } from "$lib/types/track";
 import type { FilterIntent } from "$lib/utils/commandParser";
+import type { RemoteTrack } from "$lib/api/explore";
 
 export type LoopMode = "none" | "one" | "all";
 
@@ -43,10 +44,10 @@ export class MusicPlayer {
     this.loopMode === "all" ? this.queue.length > 0 : this.currentIndex > 0
   );
 
-  autoDjReferenceTrackId = $derived(
+  autoDjReferenceTrack = $derived(
     this.queue[
       this.referenceTrackSetting === "last" ? this.queue.length - 1 : 0
-    ].id
+    ]
   );
 
   constructor() {
@@ -168,13 +169,14 @@ export class MusicPlayer {
       const currentQueueIds = this.queue.map((t) => t.id);
 
       const similarTracks =
-        this.autoDjReferenceTrackId &&
+        this.autoDjReferenceTrack &&
         (await sinatraApi.getSimilarTracks(
-          this.autoDjReferenceTrackId,
+          this.autoDjReferenceTrack.id,
           currentQueueIds,
           this.autoDjBatchSize,
           this.autoDjConstraint,
-          this.autoDjMode
+          this.autoDjMode,
+          this.autoDjReferenceTrack.source
         ));
 
       if (similarTracks && similarTracks.length > 0) {
@@ -193,7 +195,30 @@ export class MusicPlayer {
     }
   }
 
-  enqueue(track: QueuedTrack) {
+  convertRemoteToQueued(track: QueuedTrack | RemoteTrack): QueuedTrack {
+    if ("id" in track && track.id) {
+      return track;
+    }
+  
+    if (!("video_id" in track) || !track.video_id) {
+      return track as QueuedTrack;
+    }
+  
+    const duration = track.duration ?? 0;
+  
+    return {
+      ...track,
+      id: track.video_id,
+      album: track.album || "",
+      duration,
+      start: 0,
+      end: duration,
+    };
+  }
+
+  enqueue = (track: QueuedTrack | RemoteTrack) => {
+    track = this.convertRemoteToQueued(track);
+
     this.originalQueue.push(track);
     this.queue.push(track);
 

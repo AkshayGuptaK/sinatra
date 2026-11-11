@@ -19,7 +19,7 @@ SIMILARITY_COLUMN_MAP = {
     "acoustics": "acoustic_embedding",
     "semantics": "semantic_embedding",
     "acoustic_emotion": "acoustic_emotion_vector",
-    "composite_emotion": "combined_emotion_vector"
+    "composite_emotion": "combined_emotion_vector",
 }
 
 
@@ -141,14 +141,16 @@ class PostgresStore:
         acoustic_embedding: List[float],
         acoustic_emotions: Optional[Dict[str, float]] = None,
         acoustic_emotion_vector: Optional[List[float]] = None,
-        acoustic_emotion_coords: Optional[[float, float]] = [0.0,0.0],
+        acoustic_emotion_coords: Optional[[float, float]] = [0.0, 0.0],
         music_start: Optional[float] = 0.0,
         music_end: Optional[float] = None,
         rms_env: Optional[list[float]] | None = None,
         source_type: str = "local",
     ) -> None:
         # Format JSONB strings
-        emotions_json = json.dumps(acoustic_emotions) if acoustic_emotions is not None else None
+        emotions_json = (
+            json.dumps(acoustic_emotions) if acoustic_emotions is not None else None
+        )
 
         # Format vector strings
         emotion_vec_str = (
@@ -221,23 +223,33 @@ class PostgresStore:
                     music_start,
                     music_end if music_end is not None else duration,
                     rms_env,
-                    source_type
+                    source_type,
                 ),
             )
             track_id = cur.fetchone()[0]
 
         return track_id
 
-    def delete_by_filenames(self, filenames):
-        with self.conn.cursor() as cur:
-            cur.execute(
-                """
-               DELETE FROM tracks WHERE source_id = ANY(%s)
-                """,
-                (list(filenames),),
-            )
+    def delete_by_filenames(self, filenames: set[str] | list[str]) -> list[str]:
+        """Deletes tracks matching the given source paths and returns their IDs."""
+        if not filenames:
+            return []
 
-        self.conn.commit()
+        query = """
+        DELETE FROM tracks
+        WHERE source_id = ANY(%s)
+        RETURNING id::text;
+        """
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(query, (list(filenames),))
+                deleted_ids = [r[0] for r in cur.fetchall()]
+            self.conn.commit()
+            return deleted_ids
+        except Exception as e:
+            print(f"Error deleting tracks: {e}", flush=True)
+            self.conn.rollback()
+            return []
 
     def split_chunk(
         self,

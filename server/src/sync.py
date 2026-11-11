@@ -7,12 +7,18 @@ from src.pg import get_pg
 from src.sources import *
 from src.models.mert import get_mert_embedder
 from src.models.projector.mood_projector import get_mood_projector
-from src.services import get_audio_chunker, get_emotion_scorer, get_metadata_extractor, compute_rms_envelope
+from src.services import (
+    get_audio_chunker,
+    get_emotion_scorer,
+    get_metadata_extractor,
+    compute_rms_envelope,
+)
 from src.api.events import broadcast_event
 
 ai_executor = ThreadPoolExecutor(max_workers=1)
 
 SAMPLE_RATE = 24000
+
 
 def _process_single_file(path):
     try:
@@ -32,7 +38,7 @@ def _process_single_file(path):
         music_end = float(chunked_track.chunks[-1].end_sec)
 
         rms_env = compute_rms_envelope(waveform, n_points=200)
-        
+
         embedder = get_mert_embedder()
         embedded_chunks = embedder.extract(chunked_track.chunks)
 
@@ -45,11 +51,19 @@ def _process_single_file(path):
             c["acoustic_emotion_vector"] = emotion_vect
             chunk_emotion_vecs.append(emotion_vect)
 
-        durations = np.array([float(c["duration"]) for c in embedded_chunks], dtype=np.float32)
+        durations = np.array(
+            [float(c["duration"]) for c in embedded_chunks], dtype=np.float32
+        )
         total_dur = durations.sum()
-        weights = (durations / total_dur) if total_dur > 0 else (np.ones_like(durations) / len(durations))
+        weights = (
+            (durations / total_dur)
+            if total_dur > 0
+            else (np.ones_like(durations) / len(durations))
+        )
 
-        chunk_embs = np.array([c["acoustic_embedding"] for c in embedded_chunks], dtype=np.float32)
+        chunk_embs = np.array(
+            [c["acoustic_embedding"] for c in embedded_chunks], dtype=np.float32
+        )
         global_acoustic_embedding = np.sum(chunk_embs * weights[:, np.newaxis], axis=0)
         (global_emotions, global_emot_vec) = scorer.score(global_acoustic_embedding)
 
@@ -58,7 +72,11 @@ def _process_single_file(path):
 
         extractor = get_metadata_extractor()
         meta = extractor.extract(path)
-        track_duration = meta.duration if meta and meta.duration > 0 else chunked_track.total_duration
+        track_duration = (
+            meta.duration
+            if meta and meta.duration > 0
+            else chunked_track.total_duration
+        )
 
         db = get_pg()
         track_id = db.upsert_track(
@@ -73,12 +91,14 @@ def _process_single_file(path):
             acoustic_emotion_coords=[coord_x, coord_y],
             music_start=music_start,
             music_end=music_end,
-            rms_env=rms_env
+            rms_env=rms_env,
         )
 
         db.save_track_chunks(track_id=track_id, chunks=embedded_chunks)
 
-        print(f"✅ Ingested {meta.title if meta else path} ({len(embedded_chunks)} chunks ")
+        print(
+            f"✅ Ingested {meta.title if meta else path} ({len(embedded_chunks)} chunks "
+        )
         return True
 
     except Exception as e:
@@ -99,9 +119,7 @@ async def _ingest_files(paths, store):
     loop = asyncio.get_running_loop()
 
     async def _ingest_single(path: str):
-        success = await loop.run_in_executor(
-            ai_executor, _process_single_file, path
-        )
+        success = await loop.run_in_executor(ai_executor, _process_single_file, path)
         if success:
             await broadcast_event(
                 "library:updated",
@@ -113,14 +131,16 @@ async def _ingest_files(paths, store):
     print("Ingestion batch complete.")
 
 
-def _delete_orphaned_tracks(db_stats, local_stats, store):
+async def _delete_orphaned_tracks(db_stats, local_stats, store):
     db_filenames = {s.location for s in db_stats}
     local_filenames = {s.location for s in local_stats}
     orphaned = db_filenames - local_filenames
 
     if orphaned:
         print(f"Deleting {len(orphaned)} tracks for missing files")
-        store.delete_by_filenames(orphaned)
+        deleted_ids = store.delete_by_filenames(orphaned)
+        if deleted_ids:
+            await broadcast_event("library:deleted", {"track_ids": deleted_ids})
 
 
 async def _update_stale_tracks(db_stats, local_stats, store):
@@ -156,8 +176,10 @@ async def sync_file(path):
     await _ingest_files([path], db)
 
 
-def delete_file_from_store(path):
-    get_pg().delete_by_filenames([path])
+async def delete_file_from_store(path):
+    deleted_ids = get_pg().delete_by_filenames([path])
+    if deleted_ids:
+        await broadcast_event("library:deleted", {"track_ids": deleted_ids})
 
 
 async def sync_store():
@@ -167,7 +189,7 @@ async def sync_store():
     local_stats = fs.get_source_stats()
 
     print("Syncing...")
-    _delete_orphaned_tracks(db_stats, local_stats, pg)
+    await _delete_orphaned_tracks(db_stats, local_stats, pg)
     await _update_stale_tracks(db_stats, local_stats, pg)
     await _ingest_new_files(db_stats, local_stats, pg)
     print("Sync complete.")

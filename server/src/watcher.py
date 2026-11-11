@@ -11,7 +11,7 @@ async def watch_files():
         for change_type, path in changes:
             if change_type == Change.deleted:
                 print(f"Watcher detected deletion: {path}", flush=True)
-                delete_file_from_store(path)
+                await delete_file_from_store(path)
             
             elif change_type in (Change.added, Change.modified):
                 print(f"Watcher detected update: {path}", flush=True)

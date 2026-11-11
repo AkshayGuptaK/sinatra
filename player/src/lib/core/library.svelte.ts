@@ -66,6 +66,15 @@ export class MusicLibrary {
     this.eventSource.addEventListener("library:updated", async () => {
       await this.fetchDelta();
     });
+    this.eventSource.addEventListener(
+      "library:deleted",
+      (event: MessageEvent) => {
+        const payload = JSON.parse(event.data);
+        const deletedIds: string[] = payload.track_ids ?? [];
+        if (deletedIds.length === 0) return;
+        this.removeTracks(deletedIds);
+      }
+    );
   }
 
   async fetchTracks() {
@@ -97,6 +106,15 @@ export class MusicLibrary {
       this.tracks = Array.from(trackMap.values());
     } catch (err) {
       console.error("Failed to fetch library delta updates:", err);
+    }
+  };
+
+  removeTracks(trackIds: string[]) {
+    const toDelete = new Set(trackIds);
+
+    this.tracks = this.tracks.filter((t) => !toDelete.has(t.id));
+    for (const id of trackIds) {
+      player.removeTrackById(id);
     }
   }
 
@@ -559,7 +577,7 @@ export class MusicLibrary {
     for (const track of this.displayedTracks) {
       player.enqueue(track);
     }
-  }
+  };
 
   /**
    * Returns N randomly sampled tracks matching an optional filter.

@@ -13,6 +13,7 @@ interface AudioDeck {
 
 export interface NextTrack {
   id: string;
+  duration?: number;
   start: number;
   end: number;
   rms_env?: number[];
@@ -199,7 +200,7 @@ export class AudioEngine {
     });
 
     audio.addEventListener("loadedmetadata", () => {
-      if (index === this.activeDeckIdx) {
+      if (index === this.activeDeckIdx && !this.duration) {
         this.duration = Number.isFinite(audio.duration) ? audio.duration : 0;
       }
     });
@@ -243,11 +244,18 @@ export class AudioEngine {
     }
   }
 
-  private preloadDeck(deck: AudioDeck, track: NextTrack, cueStart = false) {
+  private preloadDeck(
+    deck: AudioDeck,
+    track: NextTrack,
+    cueStart = false,
+    shouldLoad = true
+  ) {
     if (deck.trackId !== track.id) {
       deck.trackId = track.id;
       deck.audio.src = sinatraApi.getStreamUrl(track.id, track.source);
-      deck.audio.load();
+      if (shouldLoad) {
+        deck.audio.load();
+      }
     }
     if (cueStart && track.start > 0) {
       this.safeSeekDeck(deck, track.start);
@@ -263,7 +271,7 @@ export class AudioEngine {
     this.currentMusicEnd = next.end;
     this.currentRmsEnv = next.rms_env || null;
     this.currentTime = active.audio.currentTime;
-    this.duration = Number.isFinite(active.audio.duration)
+    this.duration = next.duration || Number.isFinite(active.audio.duration)
       ? active.audio.duration
       : 0;
     this.isPlaying = !active.audio.paused;
@@ -450,7 +458,13 @@ export class AudioEngine {
     this.currentMusicEnd = track.end;
     this.currentRmsEnv = track.rms_env || null;
 
-    this.preloadDeck(deck, track, this.transitionMode === "gapless");
+    // Only call .load() explicitly if we aren't about to call .play() on the next line
+    this.preloadDeck(
+      deck,
+      track,
+      this.transitionMode === "gapless",
+      !autoPlay
+    );
     this.dsp.setGainImmediate(deck.gainNode, 1);
 
     if (!track.source) this.segmentManager.loadForTrack(track.id);

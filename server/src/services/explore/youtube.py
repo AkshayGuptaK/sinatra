@@ -420,7 +420,7 @@ class YoutubeExplorer:
     # -------------------------------------------------------------------------
     @classmethod
     def get_stream_info(
-        cls, video_id: str, force_refresh: bool = False
+        cls, video_id: str, force_refresh: bool = False, format="m4a"
     ) -> AudioStreamInfo:
         """Extracts direct audio-only stream URL, headers, and metadata using yt-dlp."""
         now = time.time()
@@ -440,10 +440,15 @@ class YoutubeExplorer:
             if cached and not force_refresh and cached.expires_at > now:
                 return cached
 
+            format_str = (
+                "bestaudio[ext=m4a]/bestaudio[acodec=mp4a]/bestaudio/best"
+                if format == "m4a"
+                else "bestaudio[ext=webm][acodec=opus]/bestaudio[acodec=opus]/bestaudio"
+            )
+
             url = f"https://music.youtube.com/watch?v={video_id}"
             ydl_opts = {
-                # Prefer WebM/Opus first: its header cues are at byte 0 (instant streaming)
-                "format": "bestaudio[ext=webm][acodec=opus]/bestaudio[acodec=opus]/bestaudio",
+                "format": format_str,
                 "quiet": True,
                 "no_warnings": True,
                 "noplaylist": True,
@@ -565,7 +570,7 @@ class YoutubeExplorer:
             "opus": "audio/ogg",
         }
         content_type = resp.headers.get(
-            "Content-Type", mime_map.get(stream_info.ext, "audio/webm")
+            "Content-Type", mime_map.get(stream_info.ext, "audio/mp4")
         )
 
         resp_headers: dict[str, str] = {
@@ -601,7 +606,7 @@ class YoutubeExplorer:
         Avoids yt-dlp 403 errors by reusing authenticated stream headers.
         """
         destination_dir.mkdir(parents=True, exist_ok=True)
-        stream_info = self.get_stream_info(video_id)
+        stream_info = self.get_stream_info(video_id, format="opus")
 
         artist = self._sanitize_filename(stream_info.artist or "Unknown Artist")
         title = self._sanitize_filename(stream_info.title or "Unknown Title")

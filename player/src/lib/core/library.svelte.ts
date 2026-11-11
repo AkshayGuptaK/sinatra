@@ -110,6 +110,7 @@ export class MusicLibrary {
   };
 
   removeTracks(trackIds: string[]) {
+    this.lastSyncTime = new Date().toISOString();
     const toDelete = new Set(trackIds);
 
     this.tracks = this.tracks.filter((t) => !toDelete.has(t.id));

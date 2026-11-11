@@ -1,5 +1,5 @@
 from typing import List, Literal, Optional
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 from dataclasses import asdict, is_dataclass
 from datetime import datetime
@@ -136,7 +136,6 @@ async def get_similar_library_tracks(
     ),
     filter_operator: Optional[str] = Query(default=None),
     filter_seconds: Optional[float] = Query(default=None),
-    explorer: MusicExplorer = Depends(resolve_explorer),
 ):
     """Returns requested number of tracks similar to the given track.
 
@@ -152,7 +151,7 @@ async def get_similar_library_tracks(
         # 1. YouTube Music Recommendations
         # ---------------------------------------------------------------------
         if source.strip().lower() == "ytm":
-            # Request extra tracks if a stoplist is present to guarantee fulfilling 'limit'
+            explorer = resolve_explorer(source)
             fetch_limit = limit + len(excluded_ids)
             remote_tracks: list[RemoteTrack] = explorer.get_song_recommendations(
                 video_id=track_id, limit=fetch_limit
@@ -203,5 +202,4 @@ async def get_similar_library_tracks(
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
-        print("erorr is", e)
         raise HTTPException(status_code=500, detail=str(e))

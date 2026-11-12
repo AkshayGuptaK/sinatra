@@ -152,9 +152,11 @@
           onclick={handleEnqueueClick}
           title="Add entire playlist to queue"
           aria-label="Add entire playlist to queue"
-          class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-neutral-800 hover:bg-neutral-700/80 text-neutral-200 border border-neutral-700/60 transition-colors"
+          class="group/btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-neutral-800 hover:bg-neutral-700/80 text-neutral-200 hover:text-secondary-foreground border border-neutral-700/60 transition-colors cursor-pointer"
         >
-          <ListPlus class="w-4 h-4 text-neutral-400" />
+          <ListPlus
+            class="w-4 h-4 text-neutral-400 group-hover/btn:text-secondary-foreground transition-colors"
+          />
           <span class="hidden sm:inline">Queue Playlist</span>
         </button>
       {/if}
@@ -165,9 +167,11 @@
           onclick={handleDownloadClick}
           title="Download entire playlist"
           aria-label="Download entire playlist"
-          class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-neutral-800 hover:bg-neutral-700/80 text-neutral-200 border border-neutral-700/60 transition-colors"
+          class="group/btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-neutral-800 hover:bg-neutral-700/80 text-neutral-200 hover:text-secondary-foreground border border-neutral-700/60 transition-colors cursor-pointer"
         >
-          <Download class="w-4 h-4 text-neutral-400" />
+          <Download
+            class="w-4 h-4 text-neutral-400 group-hover/btn:text-secondary-foreground transition-colors"
+          />
           <span class="hidden sm:inline">Download Playlist</span>
         </button>
       {/if}

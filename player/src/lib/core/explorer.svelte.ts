@@ -11,6 +11,7 @@ import {
   type RemoteTrack,
 } from "$lib/api/explore";
 import type { SearchIntent } from "$lib/config/commandRegistry";
+import { settings } from "./settings.svelte";
 
 export type ExplorerHistoryEntry =
   | { kind: "home" }
@@ -126,7 +127,8 @@ export class MusicExplorer {
       this.moodCategories = await explorerApi.getExploreMoods(
         this.activeSource
       );
-      this.topCharts = await explorerApi.getExploreCharts(this.activeSource);
+      const country = settings.get("explore.country")
+      this.topCharts = await explorerApi.getExploreCharts(this.activeSource, country || "ZZ");
     } catch (err) {
       console.error("Failed to load explore mood categories:", err);
     } finally {

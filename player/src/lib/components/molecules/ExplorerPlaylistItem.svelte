@@ -10,6 +10,7 @@
     onPlay?: (playlist: RemotePlaylist) => void;
     onEnqueue?: (playlist: RemotePlaylist) => void;
     browsePlaylist?: (playlistId: string) => void;
+    showTag?: boolean;
   }
 
   let {
@@ -20,6 +21,7 @@
     onPlay,
     onEnqueue,
     browsePlaylist,
+    showTag = true,
   }: Props = $props();
 
   let isImageLoaded = $state(false);
@@ -126,11 +128,13 @@
         {playlist.title}
       </span>
 
+      {#if showTag}
       <span
         class="shrink-0 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400 border border-neutral-700/60 leading-none"
       >
         Playlist
       </span>
+      {/if}
     </div>
 
     <div

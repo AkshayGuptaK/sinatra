@@ -31,51 +31,69 @@ export const SETTINGS_DEFINITIONS: SettingDefinition[] = [
 
   // --- Playback ---
   {
-    id: 'playback.fade',
-    category: 'Playback',
-    label: 'Fade',
-    description: 'Gently ramp volume when starting, pausing, or seeking',
-    type: 'boolean',
-    defaultValue: true
+    id: "playback.fade",
+    category: "Playback",
+    label: "Fade",
+    description: "Gently ramp volume when starting, pausing, or seeking",
+    type: "boolean",
+    defaultValue: true,
   },
   {
-    id: 'playback.transition',
-    category: 'Playback',
-    label: 'Transition',
-    description: 'Transition behavior between consecutive tracks in the queue',
-    type: 'select',
+    id: "playback.transition",
+    category: "Playback",
+    label: "Transition",
+    description: "Transition behavior between consecutive tracks in the queue",
+    type: "select",
     options: [
       {
-        value: 'off',
-        label: 'Off',
-        description: 'Standard playback'
+        value: "off",
+        label: "Off",
+        description: "Standard playback",
       },
       {
-        value: 'crossfade_3s',
-        label: 'Crossfade (3s)',
-        description: '3-second overlap blend'
+        value: "crossfade_3s",
+        label: "Crossfade (3s)",
+        description: "3-second overlap blend",
       },
       {
-        value: 'crossfade_5s',
-        label: 'Crossfade (5s)',
-        description: '5-second overlap blend'
+        value: "crossfade_5s",
+        label: "Crossfade (5s)",
+        description: "5-second overlap blend",
       },
       {
-        value: 'gapless',
-        label: 'Gapless',
-        description: 'Skip all silence'
+        value: "gapless",
+        label: "Gapless",
+        description: "Skip all silence",
       },
-
     ],
-    defaultValue: 'off'
+    defaultValue: "off",
   },
   {
-    id: 'playback.normalization',
-    category: 'Playback',
-    label: 'Volume Normalization',
-    description: 'Real-time dynamic leveling to smooth extreme volume spikes and dips',
-    type: 'boolean',
-    defaultValue: false
+    id: "playback.normalization",
+    category: "Playback",
+    label: "Volume Normalization",
+    description:
+      "Real-time dynamic leveling to smooth extreme volume spikes and dips",
+    type: "boolean",
+    defaultValue: false,
+  },
+
+  // --- Explore ---
+  {
+    id: "explore.country",
+    category: "Explore",
+    label: "Country",
+    description: "Country to request trending artists for",
+    type: "select",
+    options: [
+      { value: "ZZ", label: "Global" },
+      { value: "IN", label: "India" },
+      { value: "CN", label: "China" },
+      { value: "JP", label: "Japan" },
+      { value: "KR", label: "Korea" },
+      { value: "US", label: "USA" },
+    ],
+    defaultValue: "ZZ",
   },
 
   // --- AutoDJ ---
@@ -110,24 +128,25 @@ export const SETTINGS_DEFINITIONS: SettingDefinition[] = [
     defaultValue: "acoustics",
   },
   {
-    id: 'autodj.referenceTrack',
-    category: 'AutoDJ',
-    label: 'Recommendation Anchor',
-    description: 'Whether recommendations evolve from the end of the queue or anchor to the start',
-    type: 'select',
+    id: "autodj.referenceTrack",
+    category: "AutoDJ",
+    label: "Recommendation Anchor",
+    description:
+      "Whether recommendations evolve from the end of the queue or anchor to the start",
+    type: "select",
     options: [
       {
-        value: 'last',
-        label: 'Last Track',
-        description: 'Evolving journey'
+        value: "last",
+        label: "Last Track",
+        description: "Evolving journey",
       },
       {
-        value: 'first',
-        label: 'First Track',
-        description: 'Station anchor'
-      }
+        value: "first",
+        label: "First Track",
+        description: "Station anchor",
+      },
     ],
-    defaultValue: 'last'
+    defaultValue: "last",
   },
   {
     id: "autodj.batchSize",

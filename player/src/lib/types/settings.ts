@@ -1,5 +1,6 @@
 export type SettingCategory =
   | "Appearance"
+  | "Explore"
   | "AutoDJ"
   | "Playback"
   | "Visualizer";

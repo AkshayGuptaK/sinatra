@@ -10,6 +10,7 @@
     Disc3,
     Volume2,
     View,
+    Compass,
   } from "@lucide/svelte";
   import { cn } from "$lib/utils";
   import HeaderBanner from "../molecules/HeaderBanner.svelte";
@@ -23,6 +24,7 @@
   const categories: SettingCategory[] = [
     "Appearance",
     "Playback",
+    "Explore",
     "AutoDJ",
     "Visualizer",
   ];
@@ -30,6 +32,7 @@
   const categoryIcons = {
     Appearance: Palette,
     AutoDJ: Disc3,
+    Explore: Compass,
     Playback: Volume2,
     Visualizer: View,
   };
@@ -66,12 +69,10 @@
     className
   )}
 >
-  <!-- View Header Banner -->
   <HeaderBanner title="Preferences" icon={SlidersHorizontal} />
 
-  <!-- Tabs Container -->
   <Tabs.Root
-    defaultValue="Appearance"
+    value="Appearance"
     class="flex-1 min-h-0 flex flex-col w-full"
   >
     <!-- Tabs Bar Strip -->
@@ -81,7 +82,7 @@
           {@const Icon = categoryIcons[category]}
           <Tabs.Trigger
             value={category}
-            class="relative h-10 rounded-none border-b-2 border-transparent px-2 pb-2.5 pt-2 font-medium text-xs text-muted-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:bg-transparent hover:text-secondary-foreground shadow-none transition-none cursor-pointer flex items-center gap-1.5"
+            class="relative h-10 rounded-sm border-b-2 border-transparent px-2 pb-2.5 pt-2 font-medium text-xs text-muted-foreground data-[state=active]:border-primary! data-[state=active]:text-foreground data-[state=active]:bg-transparent hover:text-secondary-foreground! shadow-none transition-none cursor-pointer flex items-center gap-1.5"
           >
             {#if Icon}
               <Icon class="size-3.5" />

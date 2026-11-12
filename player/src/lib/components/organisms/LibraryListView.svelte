@@ -5,7 +5,7 @@
   import TagEditorPopover from "$lib/components/molecules/TagEditorPopover.svelte";
   import { library } from "$lib/core/library.svelte";
   import { player } from "$lib/core/player.svelte";
-  import type { Track } from "$lib/types/track";
+  import type { LibraryTrack } from "$lib/types/track";
   import { Clock3 } from "@lucide/svelte";
   import { cn } from "$lib/utils";
   import ColumnHeaderCell from "../atoms/ColumnHeaderCell.svelte";
@@ -19,11 +19,11 @@
   let { queuedTrackIds, class: className = "" }: Props = $props();
 
   // Single shared Popover state
-  let activeTaggingTrack = $state<Track | null>(null);
+  let activeTaggingTrack = $state<LibraryTrack | null>(null);
   let isPopoverOpen = $state(false);
   let triggerAnchorEl = $state<HTMLElement | null>(null);
 
-  function handleOpenTagEditor(track: Track, triggerEl: HTMLElement) {
+  function handleOpenTagEditor(track: LibraryTrack, triggerEl: HTMLElement) {
     activeTaggingTrack = track;
     triggerAnchorEl = triggerEl;
     isPopoverOpen = true;
@@ -48,7 +48,7 @@
     }
   });
 
-  function handlePlay(track: Track) {
+  function handlePlay(track: LibraryTrack) {
     const trackIndex = library.displayedTracks.findIndex(
       (t) => t.id === track.id
     );
@@ -57,11 +57,11 @@
     }
   }
 
-  function handleEnqueue(track: Track) {
+  function handleEnqueue(track: LibraryTrack) {
     player.enqueue(track);
   }
 
-  function handleDequeue(track: Track) {
+  function handleDequeue(track: LibraryTrack) {
     player.removeTrackById(track.id);
   }
 

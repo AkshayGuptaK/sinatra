@@ -1,7 +1,11 @@
 <script lang="ts">
-  import { Compass } from "@lucide/svelte";
   import { cn } from "$lib/utils";
-  import type { RemoteTrack } from "$lib/api/explore";
+  import { Compass } from "@lucide/svelte";
+  import type {
+    RemoteAlbumDetails,
+    RemotePlaylistDetails,
+    RemoteTrack,
+  } from "$lib/api/explore";
   import { explorer } from "$lib/core/explorer.svelte";
   import { player } from "$lib/core/player.svelte";
   import HeaderBanner from "$lib/components/molecules/HeaderBanner.svelte";
@@ -26,6 +30,14 @@
 
   function downloadTrack(track: RemoteTrack) {
     explorer.download(track.video_id);
+  }
+
+  function downloadAll(collection: RemoteAlbumDetails | RemotePlaylistDetails) {
+    collection.tracks.forEach(downloadTrack);
+  }
+
+  function enqueueAll(collection: RemoteAlbumDetails | RemotePlaylistDetails) {
+    collection.tracks.forEach(player.enqueue);
   }
 </script>
 
@@ -70,7 +82,9 @@
     {/if}
 
     {#if explorer.playlists && explorer.playlists.length > 0}
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+      <div
+        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2"
+      >
         {#each explorer.playlists as playlist, index (playlist.playlist_id + index)}
           <ExplorerPlaylistItem
             {playlist}
@@ -85,6 +99,10 @@
         {#each explorer.tracks as track, index (track.video_id + index)}
           <ExplorerTrackItem
             {track}
+            isActive={player.currentTrackId === track.video_id}
+            isPlaying={player.currentTrackId === track.video_id &&
+              player.engine.isPlaying}
+            isQueued={queuedTrackIds.has(track.video_id)}
             onEnqueue={player.enqueue}
             onDownload={downloadTrack}
             browseArtist={explorer.exploreArtist}
@@ -98,6 +116,9 @@
       <ExplorerArtistDetails
         artist={explorer.activeArtist}
         browseAlbum={explorer.exploreAlbum}
+        activeTrackId={player.currentTrackId}
+        queuedTrackIds={queuedTrackIds}
+        isPlaying={player.engine.isPlaying}
         onEnqueueTrack={player.enqueue}
         onDownloadTrack={downloadTrack}
       />
@@ -107,16 +128,25 @@
       <ExplorerAlbumDetails
         album={explorer.activeAlbum}
         browseArtist={explorer.exploreArtist}
+        activeTrackId={player.currentTrackId}
+        queuedTrackIds={queuedTrackIds}
+        isPlaying={player.engine.isPlaying}
+        onDownload={downloadAll}
+        onEnqueue={enqueueAll}
         onEnqueueTrack={player.enqueue}
         onDownloadTrack={downloadTrack}
       />
     {/if}
 
-
     {#if explorer.activePlaylist}
       <ExplorerPlaylistDetails
         playlist={explorer.activePlaylist}
         browseArtist={explorer.exploreArtist}
+        activeTrackId={player.currentTrackId}
+        queuedTrackIds={queuedTrackIds}
+        isPlaying={player.engine.isPlaying}
+        onDownload={downloadAll}
+        onEnqueue={enqueueAll}
         onEnqueueTrack={player.enqueue}
         onDownloadTrack={downloadTrack}
       />

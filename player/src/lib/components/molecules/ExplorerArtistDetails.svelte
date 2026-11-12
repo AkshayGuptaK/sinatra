@@ -1,4 +1,3 @@
-<!-- src/lib/components/molecules/ExplorerArtistDetails.svelte -->
 <script lang="ts">
   import type {
     RemoteArtistDetails,
@@ -8,8 +7,6 @@
   import ExplorerTrackItem from "./ExplorerTrackItem.svelte";
   import ExplorerAlbumItem from "./ExplorerAlbumItem.svelte";
   import {
-    Play,
-    Pause,
     User,
     ListPlus,
     ChevronDown,
@@ -22,18 +19,15 @@
 
   export interface Props {
     artist: RemoteArtistDetails;
-    isActive?: boolean;
-    isPlaying?: boolean;
     class?: string;
-    onPlay?: (artist: RemoteArtistDetails) => void;
     onEnqueue?: (artist: RemoteArtistDetails) => void;
     browseAlbum?: (albumId: string) => void;
     onSeeAllAlbums?: (artistId: string, params: string) => void;
 
     // Tracklist item props
     activeTrackId?: string | null;
-    playingTrackId?: string | null;
     queuedTrackIds?: Set<string>;
+    isPlaying?: boolean;
     onPlayTrack?: (track: RemoteTrack) => void;
     onEnqueueTrack?: (track: RemoteTrack) => void;
     onDequeueTrack?: (track: RemoteTrack) => void;
@@ -48,15 +42,12 @@
 
   let {
     artist,
-    isActive = false,
-    isPlaying = false,
     class: className = "",
-    onPlay,
     onEnqueue,
     browseAlbum,
     onSeeAllAlbums,
     activeTrackId = null,
-    playingTrackId = null,
+    isPlaying = false,
     queuedTrackIds = new Set<string>(),
     onPlayTrack,
     onEnqueueTrack,
@@ -73,11 +64,6 @@
   let isSongsExpanded = $state(true);
   let isAlbumsExpanded = $state(true);
   let isBioExpanded = $state(false);
-
-  function handlePlayClick(e: MouseEvent) {
-    e.stopPropagation();
-    onPlay?.(artist);
-  }
 
   function handleEnqueueClick(e: MouseEvent) {
     e.stopPropagation();
@@ -96,15 +82,11 @@
 </script>
 
 <div
-  class="flex flex-col w-full rounded-xl border border-neutral-800/80 bg-neutral-900/40 hover:border-neutral-700/70 transition-all duration-150 overflow-hidden shadow-sm {isActive
-    ? 'ring-1 ring-emerald-500/50 border-neutral-700 bg-neutral-900/60'
-    : ''} {className}"
+  class="flex flex-col w-full rounded-xl border border-neutral-800/80 bg-neutral-900/40 hover:border-neutral-700/70 transition-all duration-150 overflow-hidden shadow-sm {className}"
 >
-  <!-- Artist Header Banner Block -->
   <div
     class="group relative flex items-start sm:items-center gap-4 p-3.5 sm:p-5"
   >
-    <!-- Circular Artist Portrait Frame -->
     <div
       class="relative shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-neutral-900 border border-neutral-800/80 shadow-md flex items-center justify-center"
     >
@@ -123,41 +105,6 @@
         <div class="text-neutral-600 flex flex-col items-center justify-center">
           <User class="w-9 h-9" />
         </div>
-      {/if}
-
-      <!-- Animated equalizer bars if actively playing -->
-      {#if isPlaying}
-        <div
-          class="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center gap-0.5 group-hover:opacity-0 transition-opacity"
-        >
-          <span
-            class="w-0.5 h-4 bg-secondary-foreground rounded-full animate-bounce [animation-delay:-0.3s]"
-          ></span>
-          <span
-            class="w-0.5 h-6 bg-secondary-foreground rounded-full animate-bounce [animation-delay:-0.15s]"
-          ></span>
-          <span class="w-0.5 h-3.5 bg-secondary-foreground rounded-full animate-bounce"
-          ></span>
-        </div>
-      {/if}
-
-      {#if onPlay}
-        <button
-          type="button"
-          onclick={handlePlayClick}
-          aria-label={isPlaying ? "Pause artist" : "Play artist top songs"}
-          class="absolute inset-0 flex items-center justify-center bg-black/60 text-white transition-opacity duration-150 {isPlaying
-            ? 'opacity-0 group-hover:opacity-100'
-            : isActive
-              ? 'opacity-100'
-              : 'opacity-0 group-hover:opacity-100'}"
-        >
-          {#if isPlaying}
-            <Pause class="w-7 h-7 fill-current text-secondary-foreground" />
-          {:else}
-            <Play class="w-7 h-7 fill-current translate-x-0.5 text-white" />
-          {/if}
-        </button>
       {/if}
     </div>
 
@@ -179,17 +126,13 @@
         {/if}
       </div>
 
-      <!-- Artist Name -->
       <h2
-        class="text-lg sm:text-2xl font-bold truncate leading-tight transition-colors {isActive
-          ? 'text-secondary-foreground'
-          : 'text-neutral-100 group-hover:text-white'}"
+        class="text-lg sm:text-2xl font-bold truncate leading-tight transition-colors text-neutral-100 group-hover:text-white"
         title={artist.name}
       >
         {artist.name}
       </h2>
 
-      <!-- Track & Release Counts -->
       <div
         class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-400 mt-1 leading-normal"
       >
@@ -287,7 +230,7 @@
                 <ExplorerTrackItem
                   {track}
                   isActive={activeTrackId === track.video_id}
-                  isPlaying={playingTrackId === track.video_id}
+                  isPlaying={activeTrackId === track.video_id && isPlaying}
                   isQueued={queuedTrackIds.has(track.video_id)}
                   onPlay={onPlayTrack}
                   onEnqueue={onEnqueueTrack}

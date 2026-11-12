@@ -2,7 +2,7 @@
   import type { LibraryTrack } from "$lib/types/track";
   import type { MetadataFields } from "$lib/types/metadata";
   import { formatTime } from "$lib/utils/time";
-  import { Volume2, ListPlus } from "@lucide/svelte";
+  import { Volume2, ListPlus, ListX } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import InlineEditableCell from "$lib/components/atoms/InlineEditableCell.svelte";
   import EditableTagList from "$lib/components/molecules/EditableTagList.svelte";
@@ -51,6 +51,11 @@
     e.stopPropagation();
     onEnqueue?.(track);
   }
+
+  function handleDequeue(e: MouseEvent) {
+    e.stopPropagation();
+    onDequeue?.(track);
+  }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -80,10 +85,7 @@
       {:else if isQueued}
         <button
           type="button"
-          onclick={(e) => {
-            e.stopPropagation();
-            onDequeue?.(track);
-          }}
+          onclick={handleDequeue}
           class="group/dequeue flex items-center justify-center size-5 p-0 rounded-full hover:bg-destructive/10 transition-colors cursor-pointer"
           title="Remove from queue"
           aria-label="Remove from queue"
@@ -159,6 +161,18 @@
 
     <!-- Hover Action: Add to Queue -->
     <div class="flex justify-end">
+      {#if isQueued}
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Remove track from queue"
+        title="Remove from queue"
+        onclick={handleDequeue}
+        class="size-7 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <ListX class="size-4" />
+      </Button>
+      {:else}
       <Button
         variant="ghost"
         size="icon"
@@ -169,6 +183,7 @@
       >
         <ListPlus class="size-4" />
       </Button>
+      {/if}
     </div>
   </div>
   {#if primaryLyric}

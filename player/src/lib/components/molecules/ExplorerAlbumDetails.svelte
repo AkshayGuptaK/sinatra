@@ -3,27 +3,24 @@
   import ExplorerTrackItem from "./ExplorerTrackItem.svelte";
   import { formatTime } from "$lib/utils/time";
   import {
-    Play,
-    Pause,
     Disc,
     ListPlus,
     ChevronDown,
     ChevronUp,
+    Download,
   } from "@lucide/svelte";
 
   export interface Props {
     album: RemoteAlbumDetails;
-    isActive?: boolean;
-    isPlaying?: boolean;
     class?: string;
-    onPlay?: (album: RemoteAlbumDetails) => void;
+    onDownload?: (album: RemoteAlbumDetails) => void;
     onEnqueue?: (album: RemoteAlbumDetails) => void;
     browseArtist?: (artistId: string) => void;
 
     // Tracklist item props
     activeTrackId?: string | null;
-    playingTrackId?: string | null;
     queuedTrackIds?: Set<string>;
+    isPlaying?: boolean;
     onPlayTrack?: (track: RemoteTrack) => void;
     onEnqueueTrack?: (track: RemoteTrack) => void;
     onDequeueTrack?: (track: RemoteTrack) => void;
@@ -32,15 +29,13 @@
 
   let {
     album,
-    isActive = false,
-    isPlaying = false,
     class: className = "",
-    onPlay,
+    onDownload,
     onEnqueue,
     browseArtist,
     activeTrackId = null,
-    playingTrackId = null,
     queuedTrackIds = new Set<string>(),
+    isPlaying = false,
     onPlayTrack,
     onEnqueueTrack,
     onDequeueTrack,
@@ -51,9 +46,9 @@
   let isImageError = $state(false);
   let isExpanded = $state(true);
 
-  function handlePlayClick(e: MouseEvent) {
+  function handleDownloadClick(e: MouseEvent) {
     e.stopPropagation();
-    onPlay?.(album);
+    onDownload?.(album);
   }
 
   function handleEnqueueClick(e: MouseEvent) {
@@ -68,9 +63,7 @@
 </script>
 
 <div
-  class="flex flex-col w-full rounded-xl border border-neutral-800/80 bg-neutral-900/40 hover:border-neutral-700/70 transition-all duration-150 overflow-hidden shadow-sm {isActive
-    ? 'ring-1 ring-emerald-500/50 border-neutral-700 bg-neutral-900/60'
-    : ''} {className}"
+  class="flex flex-col w-full rounded-xl border border-neutral-800/80 bg-neutral-900/40 hover:border-neutral-700/70 transition-all duration-150 overflow-hidden shadow-sm {className}"
 >
   <!-- Album Header Block -->
   <div
@@ -96,41 +89,6 @@
           <Disc class="w-8 h-8" />
         </div>
       {/if}
-
-      <!-- Animated equalizer bars if actively playing -->
-      {#if isPlaying}
-        <div
-          class="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center gap-0.5 group-hover:opacity-0 transition-opacity"
-        >
-          <span
-            class="w-0.5 h-4 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.3s]"
-          ></span>
-          <span
-            class="w-0.5 h-6 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.15s]"
-          ></span>
-          <span class="w-0.5 h-3.5 bg-emerald-400 rounded-full animate-bounce"
-          ></span>
-        </div>
-      {/if}
-
-      {#if onPlay}
-        <button
-          type="button"
-          onclick={handlePlayClick}
-          aria-label={isPlaying ? "Pause album" : "Play album"}
-          class="absolute inset-0 flex items-center justify-center bg-black/60 text-white transition-opacity duration-150 {isPlaying
-            ? 'opacity-0 group-hover:opacity-100'
-            : isActive
-              ? 'opacity-100'
-              : 'opacity-0 group-hover:opacity-100'}"
-        >
-          {#if isPlaying}
-            <Pause class="w-7 h-7 fill-current text-emerald-400" />
-          {:else}
-            <Play class="w-7 h-7 fill-current translate-x-0.5 text-white" />
-          {/if}
-        </button>
-      {/if}
     </div>
 
     <!-- Album Metadata -->
@@ -150,11 +108,8 @@
         {/if}
       </div>
 
-      <!-- Title -->
       <h3
-        class="text-base sm:text-lg font-bold truncate leading-tight transition-colors {isActive
-          ? 'text-emerald-400'
-          : 'text-neutral-100 group-hover:text-white'}"
+        class="text-base sm:text-lg font-bold truncate leading-tight transition-colors text-neutral-100 group-hover:text-white"
         title={album.title}
       >
         {album.title}
@@ -217,6 +172,19 @@
         </button>
       {/if}
 
+      {#if onDownload}
+        <button
+          type="button"
+          onclick={handleDownloadClick}
+          title="Download entire playlist"
+          aria-label="Download entire playlist"
+          class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-neutral-800 hover:bg-neutral-700/80 text-neutral-200 border border-neutral-700/60 transition-colors"
+        >
+          <Download class="w-4 h-4 text-neutral-400" />
+          <span class="hidden sm:inline">Download Playlist</span>
+        </button>
+      {/if}
+
       {#if album.tracks && album.tracks.length > 0}
         <button
           type="button"
@@ -253,7 +221,7 @@
             <ExplorerTrackItem
               {track}
               isActive={activeTrackId === track.video_id}
-              isPlaying={playingTrackId === track.video_id}
+              isPlaying={activeTrackId === track.video_id && isPlaying}
               isQueued={queuedTrackIds.has(track.video_id)}
               onPlay={onPlayTrack}
               onEnqueue={onEnqueueTrack}

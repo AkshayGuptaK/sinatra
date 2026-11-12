@@ -108,12 +108,12 @@
         class="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center gap-0.5 group-hover:opacity-0 transition-opacity"
       >
         <span
-          class="w-0.5 h-3 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.3s]"
+          class="w-0.5 h-3 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"
         ></span>
         <span
-          class="w-0.5 h-4 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.15s]"
+          class="w-0.5 h-4 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"
         ></span>
-        <span class="w-0.5 h-2.5 bg-emerald-400 rounded-full animate-bounce"
+        <span class="w-0.5 h-2.5 bg-primary rounded-full animate-bounce"
         ></span>
       </div>
     {/if}
@@ -129,7 +129,7 @@
           : 'opacity-0 group-hover:opacity-100'}"
     >
       {#if isPlaying}
-        <Pause class="w-5 h-5 fill-current text-emerald-400" />
+        <Pause class="w-5 h-5 fill-current text-secondary-foreground" />
       {:else}
         <Play class="w-5 h-5 fill-current translate-x-0.5 text-white" />
       {/if}
@@ -140,7 +140,7 @@
     <div class="flex items-center gap-1.5 min-w-0">
       <span
         class="text-sm font-medium truncate leading-tight transition-colors {isActive
-          ? 'text-emerald-400 font-semibold'
+          ? 'text-primary font-semibold'
           : 'text-neutral-100 group-hover:text-white'}"
         title={track.title}
       >
@@ -212,7 +212,7 @@
         : 'opacity-0 group-hover:opacity-100 focus:opacity-100'}"
     >
       {#if isQueued}
-        <span class="group/btn relative flex items-center justify-center">
+        <span class="group/btn relative flex text-primary items-center justify-center">
           <Check class="w-4 h-4 group-hover/btn:hidden" />
           <ListX class="w-4 h-4 hidden group-hover/btn:block text-rose-400" />
         </span>

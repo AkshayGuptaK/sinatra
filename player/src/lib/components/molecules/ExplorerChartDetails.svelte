@@ -40,7 +40,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
           {#each playlists as playlist (playlist.playlist_id)}
             <ExplorerPlaylistItem {playlist} {browsePlaylist} />
           {/each}

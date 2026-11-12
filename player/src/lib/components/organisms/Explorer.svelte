@@ -14,6 +14,7 @@
   import ExplorerMoodCategories from "../molecules/ExplorerMoodCategories.svelte";
   import ExplorerPlaylistItem from "../molecules/ExplorerPlaylistItem.svelte";
   import ExplorerChartDetails from "../molecules/ExplorerChartDetails.svelte";
+  import ExplorerPlaylistDetails from "../molecules/ExplorerPlaylistDetails.svelte";
 
   interface Props {
     class?: string;
@@ -73,6 +74,7 @@
         {#each explorer.playlists as playlist, index (playlist.playlist_id + index)}
           <ExplorerPlaylistItem
             {playlist}
+            browsePlaylist={explorer.explorePlaylist}
           />
         {/each}
       </div>
@@ -110,10 +112,21 @@
       />
     {/if}
 
+
+    {#if explorer.activePlaylist}
+      <ExplorerPlaylistDetails
+        playlist={explorer.activePlaylist}
+        browseArtist={explorer.exploreArtist}
+        onEnqueueTrack={player.enqueue}
+        onDownloadTrack={downloadTrack}
+      />
+    {/if}
+
     {#if explorer.topCharts}
       <ExplorerChartDetails
         chart={explorer.topCharts}
         browseArtist={explorer.exploreArtist}
+        browsePlaylist={explorer.explorePlaylist}
       />
     {/if}
 

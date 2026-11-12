@@ -115,7 +115,7 @@
   </div>
 
   <!-- Primary Metadata Details -->
-  <div class="flex flex-col w-full min-w-0 flex-1 justify-center">
+  <div class="flex flex-col w-full min-w-0 flex-1 items-center justify-center">
     <div class="flex items-center gap-1.5 min-w-0">
       <span
         class="text-sm font-medium truncate leading-tight transition-colors {isActive

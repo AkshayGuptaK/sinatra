@@ -207,6 +207,18 @@ export class MusicExplorer {
     }
   };
 
+  explorePlaylist = async (playlistId: string) => {
+    try {
+      this.resetViewData();
+      this.activePlaylist = await explorerApi.getExplorePlaylist(
+        this.activeSource,
+        playlistId
+      );
+    } catch (err) {
+      console.error("Playlist details couldn't be fetched", err);
+    }
+  };
+
   private resetViewData(): void {
     this.tracks = [];
     this.albums = [];

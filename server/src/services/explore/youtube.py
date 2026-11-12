@@ -316,13 +316,74 @@ class YoutubeExplorer:
         return self.yt.get_mood_categories()
 
     def get_mood_playlists(self, params: str) -> list[dict[str, Any]]:
-        """Returns curated playlists for a given mood/genre 'params' token."""
-        raw_playlists = self.yt.get_mood_playlists(params)
-        return [
-            self._parse_playlist_summary(p).to_dict()
-            for p in raw_playlists
-            if p.get("playlistId")
-        ]
+        """Returns curated playlists for a given mood/genre 'params' token.
+        Queries the browse endpoint directly to safely skip non-playlist cards
+        (such as individual songs) that YouTube Music mixes into mood/genre hubs.
+        """
+        data = self.yt._send_request(
+            "browse",
+            {"browseId": "FEmusic_moods_and_genres_category", "params": params},
+        )
+
+        playlists: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
+
+        for renderer in self._find_two_row_renderers(data):
+            title_runs = renderer.get("title", {}).get("runs", [])
+            if not title_runs:
+                continue
+
+            browse_id = title_runs[0].get("navigationEndpoint", {}).get(
+                "browseEndpoint", {}
+            ).get("browseId") or renderer.get("navigationEndpoint", {}).get(
+                "browseEndpoint", {}
+            ).get(
+                "browseId"
+            )
+
+            # Skip individual tracks (watchEndpoint), albums (MPREb...), or artists (UC...)
+            if not browse_id or not browse_id.startswith(("VL", "PL", "OLA")):
+                continue
+
+            playlist_id = browse_id[2:] if browse_id.startswith("VL") else browse_id
+            if playlist_id in seen_ids:
+                continue
+            seen_ids.add(playlist_id)
+
+            title = "".join(r.get("text", "") for r in title_runs).strip()
+            subtitle_runs = renderer.get("subtitle", {}).get("runs", [])
+            subtitle = "".join(r.get("text", "") for r in subtitle_runs).strip()
+
+            thumb_container = (
+                renderer.get("thumbnailRenderer", {})
+                .get("musicThumbnailRenderer", {})
+                .get("thumbnail")
+            )
+
+            playlists.append(
+                RemotePlaylist(
+                    playlist_id=playlist_id,
+                    title=title or "Untitled Playlist",
+                    description=subtitle or None,
+                    thumbnail=self._best_thumbnail(thumb_container),
+                ).to_dict()
+            )
+
+        return playlists
+
+    def _find_two_row_renderers(self, obj: Any) -> list[dict[str, Any]]:
+        """Recursively collects all musicTwoRowItemRenderer cards from a browse payload."""
+        results: list[dict[str, Any]] = []
+        if isinstance(obj, dict):
+            if "musicTwoRowItemRenderer" in obj:
+                results.append(obj["musicTwoRowItemRenderer"])
+            else:
+                for v in obj.values():
+                    results.extend(self._find_two_row_renderers(v))
+        elif isinstance(obj, list):
+            for item in obj:
+                results.extend(self._find_two_row_renderers(item))
+        return results
 
     def get_playlist(
         self, playlist_id: str, limit: Optional[int] = 100

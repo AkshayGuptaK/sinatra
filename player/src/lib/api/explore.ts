@@ -94,7 +94,7 @@ export interface RemotePlaylistDetails {
   title: string;
   author?: string | null;
   description?: string | null;
-  track_count?: string | null;
+  track_count?: number | null;
   year?: string | null;
   duration_seconds?: number | null;
   thumbnail?: string | null;

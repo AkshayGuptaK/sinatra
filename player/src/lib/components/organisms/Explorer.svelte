@@ -1,18 +1,19 @@
 <script lang="ts">
+  import { Compass } from "@lucide/svelte";
+  import { cn } from "$lib/utils";
+  import type { RemoteTrack } from "$lib/api/explore";
+  import { explorer } from "$lib/core/explorer.svelte";
+  import { player } from "$lib/core/player.svelte";
   import HeaderBanner from "$lib/components/molecules/HeaderBanner.svelte";
   import CommandBar from "$lib/components/molecules/CommandBar.svelte";
   import ExplorerTrackItem from "$lib/components/molecules/ExplorerTrackItem.svelte";
-  import { Compass } from "@lucide/svelte";
-  import { explorer } from "$lib/core/explorer.svelte";
-  import { player } from "$lib/core/player.svelte";
-  import { cn } from "$lib/utils";
-  import type { RemoteTrack } from "$lib/api/explore";
   import ExplorerAlbumItem from "../molecules/ExplorerAlbumItem.svelte";
   import ExplorerAlbumDetails from "../molecules/ExplorerAlbumDetails.svelte";
   import ExplorerArtistItem from "../molecules/ExplorerArtistItem.svelte";
   import ExplorerArtistDetails from "../molecules/ExplorerArtistDetails.svelte";
   import ExplorerMoodCategories from "../molecules/ExplorerMoodCategories.svelte";
   import ExplorerPlaylistItem from "../molecules/ExplorerPlaylistItem.svelte";
+  import ExplorerChartDetails from "../molecules/ExplorerChartDetails.svelte";
 
   interface Props {
     class?: string;
@@ -67,6 +68,16 @@
       </div>
     {/if}
 
+    {#if explorer.playlists && explorer.playlists.length > 0}
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+        {#each explorer.playlists as playlist, index (playlist.playlist_id + index)}
+          <ExplorerPlaylistItem
+            {playlist}
+          />
+        {/each}
+      </div>
+    {/if}
+
     {#if explorer.tracks && explorer.tracks.length > 0}
       <div class="flex flex-col gap-0.5">
         {#each explorer.tracks as track, index (track.video_id + index)}
@@ -98,43 +109,18 @@
         onDownloadTrack={downloadTrack}
       />
     {/if}
-    <div class="flex flex-col gap-6">
-      {#if explorer.topCharts?.playlists && explorer.topCharts?.playlists.length > 0}
-        <div>
-          <div
-            class="grid grid-cols-2 gap-2"
-          >
-            {#each explorer.topCharts.playlists as playlist (playlist.playlist_id)}
-              <ExplorerPlaylistItem {playlist} />
-            {/each}
-          </div>
-        </div>
-      {/if}
-      {#if explorer.topCharts?.artists && explorer.topCharts?.artists.length > 0}
-        <div>
-          <h3
-            class="text-xs font-bold uppercase tracking-wider text-neutral-400"
-          >
-            Trending Artists
-          </h3>
-          <div
-            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2"
-          >
-            {#each explorer.topCharts.artists as artist (artist.browse_id)}
-              <ExplorerArtistItem
-                {artist}
-                browseArtist={explorer.exploreArtist}
-                showTag={false}
-              />
-            {/each}
-          </div>
-        </div>
-      {/if}
-      <ExplorerMoodCategories
-        categories={explorer.moodCategories}
-        activeCategory={explorer.activeCategory}
-        onSelect={explorer.exploreMood}
+
+    {#if explorer.topCharts}
+      <ExplorerChartDetails
+        chart={explorer.topCharts}
+        browseArtist={explorer.exploreArtist}
       />
-    </div>
+    {/if}
+
+    <ExplorerMoodCategories
+      categories={explorer.moodCategories}
+      activeCategory={explorer.activeCategory}
+      onSelect={explorer.exploreMood}
+    />
   </div>
 </div>

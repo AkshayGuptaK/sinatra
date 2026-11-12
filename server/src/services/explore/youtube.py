@@ -365,7 +365,7 @@ class YoutubeExplorer:
             {
                 "title": item.get("title"),
                 "playlist_id": item.get("playlistId"),
-                "thumbnail": item.get("thumbnails")[0],
+                "thumbnail": item.get("thumbnails")[0].get("url"),
                 "source": "ytm",
             }
             for item in data.get("videos", [])
@@ -376,7 +376,7 @@ class YoutubeExplorer:
                 "name": item.get("title"),
                 "browse_id": item.get("browseId"),
                 "subscribers": item.get("subscribers"),
-                "thumbnail": item.get("thumbnails")[0],
+                "thumbnail": item.get("thumbnails")[0].get("url"),
                 "source": "ytm",
             }
             for item in data.get("artists", [])

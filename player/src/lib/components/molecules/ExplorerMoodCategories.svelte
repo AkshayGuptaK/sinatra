@@ -22,7 +22,7 @@
 </script>
 
 {#if sections.length > 0}
-  <div class={cn("flex flex-col gap-6 w-full", className)}>
+  <div class={cn("flex flex-col gap-6 w-full pt-5 border-t border-neutral-800/60", className)}>
     {#each sections as [heading, items] (heading)}
       <section class="flex flex-col gap-2.5">
         <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-400">
@@ -49,7 +49,7 @@
                 class={cn(
                   "w-1 h-3.5 rounded-full shrink-0 transition-colors",
                   isSelected
-                    ? "bg-secondary-foreground"
+                    ? "bg-primary"
                     : "bg-neutral-700 group-hover:bg-secondary-foreground"
                 )}
               ></span>

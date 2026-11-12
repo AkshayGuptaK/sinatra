@@ -9,7 +9,6 @@
     class?: string;
     onPlay?: (playlist: RemotePlaylist) => void;
     onEnqueue?: (playlist: RemotePlaylist) => void;
-    browseArtist?: (artistId: string) => void;
     browsePlaylist?: (playlistId: string) => void;
   }
 
@@ -20,7 +19,6 @@
     class: className = "",
     onPlay,
     onEnqueue,
-    browseArtist,
     browsePlaylist,
   }: Props = $props();
 
@@ -56,14 +54,13 @@
   tabindex="0"
   onclick={handleRowClick}
   onkeydown={handleKeydown}
-  class="group relative flex items-center gap-3.5 w-full px-3 py-2 rounded-lg text-left select-none transition-colors duration-150 border border-transparent outline-none cursor-pointer {isActive
+  class="group min-w-0 overflow-hidden relative flex flex-col items-center gap-3.5 w-full px-3 py-2 rounded-lg text-left select-none transition-colors duration-150 border border-transparent outline-none cursor-pointer {isActive
     ? 'bg-neutral-800/80 border-neutral-700/60 shadow-sm'
     : 'hover:bg-neutral-900/60 active:bg-neutral-800/50'} {className}"
   aria-label="{playlist.title} by {playlist.author}"
 >
-  <!-- Artwork / Thumbnail Container -->
   <div
-    class="relative shrink-0 w-11 h-11 rounded-md overflow-hidden bg-neutral-900 border border-neutral-800 flex items-center justify-center"
+    class="relative w-full aspect-square shrink-0 rounded-md overflow-hidden bg-neutral-900 border border-neutral-800 flex items-center justify-center"
   >
     {#if playlist.thumbnail && !isImageError}
       <img
@@ -78,7 +75,7 @@
       />
     {:else}
       <div class="text-neutral-600">
-        <Disc class="w-5 h-5" />
+        <Disc class="w-2/5 h-2/5 max-w-12 max-h-12 min-w-5 min-h-5 shrink-0" />
       </div>
     {/if}
 
@@ -118,7 +115,7 @@
   </div>
 
   <!-- Primary Metadata Details -->
-  <div class="flex flex-col min-w-0 flex-1 justify-center">
+  <div class="flex flex-col w-full min-w-0 flex-1 justify-center">
     <div class="flex items-center gap-1.5 min-w-0">
       <span
         class="text-sm font-medium truncate leading-tight transition-colors {isActive

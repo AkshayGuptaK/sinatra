@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cn } from "$lib/utils";
-  import { Compass } from "@lucide/svelte";
+  import { Compass, ChevronLeft, ChevronRight } from "@lucide/svelte";
   import type {
     RemoteAlbumDetails,
     RemotePlaylistDetails,
@@ -8,6 +8,8 @@
   } from "$lib/api/explore";
   import { explorer } from "$lib/core/explorer.svelte";
   import { player } from "$lib/core/player.svelte";
+  import { ui } from "$lib/stores/ui.svelte";
+  import ControlButton from "$lib/components/atoms/ControlButton.svelte";
   import HeaderBanner from "$lib/components/molecules/HeaderBanner.svelte";
   import CommandBar from "$lib/components/molecules/CommandBar.svelte";
   import ExplorerTrackItem from "$lib/components/molecules/ExplorerTrackItem.svelte";
@@ -39,7 +41,53 @@
   function enqueueAll(collection: RemoteAlbumDetails | RemotePlaylistDetails) {
     collection.tracks.forEach(player.enqueue);
   }
+
+  function isEditableElement(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) return false;
+    return (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target.isContentEditable
+    );
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    if (ui.activeDeck !== "explore") return;
+    if (isEditableElement(e.target)) return;
+
+    // Alt+Left / Alt+Right or Cmd+[ / Cmd+] (Ctrl+[ / Ctrl+])
+    const isBackShortcut =
+      (e.altKey && e.key === "ArrowLeft") ||
+      ((e.metaKey || e.ctrlKey) && e.key === "[");
+
+    const isForwardShortcut =
+      (e.altKey && e.key === "ArrowRight") ||
+      ((e.metaKey || e.ctrlKey) && e.key === "]");
+
+    if (isBackShortcut && explorer.canGoBack) {
+      e.preventDefault();
+      explorer.back();
+    } else if (isForwardShortcut && explorer.canGoForward) {
+      e.preventDefault();
+      explorer.forward();
+    }
+  }
+
+  function handleMouseUp(e: MouseEvent) {
+    if (ui.activeDeck !== "explore") return;
+
+    // Mouse Button 3 (Browser Back) & Button 4 (Browser Forward)
+    if (e.button === 3) {
+      e.preventDefault();
+      if (explorer.canGoBack) explorer.back();
+    } else if (e.button === 4) {
+      e.preventDefault();
+      if (explorer.canGoForward) explorer.forward();
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleKeyDown} onmouseup={handleMouseUp} />
 
 <div
   class={cn(
@@ -56,7 +104,28 @@
     <div
       class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end"
     >
-      <!-- controls go here -->
+      <div
+        class="flex items-center rounded-lg border bg-muted/40 p-0.5 text-xs"
+      >
+        <ControlButton
+          icon={ChevronLeft}
+          onClick={() => explorer.back()}
+          disabled={!explorer.canGoBack}
+          label="Go back"
+          title="Back (Alt+Left / Cmd+[)"
+          class="size-7 p-1 rounded-md text-muted-foreground hover:text-secondary-foreground hover:bg-transparent disabled:opacity-40"
+          iconClass="size-4"
+        />
+        <ControlButton
+          icon={ChevronRight}
+          onClick={() => explorer.forward()}
+          disabled={!explorer.canGoForward}
+          label="Go forward"
+          title="Forward (Alt+Right / Cmd+])"
+          class="size-7 p-1 rounded-md text-muted-foreground hover:text-secondary-foreground hover:bg-transparent disabled:opacity-40"
+          iconClass="size-4"
+        />
+      </div>
     </div>
   </div>
 

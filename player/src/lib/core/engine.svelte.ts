@@ -208,7 +208,7 @@ export class AudioEngine {
     audio.addEventListener("timeupdate", () => {
       if (index === this.activeDeckIdx) {
         this.currentTime = audio.currentTime;
-        this.checkTransitionTrigger(audio.currentTime, audio.duration);
+        this.checkTransitionTrigger(audio.currentTime, this.duration);
       }
     });
 
@@ -271,9 +271,9 @@ export class AudioEngine {
     this.currentMusicEnd = next.end;
     this.currentRmsEnv = next.rms_env || null;
     this.currentTime = active.audio.currentTime;
-    this.duration = next.duration || Number.isFinite(active.audio.duration)
-      ? active.audio.duration
-      : 0;
+    this.duration =
+      next.duration ||
+      (Number.isFinite(active.audio.duration) ? active.audio.duration : 0);
     this.isPlaying = !active.audio.paused;
 
     // Load segments for the newly promoted active track
@@ -457,14 +457,11 @@ export class AudioEngine {
     this.currentMusicStart = track.start;
     this.currentMusicEnd = track.end;
     this.currentRmsEnv = track.rms_env || null;
+    this.currentTime = 0;
+    this.duration = track.duration || deck.audio.duration;
 
     // Only call .load() explicitly if we aren't about to call .play() on the next line
-    this.preloadDeck(
-      deck,
-      track,
-      this.transitionMode === "gapless",
-      !autoPlay
-    );
+    this.preloadDeck(deck, track, this.transitionMode === "gapless", !autoPlay);
     this.dsp.setGainImmediate(deck.gainNode, 1);
 
     if (!track.source) this.segmentManager.loadForTrack(track.id);

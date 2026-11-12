@@ -28,7 +28,8 @@ export type SearchType =
 | "song"
 | "artist"
 | "album"
-| "mood";
+| "mood"
+| "playlist";
 
 export interface SearchIntent {
   type: SearchType;
@@ -504,8 +505,8 @@ export const COMMAND_REGISTRY: AppCommand[] = [
       );
     },
     execute: ({ rawArgs }) => {
-      ui.setDeck("explore")
-      const match = rawArgs.match(/^:(song|artist|album|mood)(?:\s+(.*)|$)/i);
+      ui.setDeck("explore");
+      const match = rawArgs.match(/^:(song|artist|album|mood|playlist)(?:\s+(.*)|$)/i);
       if (match) {
         const type = match[1].toLowerCase() as SearchType
         const query = match[2]?.trim() || "";

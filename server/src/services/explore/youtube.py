@@ -361,20 +361,31 @@ class YoutubeExplorer:
         """
         data = self.yt.get_charts(country=country.upper())
 
-        videos: list[dict[str, Any]] = [
-            {"title": item.get("title"), "id": item.get("playlistId")}
+        playlists: list[dict[str, Any]] = [
+            {
+                "title": item.get("title"),
+                "playlist_id": item.get("playlistId"),
+                "thumbnail": item.get("thumbnails")[0],
+                "source": "ytm",
+            }
             for item in data.get("videos", [])
         ]
 
         artists: list[dict[str, Any]] = [
-            {"title": item.get("title"), "id": item.get("browseId")}
+            {
+                "name": item.get("title"),
+                "browse_id": item.get("browseId"),
+                "subscribers": item.get("subscribers"),
+                "thumbnail": item.get("thumbnails")[0],
+                "source": "ytm",
+            }
             for item in data.get("artists", [])
         ]
 
         return {
             "country": country.upper(),
             "countries": data.get("countries", {}).get("options", []),
-            "videos": videos,
+            "playlists": playlists,
             "artists": artists,
         }
 

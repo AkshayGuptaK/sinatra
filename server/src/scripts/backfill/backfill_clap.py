@@ -22,9 +22,9 @@ def backfill_clap_embeddings(
 
     # 1. Build fetch query
     query = f"""
-        SELECT id, filepath 
+        SELECT id, source_id 
         FROM tracks 
-        WHERE filepath IS NOT NULL
+        WHERE source_id IS NOT NULL
     """
     if not overwrite:
         query += " AND semantic_embedding IS NULL"
@@ -56,15 +56,15 @@ def backfill_clap_embeddings(
     success_count = 0
     error_count = 0
 
-    for idx, (track_id, filepath) in enumerate(rows, 1):
-        if not os.path.exists(filepath):
-            print(f"\n⚠️ File missing from disk: {filepath}")
+    for idx, (track_id, source_id) in enumerate(rows, 1):
+        if not os.path.exists(source_id):
+            print(f"\n⚠️ File missing from disk: {source_id}")
             error_count += 1
             continue
 
         try:
             # Extract 512-D numpy vector
-            raw_vector = embedder.extract(filepath)
+            raw_vector = embedder.extract(source_id)
 
             # Ensure unit L2 normalization
             norm = np.linalg.norm(raw_vector)
@@ -79,7 +79,7 @@ def backfill_clap_embeddings(
             success_count += 1
 
         except Exception as e:
-            print(f"\n❌ Failed to embed {Path(filepath).name}: {e}")
+            print(f"\n❌ Failed to embed {Path(source_id).name}: {e}")
             error_count += 1
             continue
 
@@ -89,7 +89,7 @@ def backfill_clap_embeddings(
             processed += len(update_payloads)
             pct = (idx / total_tracks) * 100
             print(
-                f"   Saved {processed}/{total_tracks} ({pct:.1f}%)... Latest: {Path(filepath).name[:30]}",
+                f"   Saved {processed}/{total_tracks} ({pct:.1f}%)... Latest: {Path(source_id).name[:30]}",
                 end="\r",
                 flush=True,
             )
@@ -112,7 +112,7 @@ def backfill_clap_embeddings(
 
 
 def _flush_batch(db, batch_data: List[Tuple[str, str]]):
-    """Flushes updates by primary key ID to avoid filepath path-encoding collisions."""
+    """Flushes updates by primary key ID to avoid source_id path-encoding collisions."""
     with db.conn.cursor() as cur:
         cur.executemany(
             f"""

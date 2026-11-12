@@ -108,12 +108,9 @@ export interface MoodCategoryItem {
 
 export interface RemoteCharts {
   country: string;
-  countries: Array<{ text: string; value: string }>;
-  songs: RemoteTrack[];
-  videos: RemoteTrack[];
-  trending: RemoteTrack[];
+  countries: Array<string>;
   artists: RemoteArtist[];
-  genres: RemotePlaylist[];
+  playlists: RemotePlaylist[];
 }
 
 export interface SearchExploreParams {
@@ -272,7 +269,7 @@ export const explorerApi = {
   /**
    * Fetches mood, genre, and activity categories.
    */
-  async getExploreMoods(source: string): Promise<MoodCategoryItem[]> {
+  async getExploreMoods(source: string): Promise<Record<string, MoodCategoryItem[]>> {
     const res = await fetch(
       `${API_BASE_URL}/api/explore/${encodeURIComponent(source)}/moods`
     );

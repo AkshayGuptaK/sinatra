@@ -101,7 +101,6 @@ def get_mood_categories(
     """Returns mood and genre categories for browsing."""
     try:
         categories = explorer.get_mood_categories()
-        categories = [item for sublist in categories.values() for item in sublist]
         return JSONResponse(content=categories)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -11,6 +11,8 @@
   import ExplorerAlbumDetails from "../molecules/ExplorerAlbumDetails.svelte";
   import ExplorerArtistItem from "../molecules/ExplorerArtistItem.svelte";
   import ExplorerArtistDetails from "../molecules/ExplorerArtistDetails.svelte";
+  import ExplorerMoodCategories from "../molecules/ExplorerMoodCategories.svelte";
+  import ExplorerPlaylistItem from "../molecules/ExplorerPlaylistItem.svelte";
 
   interface Props {
     class?: string;
@@ -96,5 +98,43 @@
         onDownloadTrack={downloadTrack}
       />
     {/if}
+    <div class="flex flex-col gap-6">
+      {#if explorer.topCharts?.playlists && explorer.topCharts?.playlists.length > 0}
+        <div>
+          <div
+            class="grid grid-cols-2 gap-2"
+          >
+            {#each explorer.topCharts.playlists as playlist (playlist.playlist_id)}
+              <ExplorerPlaylistItem {playlist} />
+            {/each}
+          </div>
+        </div>
+      {/if}
+      {#if explorer.topCharts?.artists && explorer.topCharts?.artists.length > 0}
+        <div>
+          <h3
+            class="text-xs font-bold uppercase tracking-wider text-neutral-400"
+          >
+            Trending Artists
+          </h3>
+          <div
+            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2"
+          >
+            {#each explorer.topCharts.artists as artist (artist.browse_id)}
+              <ExplorerArtistItem
+                {artist}
+                browseArtist={explorer.exploreArtist}
+                showTag={false}
+              />
+            {/each}
+          </div>
+        </div>
+      {/if}
+      <ExplorerMoodCategories
+        categories={explorer.moodCategories}
+        activeCategory={explorer.activeCategory}
+        onSelect={explorer.exploreMood}
+      />
+    </div>
   </div>
 </div>

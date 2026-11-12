@@ -10,6 +10,7 @@
     onPlay?: (artist: RemoteArtist) => void;
     onEnqueue?: (artist: RemoteArtist) => void;
     browseArtist?: (artistId: string) => void;
+    showTag?: boolean;
   }
 
   let {
@@ -20,6 +21,7 @@
     onPlay,
     onEnqueue,
     browseArtist,
+    showTag = true,
   }: Props = $props();
 
   let isImageLoaded = $state(false);
@@ -127,11 +129,13 @@
         {artist.name}
       </span>
 
-      <span
-        class="shrink-0 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400 border border-neutral-700/60 leading-none"
-      >
-        Artist
-      </span>
+      {#if showTag}
+        <span
+          class="shrink-0 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400 border border-neutral-700/60 leading-none"
+        >
+          Artist
+        </span>
+      {/if}
     </div>
     <div
       class="flex items-center gap-1.5 text-xs text-neutral-400 truncate mt-0.5 leading-normal"

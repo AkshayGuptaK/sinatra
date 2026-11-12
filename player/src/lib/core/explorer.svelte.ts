@@ -17,8 +17,9 @@ export class MusicExplorer {
   activeSource = $state<string>("ytm");
   isInitialized = $state(false);
 
-  moodCategories = $state<MoodCategoryItem[]>([]);
-  isLoadingMoods = $state(false);
+  moodCategories = $state<Record<string, MoodCategoryItem[]>>({});
+  topCharts = $state<RemoteCharts | null>(null);
+  isLoading = $state(false);
 
   activeIntent = $state<SearchIntent>({ type: "song", query: "" });
 
@@ -27,12 +28,13 @@ export class MusicExplorer {
   artists = $state<RemoteArtist[]>([]);
   playlists = $state<RemotePlaylist[]>([]);
 
+  activeCategory = $state<MoodCategoryItem | null>(null);
   activeArtist = $state<RemoteArtistDetails | null>(null);
   activeAlbum = $state<RemoteAlbumDetails | null>(null);
   activePlaylist = $state<RemotePlaylistDetails | null>(null);
   activeCharts = $state<RemoteCharts | null>(null);
 
-  isLoading = $state(false);
+  isLoadingSearch = $state(false);
   error = $state<string | null>(null);
   private requestCounter = 0;
 
@@ -58,7 +60,7 @@ export class MusicExplorer {
         this.activeSource = availableSources[0];
       }
 
-      await this.loadMoodCategories();
+      await this.loadInitialData();
 
       this.isInitialized = true;
     } catch (err) {
@@ -76,7 +78,7 @@ export class MusicExplorer {
     if (source === this.activeSource || !this.sources.includes(source)) return;
     this.activeSource = source;
     await Promise.all([
-      this.loadMoodCategories(),
+      this.loadInitialData(),
       this.executeIntent(this.activeIntent),
     ]);
   }
@@ -84,17 +86,17 @@ export class MusicExplorer {
   /**
    * Loads mood & genre categories for the active source.
    */
-  async loadMoodCategories(): Promise<void> {
-    this.isLoadingMoods = true;
+  async loadInitialData(): Promise<void> {
+    this.isLoading = true;
     try {
       this.moodCategories = await explorerApi.getExploreMoods(
         this.activeSource
       );
+      this.topCharts = await explorerApi.getExploreCharts(this.activeSource);
     } catch (err) {
       console.error("Failed to load explore mood categories:", err);
-      this.moodCategories = [];
     } finally {
-      this.isLoadingMoods = false;
+      this.isLoading = false;
     }
   }
 
@@ -104,16 +106,16 @@ export class MusicExplorer {
   async executeIntent(intent: SearchIntent): Promise<void> {
     const currentRequestId = ++this.requestCounter;
 
-    this.isLoading = true;
+    this.isLoadingSearch = true;
     this.error = null;
 
     try {
       let results = [];
       switch (intent.type) {
         case "mood": {
-          const category = this.moodCategories.find(
-            (cat) => cat.title.toLowerCase() === intent.query
-          );
+          const category = Object.values(this.moodCategories)
+            .flatMap((arr) => arr)
+            .find((cat) => cat.title.toLowerCase() === intent.query);
           if (!category) return;
           results = await explorerApi.getExploreMoodPlaylists(
             this.activeSource,
@@ -155,7 +157,7 @@ export class MusicExplorer {
         err instanceof Error ? err.message : "Failed to load explore results";
     } finally {
       if (currentRequestId === this.requestCounter) {
-        this.isLoading = false;
+        this.isLoadingSearch = false;
       }
     }
   }
@@ -167,6 +169,19 @@ export class MusicExplorer {
       console.error("Track download failed:", err);
     }
   }
+
+  exploreMood = async (category: MoodCategoryItem) => {
+    try {
+      this.resetViewData();
+      this.activeCategory = category;
+      this.playlists = await explorerApi.getExploreMoodPlaylists(
+        this.activeSource,
+        category.params
+      );
+    } catch (err) {
+      console.error("Mood playlists couldn't be fetched", err);
+    }
+  };
 
   exploreArtist = async (artistId: string) => {
     try {
@@ -197,6 +212,7 @@ export class MusicExplorer {
     this.albums = [];
     this.artists = [];
     this.playlists = [];
+    this.activeCategory = null;
     this.activeArtist = null;
     this.activeAlbum = null;
     this.activePlaylist = null;

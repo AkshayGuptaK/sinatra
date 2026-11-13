@@ -498,6 +498,11 @@ export const COMMAND_REGISTRY: AppCommand[] = [
           label: "/s :mood <cluster>",
           desc: "Browse mood playlists",
         },
+        {
+          prefix: "/s :playlist",
+          label: "/s :playlist <title>",
+          desc: "Search playlists",
+        },
       ];
       if (!trimmed) return prefixes;
       return prefixes.filter((p) =>

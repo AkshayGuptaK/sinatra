@@ -68,19 +68,19 @@
   </div>
 
   <!-- Primary Metadata Details -->
-  <div class="flex flex-col w-full min-w-0 flex-1 items-center justify-center">
+  <div class="flex flex-col items-center justify-center w-full min-w-0 flex-1">
     <div
-      class="text-sm font-medium truncate leading-tight transition-colors text-neutral-100 group-hover:text-secondary-foreground"
+      class="w-full text-center text-sm font-medium truncate leading-tight transition-colors text-neutral-100 group-hover:text-secondary-foreground"
       title={playlist.title}
     >
       {playlist.title}
     </div>
 
     <div
-      class="flex items-center gap-1.5 text-xs text-neutral-400 truncate mt-0.5 leading-normal"
+      class="flex items-center justify-center gap-1.5 w-full min-w-0 text-xs text-neutral-400 mt-0.5 leading-normal"
     >
       {#if playlist.author}
-        <span class="truncate" title={playlist.author}>
+        <span class="min-w-0 truncate" title={playlist.author}>
           {playlist.author}
         </span>
       {/if}
